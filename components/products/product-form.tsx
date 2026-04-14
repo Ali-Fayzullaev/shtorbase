@@ -7,8 +7,13 @@ import {
   updateProductAction,
   type ProductFormState,
 } from '@/lib/actions/product-mutations'
-import { cn } from '@/lib/utils/format'
-import { Plus, Trash2, ImageIcon } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { cn } from '@/lib/utils'
+import { Plus, Trash2, ImageIcon, Loader2 } from 'lucide-react'
 
 interface ProductFormProps {
   categories: Category[]
@@ -20,69 +25,85 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const action = isEdit ? updateProductAction : createProductAction
   const [state, formAction, isPending] = useActionState<ProductFormState, FormData>(action, null)
   const [imageUrls, setImageUrls] = useState<string[]>([''])
+  const [vatIncluded, setVatIncluded] = useState(product?.vat_included ?? true)
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={formAction} className="space-y-6">
       {product && <input type="hidden" name="product_id" value={product.id} />}
+      {/* Hidden input for checkbox — base-ui Checkbox doesn't submit via FormData */}
+      <input type="hidden" name="vat_included" value={vatIncluded ? 'on' : ''} />
 
       {state?.error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-[13px] text-red-700">
+        <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
           {state.error}
         </div>
       )}
 
       {/* SKU + Name */}
-      <div className="grid grid-cols-3 gap-4">
-        <Field
-          label="Артикул"
-          name="sku"
-          defaultValue={product?.sku}
-          error={state?.fieldErrors?.sku}
-          placeholder="SH-0001"
-          className="font-mono"
-        />
-        <div className="col-span-2">
-          <Field
-            label="Название"
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="sku">Артикул</Label>
+          <Input
+            id="sku"
+            name="sku"
+            defaultValue={product?.sku}
+            placeholder="SH-0001"
+            className={cn('font-mono', state?.fieldErrors?.sku && 'border-destructive')}
+          />
+          {state?.fieldErrors?.sku && (
+            <p className="text-xs text-destructive">{state.fieldErrors.sku}</p>
+          )}
+        </div>
+        <div className="sm:col-span-2 space-y-2">
+          <Label htmlFor="name">Название</Label>
+          <Input
+            id="name"
             name="name"
             defaultValue={product?.name}
-            error={state?.fieldErrors?.name}
             placeholder="Штора «Венеция» бархат"
+            className={cn(state?.fieldErrors?.name && 'border-destructive')}
           />
+          {state?.fieldErrors?.name && (
+            <p className="text-xs text-destructive">{state.fieldErrors.name}</p>
+          )}
         </div>
       </div>
 
-      {/* Category + Unit */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-[12px] font-medium text-slate-500 mb-1">Категория</label>
+      {/* Category + Unit — native <select> for FormData compatibility */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="category_id">Категория</Label>
           <select
+            id="category_id"
             name="category_id"
             defaultValue={product?.category_id ?? ''}
             className={cn(
-              'w-full rounded-lg border bg-white px-3 py-2 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all',
-              state?.fieldErrors?.category_id ? 'border-red-300' : 'border-slate-200'
+              'flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+              state?.fieldErrors?.category_id && 'border-destructive ring-3 ring-destructive/20'
             )}
           >
             <option value="">Выберите категорию</option>
             {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
             ))}
           </select>
           {state?.fieldErrors?.category_id && (
-            <p className="mt-1 text-[11px] text-red-500">{state.fieldErrors.category_id}</p>
+            <p className="text-xs text-destructive">{state.fieldErrors.category_id}</p>
           )}
         </div>
-        <div>
-          <label className="block text-[12px] font-medium text-slate-500 mb-1">Единица измерения</label>
+        <div className="space-y-2">
+          <Label htmlFor="unit">Единица измерения</Label>
           <select
+            id="unit"
             name="unit"
             defaultValue={product?.unit ?? ''}
             disabled={isEdit}
             className={cn(
-              'w-full rounded-lg border bg-white px-3 py-2 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all',
-              state?.fieldErrors?.unit ? 'border-red-300' : 'border-slate-200',
-              isEdit && 'opacity-60 cursor-not-allowed'
+              'flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+              state?.fieldErrors?.unit && 'border-destructive ring-3 ring-destructive/20',
+              isEdit && 'opacity-50 cursor-not-allowed'
             )}
           >
             <option value="">Выберите</option>
@@ -90,82 +111,101 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             <option value="piece">Штука</option>
           </select>
           {isEdit && (
-            <p className="mt-1 text-[11px] text-slate-400">Нельзя изменить после создания</p>
+            <p className="text-xs text-muted-foreground">Нельзя изменить после создания</p>
           )}
           {state?.fieldErrors?.unit && (
-            <p className="mt-1 text-[11px] text-red-500">{state.fieldErrors.unit}</p>
+            <p className="text-xs text-destructive">{state.fieldErrors.unit}</p>
           )}
         </div>
       </div>
 
       {/* Price + Stock + VAT */}
-      <div className="grid grid-cols-3 gap-4">
-        <Field
-          label="Цена, ₸"
-          name="price"
-          type="number"
-          step="0.01"
-          min="0"
-          defaultValue={product?.price?.toString()}
-          error={state?.fieldErrors?.price}
-          placeholder="4500"
-        />
-        <Field
-          label="Остаток"
-          name="stock"
-          type="number"
-          step="0.1"
-          min="0"
-          defaultValue={product?.stock?.toString()}
-          error={state?.fieldErrors?.stock}
-          placeholder="100"
-        />
-        <div>
-          <label className="block text-[12px] font-medium text-slate-500 mb-1">НДС</label>
-          <label className="flex items-center gap-2 mt-2 cursor-pointer">
-            <input
-              type="checkbox"
-              name="vat_included"
-              defaultChecked={product?.vat_included ?? true}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500/20"
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="price">Цена, ₸</Label>
+          <Input
+            id="price"
+            name="price"
+            type="number"
+            step="0.01"
+            min="0"
+            defaultValue={product?.price?.toString()}
+            placeholder="4500"
+            className={cn(state?.fieldErrors?.price && 'border-destructive')}
+          />
+          {state?.fieldErrors?.price && (
+            <p className="text-xs text-destructive">{state.fieldErrors.price}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="stock">Остаток</Label>
+          <Input
+            id="stock"
+            name="stock"
+            type="number"
+            step="0.1"
+            min="0"
+            defaultValue={product?.stock?.toString()}
+            placeholder="100"
+            className={cn(state?.fieldErrors?.stock && 'border-destructive')}
+          />
+          {state?.fieldErrors?.stock && (
+            <p className="text-xs text-destructive">{state.fieldErrors.stock}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label>НДС</Label>
+          <div className="flex items-center gap-2 pt-1">
+            <Checkbox
+              id="vat_included"
+              checked={vatIncluded}
+              onCheckedChange={(checked) => setVatIncluded(checked === true)}
             />
-            <span className="text-[13px] text-slate-600">Цена включает НДС</span>
-          </label>
+            <Label htmlFor="vat_included" className="text-sm font-normal cursor-pointer">
+              Цена включает НДС
+            </Label>
+          </div>
         </div>
       </div>
 
       {/* Description */}
-      <div>
-        <label className="block text-[12px] font-medium text-slate-500 mb-1">Описание</label>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="description">Описание</Label>
+        <Textarea
+          id="description"
           name="description"
-          rows={3}
           defaultValue={product?.description ?? ''}
           placeholder="Краткое описание товара..."
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all resize-none"
+          className="min-h-20 resize-none"
         />
       </div>
 
       {/* Note */}
-      <Field
-        label="Заметка для сотрудников"
-        name="note"
-        defaultValue={product?.note ?? ''}
-        error={state?.fieldErrors?.note}
-        placeholder="Например: «Режется от 1 м, шаг 0.5 м»"
-      />
+      <div className="space-y-2">
+        <Label htmlFor="note">Заметка для сотрудников</Label>
+        <Input
+          id="note"
+          name="note"
+          defaultValue={product?.note ?? ''}
+          placeholder="Например: «Режется от 1 м, шаг 0.5 м»"
+          className={cn(state?.fieldErrors?.note && 'border-destructive')}
+        />
+        {state?.fieldErrors?.note && (
+          <p className="text-xs text-destructive">{state.fieldErrors.note}</p>
+        )}
+      </div>
 
       {/* Image URLs (only for creation) */}
       {!isEdit && (
-        <div>
-          <label className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500 mb-2">
-            <ImageIcon size={13} />
+        <div className="space-y-3">
+          <Label className="gap-1.5">
+            <ImageIcon size={14} />
             Изображения (URL)
-          </label>
+          </Label>
           <div className="space-y-2">
             {imageUrls.map((url, i) => (
               <div key={i} className="flex gap-2">
-                <input
+                <Input
                   name="image_urls"
                   value={url}
                   onChange={(e) => {
@@ -174,74 +214,40 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                     setImageUrls(next)
                   }}
                   placeholder="https://example.com/photo.jpg"
-                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all"
                 />
                 {imageUrls.length > 1 && (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="icon"
                     onClick={() => setImageUrls(imageUrls.filter((_, j) => j !== i))}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 transition-colors"
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 size={14} />
-                  </button>
+                  </Button>
                 )}
               </div>
             ))}
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setImageUrls([...imageUrls, ''])}
-            className="mt-2 inline-flex items-center gap-1 text-[12px] text-indigo-500 hover:text-indigo-600 transition-colors"
           >
-            <Plus size={13} />
+            <Plus size={14} />
             Добавить ещё
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Submit */}
       <div className="flex items-center gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-5 py-2 text-[13px] font-medium text-white hover:bg-indigo-600 disabled:opacity-50 transition-colors shadow-sm"
-        >
-          {isPending ? (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-          ) : null}
+        <Button type="submit" disabled={isPending}>
+          {isPending && <Loader2 size={14} className="animate-spin" />}
           {isEdit ? 'Сохранить' : 'Создать товар'}
-        </button>
+        </Button>
       </div>
     </form>
-  )
-}
-
-// Reusable field component
-function Field({
-  label,
-  name,
-  error,
-  className,
-  ...props
-}: {
-  label: string
-  name: string
-  error?: string
-  className?: string
-} & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div>
-      <label className="block text-[12px] font-medium text-slate-500 mb-1">{label}</label>
-      <input
-        name={name}
-        className={cn(
-          'w-full rounded-lg border bg-white px-3 py-2 text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all',
-          error ? 'border-red-300' : 'border-slate-200',
-          className
-        )}
-        {...props}
-      />
-      {error && <p className="mt-1 text-[11px] text-red-500">{error}</p>}
-    </div>
   )
 }

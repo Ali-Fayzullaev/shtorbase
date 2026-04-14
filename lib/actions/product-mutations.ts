@@ -27,11 +27,6 @@ export async function createProductAction(
   formData: FormData
 ): Promise<ProductFormState> {
   try {
-    // DEBUG: log all form entries
-    const entries: Record<string, unknown> = {}
-    formData.forEach((v, k) => { entries[k] = v })
-    console.log('[createProduct] formData entries:', JSON.stringify(entries))
-
     const raw = {
       sku: formData.get('sku'),
       name: formData.get('name'),
@@ -51,7 +46,6 @@ export async function createProductAction(
         const key = issue.path[0]?.toString()
         if (key && !fieldErrors[key]) fieldErrors[key] = issue.message
       })
-      console.log('[createProduct] validation errors:', JSON.stringify(fieldErrors))
       return { fieldErrors }
     }
 
