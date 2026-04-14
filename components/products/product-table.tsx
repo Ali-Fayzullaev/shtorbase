@@ -1,9 +1,8 @@
 'use client'
 
 import { type Product } from '@/lib/types/database'
-import { UnitBadge } from './unit-badge'
 import { formatPrice, formatStock, cn } from '@/lib/utils/format'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
 interface ProductTableProps {
@@ -11,73 +10,119 @@ interface ProductTableProps {
 }
 
 export function ProductTable({ products }: ProductTableProps) {
+  if (products.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="rounded-full bg-slate-100 p-4 mb-4">
+          <AlertTriangle size={24} className="text-slate-400" />
+        </div>
+        <p className="text-sm font-medium text-slate-600">Товары не найдены</p>
+        <p className="text-xs text-slate-400 mt-1">Попробуйте изменить фильтры</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-      <table className="w-full text-left">
+    <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
+      <table className="w-full">
         <thead>
-          <tr className="border-b border-border bg-background/60">
-            <th className="px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider">Артикул</th>
-            <th className="px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider">Название</th>
-            <th className="px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider">Категория</th>
-            <th className="px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider text-right">Цена ₸</th>
-            <th className="px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider text-center">Ед. изм.</th>
-            <th className="px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider text-right">Остаток</th>
+          <tr className="border-b border-slate-100">
+            <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Товар</th>
+            <th className="hidden sm:table-cell px-4 py-2.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Категория</th>
+            <th className="hidden sm:table-cell px-4 py-2.5 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Цена</th>
+            <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Остаток</th>
+            <th className="w-10"></th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
-          {products.map((product) => {
+        <tbody>
+          {products.map((product, idx) => {
             const isLow = product.stock < 10 && product.stock > 0
             const isOut = product.stock === 0
+            const isLast = idx === products.length - 1
 
             return (
               <tr
                 key={product.id}
-                className="hover:bg-primary/[0.02] transition-colors"
+                className={cn(
+                  'group transition-colors hover:bg-slate-50/80',
+                  !isLast && 'border-b border-slate-100/80'
+                )}
               >
+                {/* Товар */}
                 <td className="px-4 py-3">
-                  <span className="font-mono text-xs text-muted">{product.sku}</span>
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={cn(
+                        'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold',
+                        product.unit === 'meter'
+                          ? 'bg-blue-50 text-blue-600'
+                          : 'bg-emerald-50 text-emerald-600'
+                      )}
+                    >
+                      {product.unit === 'meter' ? 'м' : 'шт'}
+                    </div>
+                    <div className="min-w-0">
+                      <Link
+                        href={`/catalog/${product.id}`}
+                        className="text-[13px] font-medium text-slate-800 hover:text-indigo-600 transition-colors leading-tight"
+                      >
+                        {product.name}
+                      </Link>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-mono text-[11px] text-slate-400">{product.sku}</span>
+                        {product.note && (
+                          <span className="text-[11px] text-amber-500 truncate max-w-[200px]" title={product.note}>
+                            · {product.note}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </td>
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/catalog/${product.id}`}
-                    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-                  >
-                    {product.name}
-                  </Link>
-                  {product.note && (
-                    <p className="text-xs text-muted mt-0.5 truncate max-w-xs" title={product.note}>
-                      💡 {product.note}
-                    </p>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-xs text-muted bg-background rounded-full px-2.5 py-1">
+
+                {/* Категория */}
+                <td className="hidden sm:table-cell px-4 py-3">
+                  <span className="inline-block rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200/60">
                     {product.category?.name}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="text-sm font-semibold tabular-nums">{formatPrice(product.price)}</span>
-                  <span className="text-xs text-muted ml-1">
-                    {product.vat_included ? 'с НДС' : 'без НДС'}
+
+                {/* Цена */}
+                <td className="hidden sm:table-cell px-4 py-3 text-right">
+                  <span className="text-[13px] font-semibold text-slate-800 tabular-nums">
+                    {formatPrice(product.price)}
                   </span>
+                  <span className="text-[11px] text-slate-400 ml-0.5">₸</span>
+                  <div className="text-[10px] text-slate-400">
+                    {product.vat_included ? 'с НДС' : 'без НДС'}
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-center">
-                  <UnitBadge unit={product.unit} size="sm" />
-                </td>
+
+                {/* Остаток */}
                 <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-1.5">
-                    {isLow && <AlertTriangle size={14} className="text-warning" />}
+                  <div className="flex items-center justify-end gap-1">
+                    {isLow && <AlertTriangle size={12} className="text-amber-500" />}
                     <span
                       className={cn(
-                        'text-sm font-medium tabular-nums',
-                        isOut && 'text-danger',
-                        isLow && 'text-warning',
-                        !isLow && !isOut && 'text-foreground'
+                        'text-[13px] font-medium tabular-nums',
+                        isOut && 'text-red-500',
+                        isLow && 'text-amber-600',
+                        !isLow && !isOut && 'text-slate-700'
                       )}
                     >
                       {isOut ? 'Нет' : formatStock(product.stock, product.unit)}
                     </span>
                   </div>
+                </td>
+
+                {/* Arrow */}
+                <td className="pr-3 py-3">
+                  <Link
+                    href={`/catalog/${product.id}`}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-300 group-hover:text-indigo-500 group-hover:bg-indigo-50 transition-all"
+                  >
+                    <ChevronRight size={14} />
+                  </Link>
                 </td>
               </tr>
             )

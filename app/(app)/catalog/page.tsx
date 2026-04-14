@@ -1,69 +1,62 @@
-'use client'
-
-import { useState, useMemo } from 'react'
 import { Header } from '@/components/layout/header'
-import { SearchFilters } from '@/components/search/search-filters'
+import { CatalogFilters } from '@/components/search/catalog-filters'
 import { ProductTable } from '@/components/products/product-table'
-import { demoProducts, demoCategories } from '@/lib/demo-data'
+import { Pagination } from '@/components/ui/pagination'
+import { PrintButton } from '@/components/ui/print-button'
+import { getCatalogProducts, getCategories } from '@/lib/actions/products'
 import { Download } from 'lucide-react'
-import { type Product } from '@/lib/types/database'
 
-export default function CatalogPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
-  const [unitFilter, setUnitFilter] = useState<string | null>(null)
-  const [stockFilter, setStockFilter] = useState<string | null>(null)
+interface CatalogPageProps {
+  searchParams: Promise<{
+    q?: string
+    category?: string
+    unit?: string
+    stock?: string
+    page?: string
+  }>
+}
 
-  const filtered = useMemo(() => {
-    let result: Product[] = demoProducts
+export default async function CatalogPage({ searchParams }: CatalogPageProps) {
+  const params = await searchParams
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          (p.description && p.description.toLowerCase().includes(q))
-      )
-    }
-
-    if (categoryFilter) {
-      result = result.filter((p) => p.category_id === categoryFilter)
-    }
-
-    if (unitFilter) {
-      result = result.filter((p) => p.unit === unitFilter)
-    }
-
-    if (stockFilter === 'in-stock') {
-      result = result.filter((p) => p.stock >= 10)
-    } else if (stockFilter === 'low') {
-      result = result.filter((p) => p.stock > 0 && p.stock < 10)
-    } else if (stockFilter === 'out') {
-      result = result.filter((p) => p.stock === 0)
-    }
-
-    return result
-  }, [searchQuery, categoryFilter, unitFilter, stockFilter])
+  const [{ products, total, page, totalPages }, categories] = await Promise.all([
+    getCatalogProducts({
+      search: params.q,
+      category: params.category,
+      unit: params.unit,
+      stock: params.stock,
+      page: params.page ? parseInt(params.page) : 1,
+    }),
+    getCategories(),
+  ])
 
   return (
     <>
-      <Header title="Каталог товаров" description={`${filtered.length} из ${demoProducts.length} товаров`}>
-        <button className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground hover:border-foreground/20 transition-all">
-          <Download size={16} />
-          Excel
-        </button>
+      <Header title="Каталог" description={`${total} товаров`}>
+        <div className="flex items-center gap-2 no-print">
+          <PrintButton />
+          <a
+            href={`/api/export?${new URLSearchParams(Object.fromEntries(Object.entries({ q: params.q, category: params.category, unit: params.unit, stock: params.stock }).filter((e): e is [string, string] => !!e[1]))).toString()}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-all"
+          >
+            <Download size={14} />
+            Excel
+          </a>
+        </div>
       </Header>
 
-      <div className="p-6 space-y-4">
-        <SearchFilters
-          categories={demoCategories}
-          onSearch={setSearchQuery}
-          onFilterCategory={setCategoryFilter}
-          onFilterUnit={setUnitFilter}
-          onFilterStock={setStockFilter}
+      <div className="p-5 space-y-4">
+        <CatalogFilters
+          categories={categories}
+          currentSearch={params.q}
+          currentCategory={params.category}
+          currentUnit={params.unit}
+          currentStock={params.stock}
         />
-        <ProductTable products={filtered} />
+        <ProductTable products={products} />
+        {totalPages > 1 && (
+          <Pagination currentPage={page} totalPages={totalPages} />
+        )}
       </div>
     </>
   )

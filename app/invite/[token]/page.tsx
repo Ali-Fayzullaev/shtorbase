@@ -1,12 +1,14 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import { Eye, EyeOff, LogIn } from 'lucide-react'
-import { loginAction, type AuthState } from '@/lib/actions/auth'
+import { Eye, EyeOff, UserPlus } from 'lucide-react'
+import { acceptInviteAction, type AcceptInviteState } from '@/lib/actions/accept-invite'
+import { use } from 'react'
 
-export default function LoginPage() {
+export default function AcceptInvitePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params)
   const [showPassword, setShowPassword] = useState(false)
-  const [state, formAction, isPending] = useActionState<AuthState, FormData>(loginAction, null)
+  const [state, formAction, isPending] = useActionState<AcceptInviteState, FormData>(acceptInviteAction, null)
 
   return (
     <div className="w-full max-w-sm mx-auto px-4">
@@ -16,7 +18,7 @@ export default function LoginPage() {
           Ш
         </div>
         <h1 className="text-2xl font-bold text-foreground">ШторБаза</h1>
-        <p className="text-sm text-muted mt-1">Войдите для доступа к системе</p>
+        <p className="text-sm text-muted mt-1">Создайте пароль для входа в систему</p>
       </div>
 
       {/* Form */}
@@ -24,25 +26,13 @@ export default function LoginPage() {
         action={formAction}
         className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4"
       >
+        <input type="hidden" name="token" value={token} />
+
         {state?.error && (
           <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
             {state.error}
           </div>
         )}
-
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1.5">
-            Email
-          </label>
-          <input
-            type="email"
-            name="email"
-            required
-            autoComplete="email"
-            placeholder="name@company.kz"
-            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-          />
-        </div>
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -54,8 +44,8 @@ export default function LoginPage() {
               name="password"
               required
               minLength={8}
-              autoComplete="current-password"
-              placeholder="••••••••"
+              autoComplete="new-password"
+              placeholder="Минимум 8 символов"
               className="w-full rounded-xl border border-border bg-background px-4 py-2.5 pr-10 text-sm placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
             <button
@@ -68,6 +58,21 @@ export default function LoginPage() {
           </div>
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1.5">
+            Подтвердите пароль
+          </label>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            name="password_confirm"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            placeholder="Повторите пароль"
+            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+          />
+        </div>
+
         <button
           type="submit"
           disabled={isPending}
@@ -77,15 +82,15 @@ export default function LoginPage() {
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           ) : (
             <>
-              <LogIn size={16} />
-              Войти
+              <UserPlus size={16} />
+              Создать аккаунт
             </>
           )}
         </button>
       </form>
 
       <p className="text-center text-xs text-muted mt-6">
-        Доступ только по приглашению администратора
+        Регистрация доступна только по приглашению
       </p>
     </div>
   )
