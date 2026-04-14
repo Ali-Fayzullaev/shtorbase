@@ -4,8 +4,7 @@ import { LowStockWidget } from '@/components/dashboard/low-stock-widget'
 import { RecentChangesWidget } from '@/components/dashboard/recent-changes-widget'
 import { LowStockAlert } from '@/components/ui/low-stock-alert'
 import { getDashboardStats, getLowStockProducts, getRecentAuditLogs } from '@/lib/actions/products'
-import { Package, PackageCheck, PackageX, AlertTriangle, Search } from 'lucide-react'
-import Link from 'next/link'
+import { Package, PackageCheck, PackageX, AlertTriangle } from 'lucide-react'
 
 export default async function DashboardPage() {
   const [stats, lowStockProducts, logs] = await Promise.all([
@@ -16,28 +15,14 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <Header title="Главная" description="Обзор" />
+      <Header title="Главная" description="Обзор склада" />
 
       <LowStockAlert count={stats.lowStock + stats.outOfStock} />
 
-      <div className="p-5 space-y-5">
-        {/* Quick Search */}
-        <Link
-          href="/catalog"
-          className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white p-4 hover:border-indigo-200 hover:shadow-sm transition-all group"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-            <Search size={18} />
-          </div>
-          <div>
-            <p className="text-[13px] font-semibold text-slate-800">Найти товар</p>
-            <p className="text-[12px] text-slate-400">Поиск по названию, артикулу или категории</p>
-          </div>
-        </Link>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Всего" value={stats.total} icon={Package} color="indigo" />
+      <div className="p-4 sm:p-6 space-y-6">
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard label="Всего товаров" value={stats.total} icon={Package} color="indigo" />
           <StatCard label="Активных" value={stats.active} icon={PackageCheck} color="emerald" />
           <StatCard label="Нет в наличии" value={stats.outOfStock} icon={PackageX} color="red" />
           <StatCard label="Заканчиваются" value={stats.lowStock} icon={AlertTriangle} color="amber" />

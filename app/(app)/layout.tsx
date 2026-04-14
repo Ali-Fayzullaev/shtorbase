@@ -11,8 +11,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <MobileMenuProvider>
       <div className="flex h-full">
         <Sidebar role={profile.role} userName={profile.full_name} />
-        <MobileMenuButton />
-        <main className="flex-1 lg:ml-[260px] overflow-y-auto bg-slate-50/50">
+        <main className="flex-1 min-w-0 overflow-y-auto bg-slate-50/50">
+          <MobileMenuButton />
           {children}
         </main>
       </div>
