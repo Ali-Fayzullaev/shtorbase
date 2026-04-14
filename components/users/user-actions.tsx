@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { changeUserRole, toggleUserActive } from '@/lib/actions/users'
+import { changeUserRole, toggleUserActive, deleteUser } from '@/lib/actions/users'
 import { type UserRole } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
+import { Trash2 } from 'lucide-react'
 
 const roleLabels: Record<UserRole, string> = {
   employee: 'Сотрудник',
@@ -73,6 +74,49 @@ export function ToggleActiveButton({ userId, isActive, isSelf }: ToggleActiveBut
       )}
     >
       {pending ? '...' : isActive ? 'Деактивировать' : 'Активировать'}
+    </button>
+  )
+}
+
+interface DeleteUserButtonProps {
+  userId: string
+  userName: string
+  isSelf: boolean
+}
+
+export function DeleteUserButton({ userId, userName, isSelf }: DeleteUserButtonProps) {
+  const [pending, startTransition] = useTransition()
+  const [confirming, setConfirming] = useState(false)
+
+  const handleDelete = () => {
+    if (!confirming) {
+      setConfirming(true)
+      return
+    }
+    startTransition(async () => {
+      await deleteUser(userId)
+      setConfirming(false)
+    })
+  }
+
+  if (isSelf) return null
+
+  return (
+    <button
+      onClick={handleDelete}
+      onBlur={() => setConfirming(false)}
+      disabled={pending}
+      className={cn(
+        'inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium transition-colors',
+        confirming
+          ? 'bg-red-500 text-white hover:bg-red-600'
+          : 'text-slate-400 hover:text-red-500 hover:bg-red-50',
+        pending && 'opacity-50',
+      )}
+      title="Удалить пользователя"
+    >
+      <Trash2 size={12} />
+      {confirming ? 'Подтвердить' : ''}
     </button>
   )
 }

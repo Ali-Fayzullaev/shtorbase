@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
@@ -25,55 +26,82 @@ export async function createProductAction(
   _prevState: ProductFormState,
   formData: FormData
 ): Promise<ProductFormState> {
-  const raw = {
-    sku: formData.get('sku'),
-    name: formData.get('name'),
-    description: formData.get('description') || null,
-    category_id: formData.get('category_id'),
-    price: formData.get('price'),
-    unit: formData.get('unit'),
-    stock: formData.get('stock'),
-    vat_included: formData.get('vat_included') === 'on',
-    note: formData.get('note') || null,
-  }
+  try {
+    // DEBUG: log all form entries
+    const entries: Record<string, unknown> = {}
+    formData.forEach((v, k) => { entries[k] = v })
+    console.log('[createProduct] formData entries:', JSON.stringify(entries))
 
-  const parsed = ProductSchema.safeParse(raw)
-  if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {}
-    parsed.error.issues.forEach((issue) => {
-      const key = issue.path[0]?.toString()
-      if (key && !fieldErrors[key]) fieldErrors[key] = issue.message
-    })
-    return { fieldErrors }
-  }
-
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Не авторизован' }
-
-  // Проверяем роль
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || (profile.role !== 'admin' && profile.role !== 'manager')) {
-    return { error: 'Нет прав для создания товаров' }
-  }
-
-  const { error } = await supabase.from('products').insert({
-    ...parsed.data,
-    created_by: user.id,
-    updated_by: user.id,
-  })
-
-  if (error) {
-    if (error.code === '23505') {
-      return { fieldErrors: { sku: 'Артикул уже существует' } }
+    const raw = {
+      sku: formData.get('sku'),
+      name: formData.get('name'),
+      description: formData.get('description') || null,
+      category_id: formData.get('category_id'),
+      price: formData.get('price'),
+      unit: formData.get('unit'),
+      stock: formData.get('stock'),
+      vat_included: formData.get('vat_included') === 'on',
+      note: formData.get('note') || null,
     }
-    return { error: 'Не удалось создать товар' }
+
+    const parsed = ProductSchema.safeParse(raw)
+    if (!parsed.success) {
+      const fieldErrors: Record<string, string> = {}
+      parsed.error.issues.forEach((issue) => {
+        const key = issue.path[0]?.toString()
+        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message
+      })
+      console.log('[createProduct] validation errors:', JSON.stringify(fieldErrors))
+      return { fieldErrors }
+    }
+
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Не авторизован' }
+
+    // Проверяем роль
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'manager')) {
+      return { error: 'Нет прав для создания товаров' }
+    }
+
+    const admin = createAdminClient()
+    const { data: insertedProduct, error } = await admin.from('products').insert({
+      ...parsed.data,
+      created_by: user.id,
+      updated_by: user.id,
+    }).select('id').single()
+
+    if (error) {
+      if (error.code === '23505') {
+        return { fieldErrors: { sku: 'Артикул уже существует' } }
+      }
+      return { error: `Не удалось создать товар: ${error.message} (${error.code})` }
+    }
+
+    // Save image URLs if provided
+    if (insertedProduct) {
+      const imageUrls = formData.getAll('image_urls').filter((u) => typeof u === 'string' && (u as string).trim())
+      if (imageUrls.length > 0) {
+        const rows = imageUrls.map((url, i) => ({
+          product_id: insertedProduct.id,
+          url: url as string,
+          sort_order: i,
+        }))
+        await admin.from('product_images').insert(rows)
+      }
+    }
+  } catch (err) {
+    // Re-throw redirect errors (Next.js uses throw for redirects)
+    if (err && typeof err === 'object' && 'digest' in err) throw err
+    const message = err instanceof Error ? err.message : 'Неизвестная ошибка'
+    return { error: `Ошибка: ${message}` }
   }
 
   redirect('/catalog')
@@ -123,7 +151,8 @@ export async function updateProductAction(
     return { error: 'Нет прав для редактирования' }
   }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('products')
     .update({
       ...parsed.data,

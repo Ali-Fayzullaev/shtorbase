@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { type Product, type Category } from '@/lib/types/database'
 import {
   createProductAction,
@@ -8,6 +8,7 @@ import {
   type ProductFormState,
 } from '@/lib/actions/product-mutations'
 import { cn } from '@/lib/utils/format'
+import { Plus, Trash2, ImageIcon } from 'lucide-react'
 
 interface ProductFormProps {
   categories: Category[]
@@ -18,6 +19,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const isEdit = !!product
   const action = isEdit ? updateProductAction : createProductAction
   const [state, formAction, isPending] = useActionState<ProductFormState, FormData>(action, null)
+  const [imageUrls, setImageUrls] = useState<string[]>([''])
 
   return (
     <form action={formAction} className="space-y-5">
@@ -152,6 +154,50 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         error={state?.fieldErrors?.note}
         placeholder="Например: «Режется от 1 м, шаг 0.5 м»"
       />
+
+      {/* Image URLs (only for creation) */}
+      {!isEdit && (
+        <div>
+          <label className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500 mb-2">
+            <ImageIcon size={13} />
+            Изображения (URL)
+          </label>
+          <div className="space-y-2">
+            {imageUrls.map((url, i) => (
+              <div key={i} className="flex gap-2">
+                <input
+                  name="image_urls"
+                  value={url}
+                  onChange={(e) => {
+                    const next = [...imageUrls]
+                    next[i] = e.target.value
+                    setImageUrls(next)
+                  }}
+                  placeholder="https://example.com/photo.jpg"
+                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all"
+                />
+                {imageUrls.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setImageUrls(imageUrls.filter((_, j) => j !== i))}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setImageUrls([...imageUrls, ''])}
+            className="mt-2 inline-flex items-center gap-1 text-[12px] text-indigo-500 hover:text-indigo-600 transition-colors"
+          >
+            <Plus size={13} />
+            Добавить ещё
+          </button>
+        </div>
+      )}
 
       {/* Submit */}
       <div className="flex items-center gap-3 pt-2">

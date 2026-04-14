@@ -1,7 +1,9 @@
 import { Header } from '@/components/layout/header'
-import { InviteForm } from '@/components/users/invite-form'
-import { UserRoleSelect, ToggleActiveButton } from '@/components/users/user-actions'
+import { CreateUserForm } from '@/components/users/create-user-form'
+import { RegistrationToggle } from '@/components/users/registration-toggle'
+import { UserRoleSelect, ToggleActiveButton, DeleteUserButton } from '@/components/users/user-actions'
 import { getUsers, getInviteTokens } from '@/lib/actions/users'
+import { isRegistrationAllowed } from '@/lib/actions/settings'
 import { requireProfile } from '@/lib/actions/profile'
 import { redirect } from 'next/navigation'
 import { formatDate } from '@/lib/utils/format'
@@ -21,22 +23,42 @@ const roleLabels: Record<UserRole, string> = {
   admin: 'Администратор',
 }
 
+function getDisplayName(name: string) {
+  if (name.includes('@')) return name.split('@')[0]
+  return name
+}
+
+function getInitials(name: string) {
+  const display = getDisplayName(name)
+  const parts = display.split(/[\s._-]+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return display.slice(0, 2).toUpperCase()
+}
+
 export default async function UsersPage() {
   const profile = await requireProfile()
   if (profile.role !== 'admin') redirect('/')
 
-  const [users, pendingInvites] = await Promise.all([getUsers(), getInviteTokens()])
+  const [users, pendingInvites, regAllowed] = await Promise.all([
+    getUsers(),
+    getInviteTokens(),
+    isRegistrationAllowed(),
+  ])
 
   return (
     <>
       <Header title="Пользователи" description={`${users.length} пользователей`} />
 
-      <div className="p-5 space-y-5">
-        <InviteForm />
+      <div className="p-4 sm:p-6 space-y-5">
+        {/* Registration toggle */}
+        <RegistrationToggle allowed={regAllowed} />
+
+        {/* Create user directly */}
+        <CreateUserForm />
 
         {/* Pending invites */}
         {pendingInvites.length > 0 && (
-          <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
             <h3 className="text-[13px] font-semibold text-amber-700 mb-3 flex items-center gap-1.5">
               <Clock size={14} />
               Ожидающие приглашения ({pendingInvites.length})
@@ -60,14 +82,14 @@ export default async function UsersPage() {
         )}
 
         {/* Users table */}
-        <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
                 <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Пользователь</th>
                 <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Роль</th>
                 <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Статус</th>
-                <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Зарегистрирован</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Дата</th>
                 <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Действия</th>
               </tr>
             </thead>
@@ -77,9 +99,14 @@ export default async function UsersPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-600 font-semibold text-xs">
-                        {user.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        {getInitials(user.full_name)}
                       </div>
-                      <span className="text-[13px] font-medium text-slate-700">{user.full_name}</span>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-slate-700 truncate">{getDisplayName(user.full_name)}</p>
+                        {user.id === profile.id && (
+                          <span className="text-[10px] text-slate-400">Вы</span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -97,11 +124,14 @@ export default async function UsersPage() {
                       {user.is_active ? 'Активен' : 'Неактивен'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-[13px] text-slate-400 tabular-nums">
+                  <td className="hidden sm:table-cell px-4 py-3 text-[13px] text-slate-400 tabular-nums">
                     {formatDate(user.created_at)}
                   </td>
                   <td className="px-4 py-3">
-                    <ToggleActiveButton userId={user.id} isActive={user.is_active} isSelf={user.id === profile.id} />
+                    <div className="flex items-center gap-1.5">
+                      <ToggleActiveButton userId={user.id} isActive={user.is_active} isSelf={user.id === profile.id} />
+                      <DeleteUserButton userId={user.id} userName={user.full_name} isSelf={user.id === profile.id} />
+                    </div>
                   </td>
                 </tr>
               ))}

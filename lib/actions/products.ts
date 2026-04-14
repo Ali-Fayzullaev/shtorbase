@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { type Product, type Category, type AuditLog } from '@/lib/types/database'
 
 // ============================================
@@ -159,9 +160,41 @@ export async function getCatalogProducts(params: CatalogParams = {}) {
   query = query.order('updated_at', { ascending: false }).range(from, to)
 
   const { data, count } = await query
+  const products = (data ?? []) as Product[]
+
+  // Fetch first image for each product
+  let thumbnails: Record<string, string> = {}
+  if (products.length > 0) {
+    const ids = products.map((p) => p.id)
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const admin = createAdminClient()
+    const { data: images } = await admin
+      .from('product_images')
+      .select('product_id, storage_path, url')
+      .in('product_id', ids)
+      .order('sort_order', { ascending: true })
+
+    if (images) {
+      for (const img of images) {
+        if (thumbnails[img.product_id]) continue // keep first only
+        if (img.url) {
+          thumbnails[img.product_id] = img.url
+        } else if (img.storage_path) {
+          const { data: urlData } = admin.storage.from('product-images').getPublicUrl(img.storage_path)
+          thumbnails[img.product_id] = urlData.publicUrl
+        }
+      }
+    }
+  }
+
+  // Attach thumbnail to each product
+  const productsWithThumbs = products.map((p) => ({
+    ...p,
+    thumbnail: thumbnails[p.id] ?? null,
+  }))
 
   return {
-    products: (data ?? []) as Product[],
+    products: productsWithThumbs,
     total: count ?? 0,
     page,
     pageSize,
@@ -204,9 +237,9 @@ export async function getProductAuditLogs(productId: string) {
 // Категории
 // ============================================
 export async function getCategories() {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data } = await supabase
+  const { data } = await admin
     .from('categories')
     .select('*')
     .order('sort_order')

@@ -2,11 +2,15 @@
 
 import { type Product } from '@/lib/types/database'
 import { formatPrice, formatStock, cn } from '@/lib/utils/format'
-import { AlertTriangle, ChevronRight } from 'lucide-react'
+import { AlertTriangle, ChevronRight, ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 
+interface ProductWithThumb extends Product {
+  thumbnail?: string | null
+}
+
 interface ProductTableProps {
-  products: Product[]
+  products: ProductWithThumb[]
 }
 
 export function ProductTable({ products }: ProductTableProps) {
@@ -51,16 +55,24 @@ export function ProductTable({ products }: ProductTableProps) {
                 {/* Товар */}
                 <td className="px-4 py-3">
                   <div className="flex items-start gap-3">
-                    <div
-                      className={cn(
-                        'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold',
-                        product.unit === 'meter'
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'bg-emerald-50 text-emerald-600'
-                      )}
-                    >
-                      {product.unit === 'meter' ? 'м' : 'шт'}
-                    </div>
+                    {product.thumbnail ? (
+                      <img
+                        src={product.thumbnail}
+                        alt={product.name}
+                        className="mt-0.5 h-9 w-9 shrink-0 rounded-lg object-cover ring-1 ring-slate-200/60"
+                      />
+                    ) : (
+                      <div
+                        className={cn(
+                          'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                          product.unit === 'meter'
+                            ? 'bg-blue-50 text-blue-400'
+                            : 'bg-emerald-50 text-emerald-400'
+                        )}
+                      >
+                        <ImageIcon size={16} />
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <Link
                         href={`/catalog/${product.id}`}

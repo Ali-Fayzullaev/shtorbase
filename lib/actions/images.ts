@@ -1,13 +1,13 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
-export async function uploadProductImage(productId: string, formData: FormData) {
+async function requireEditor() {
   const supabase = await createClient()
-
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Не авторизован' }
+  if (!user) return null
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -15,9 +15,24 @@ export async function uploadProductImage(productId: string, formData: FormData) 
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['manager', 'admin'].includes(profile.role)) {
-    return { error: 'Нет прав' }
-  }
+  if (!profile || !['manager', 'admin'].includes(profile.role)) return null
+  return user
+}
+
+async function getNextSortOrder(productId: string) {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('product_images')
+    .select('sort_order')
+    .eq('product_id', productId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+  return (data?.[0]?.sort_order ?? -1) + 1
+}
+
+export async function uploadProductImage(productId: string, formData: FormData) {
+  const user = await requireEditor()
+  if (!user) return { error: 'Нет прав' }
 
   const file = formData.get('image') as File
   if (!file || file.size === 0) return { error: 'Выберите файл' }
@@ -30,23 +45,16 @@ export async function uploadProductImage(productId: string, formData: FormData) 
 
   const path = `${productId}/${crypto.randomUUID()}.${ext}`
 
-  const { error: uploadError } = await supabase.storage
+  const admin = createAdminClient()
+  const { error: uploadError } = await admin.storage
     .from('product-images')
     .upload(path, file, { contentType: file.type })
 
   if (uploadError) return { error: 'Ошибка загрузки: ' + uploadError.message }
 
-  // Get current max sort_order
-  const { data: existing } = await supabase
-    .from('product_images')
-    .select('sort_order')
-    .eq('product_id', productId)
-    .order('sort_order', { ascending: false })
-    .limit(1)
+  const nextOrder = await getNextSortOrder(productId)
 
-  const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1
-
-  const { error: dbError } = await supabase
+  const { error: dbError } = await admin
     .from('product_images')
     .insert({
       product_id: productId,
@@ -60,38 +68,64 @@ export async function uploadProductImage(productId: string, formData: FormData) 
   return { success: true }
 }
 
-export async function deleteProductImage(imageId: string, storagePath: string, productId: string) {
-  const supabase = await createClient()
+export async function addProductImageUrl(productId: string, imageUrl: string) {
+  const user = await requireEditor()
+  if (!user) return { error: 'Нет прав' }
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Не авторизован' }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['manager', 'admin'].includes(profile.role)) {
-    return { error: 'Нет прав' }
+  // Basic URL validation
+  try {
+    new URL(imageUrl)
+  } catch {
+    return { error: 'Некорректный URL' }
   }
 
-  await supabase.storage.from('product-images').remove([storagePath])
+  const admin = createAdminClient()
+  const nextOrder = await getNextSortOrder(productId)
 
-  await supabase.from('product_images').delete().eq('id', imageId)
+  const { error } = await admin
+    .from('product_images')
+    .insert({
+      product_id: productId,
+      url: imageUrl,
+      sort_order: nextOrder,
+    })
+
+  if (error) return { error: 'Ошибка сохранения: ' + error.message }
+
+  revalidatePath(`/catalog/${productId}`)
+  return { success: true }
+}
+
+export async function deleteProductImage(imageId: string, storagePath: string | null, productId: string) {
+  const user = await requireEditor()
+  if (!user) return { error: 'Нет прав' }
+
+  const admin = createAdminClient()
+
+  if (storagePath) {
+    await admin.storage.from('product-images').remove([storagePath])
+  }
+
+  await admin.from('product_images').delete().eq('id', imageId)
 
   revalidatePath(`/catalog/${productId}`)
   return { success: true }
 }
 
 export async function getProductImages(productId: string) {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data } = await supabase
+  const { data } = await admin
     .from('product_images')
     .select('*')
     .eq('product_id', productId)
     .order('sort_order')
 
-  return data ?? []
+  if (!data) return []
+
+  // Return with resolved URLs
+  return data.map((img: { id: string; product_id: string; storage_path: string | null; url: string | null; sort_order: number; created_at: string }) => ({
+    ...img,
+    display_url: img.url ?? admin.storage.from('product-images').getPublicUrl(img.storage_path!).data.publicUrl,
+  }))
 }

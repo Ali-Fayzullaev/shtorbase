@@ -43,9 +43,12 @@ export interface Product {
 export interface ProductImage {
   id: string
   product_id: string
-  storage_path: string
+  storage_path: string | null
+  url: string | null
   sort_order: number
   created_at: string
+  /** Resolved display URL (file or external) */
+  display_url?: string
 }
 
 export interface AuditLog {
