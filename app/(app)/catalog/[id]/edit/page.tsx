@@ -2,6 +2,7 @@ import { Header } from '@/components/layout/header'
 import { ProductForm } from '@/components/products/product-form'
 import { DeleteProductButton } from '@/components/products/delete-product-button'
 import { getProductById, getCategories } from '@/lib/actions/products'
+import { getUnits, getCustomFields, getProductCustomValues } from '@/lib/actions/settings-data'
 import { requireProfile } from '@/lib/actions/profile'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -15,13 +16,21 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     redirect('/')
   }
 
-  const [product, categories] = await Promise.all([
+  const [product, categories, units, customFields] = await Promise.all([
     getProductById(id),
     getCategories(),
+    getUnits(),
+    getCustomFields(),
   ])
 
   if (!product) {
     notFound()
+  }
+
+  const customValuesRaw = await getProductCustomValues(product.id)
+  const initialCustomValues: Record<string, string> = {}
+  for (const cv of customValuesRaw) {
+    initialCustomValues[cv.field_id] = cv.value
   }
 
   return (
@@ -38,7 +47,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
       <div className="p-5 max-w-2xl space-y-5">
         <div className="rounded-xl border border-slate-200/80 bg-white p-5">
-          <ProductForm categories={categories} product={product} />
+          <ProductForm categories={categories} units={units} customFields={customFields} product={product} initialCustomValues={initialCustomValues} />
         </div>
 
         {profile.role === 'admin' && (

@@ -1,11 +1,13 @@
 export type UserRole = 'employee' | 'manager' | 'admin'
-export type ProductUnit = 'meter' | 'piece'
+export type ProductUnit = string
 export type ProductStatus = 'active' | 'hidden' | 'discontinued'
 export type AuditAction = 'create' | 'update' | 'delete'
+export type CustomFieldType = 'text' | 'number' | 'select'
 
 export interface Profile {
   id: string
   full_name: string
+  phone: string | null
   role: UserRole
   is_active: boolean
   created_at: string
@@ -64,4 +66,29 @@ export interface AuditLog {
   // Joined
   user?: Profile
   product?: Product
+}
+
+export interface Unit {
+  id: string
+  name: string
+  short_name: string
+  sort_order: number
+  created_at: string
+}
+
+export interface CustomField {
+  id: string
+  name: string
+  field_type: CustomFieldType
+  options: string[] | null
+  is_required: boolean
+  sort_order: number
+  created_at: string
+}
+
+export interface ProductCustomValue {
+  id: string
+  product_id: string
+  field_id: string
+  value: string
 }

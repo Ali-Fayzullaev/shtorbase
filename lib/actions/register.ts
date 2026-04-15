@@ -9,6 +9,7 @@ const RegisterSchema = z
   .object({
     full_name: z.string().min(2, 'Минимум 2 символа').max(100),
     email: z.string().email('Некорректный email'),
+    phone: z.string().regex(/^\+?[0-9]{10,15}$/, 'Введите номер: +77001234567').optional().or(z.literal('')),
     password: z.string().min(8, 'Минимум 8 символов'),
     password_confirm: z.string(),
   })
@@ -35,6 +36,7 @@ export async function registerAction(
   const parsed = RegisterSchema.safeParse({
     full_name: formData.get('full_name'),
     email: formData.get('email'),
+    phone: formData.get('phone') || '',
     password: formData.get('password'),
     password_confirm: formData.get('password_confirm'),
   })
@@ -55,6 +57,7 @@ export async function registerAction(
     options: {
       data: {
         full_name: parsed.data.full_name,
+        phone: parsed.data.phone || null,
         role: 'employee', // всегда employee при самостоятельной регистрации
       },
     },

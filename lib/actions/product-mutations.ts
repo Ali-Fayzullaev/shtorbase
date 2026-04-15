@@ -11,7 +11,7 @@ const ProductSchema = z.object({
   description: z.string().max(2000).nullable(),
   category_id: z.string().min(1, 'Выберите категорию').regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Неверный формат категории'),
   price: z.coerce.number().positive('Цена должна быть > 0'),
-  unit: z.enum(['meter', 'piece'], { message: 'Выберите единицу' }),
+  unit: z.string().min(1, 'Выберите единицу').max(50),
   stock: z.coerce.number().min(0, 'Остаток ≥ 0'),
   vat_included: z.coerce.boolean(),
   note: z.string().max(500).nullable(),
@@ -90,6 +90,38 @@ export async function createProductAction(
         }))
         await admin.from('product_images').insert(rows)
       }
+
+      // Save uploaded files
+      const files = formData.getAll('image_files') as File[]
+      let sortOffset = imageUrls.length
+      for (const file of files) {
+        if (!file || file.size === 0) continue
+        if (file.size > 5 * 1024 * 1024) continue // skip too large
+        const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+        const path = `${insertedProduct.id}/${crypto.randomUUID()}.${ext}`
+        const { error: uploadErr } = await admin.storage
+          .from('product-images')
+          .upload(path, file, { contentType: file.type })
+        if (!uploadErr) {
+          await admin.from('product_images').insert({
+            product_id: insertedProduct.id,
+            storage_path: path,
+            sort_order: sortOffset++,
+          })
+        }
+      }
+
+      // Save custom field values
+      const cfEntries: { field_id: string; value: string }[] = []
+      for (const [key, val] of formData.entries()) {
+        if (key.startsWith('cf_') && typeof val === 'string' && val.trim()) {
+          cfEntries.push({ field_id: key.slice(3), value: val })
+        }
+      }
+      if (cfEntries.length > 0) {
+        const { saveProductCustomValues } = await import('./settings-data')
+        await saveProductCustomValues(insertedProduct.id, cfEntries)
+      }
     }
   } catch (err) {
     // Re-throw redirect errors (Next.js uses throw for redirects)
@@ -160,6 +192,16 @@ export async function updateProductAction(
     }
     return { error: 'Не удалось обновить товар' }
   }
+
+  // Save custom field values
+  const cfEntries: { field_id: string; value: string }[] = []
+  for (const [key, val] of formData.entries()) {
+    if (key.startsWith('cf_') && typeof val === 'string') {
+      cfEntries.push({ field_id: key.slice(3), value: val })
+    }
+  }
+  const { saveProductCustomValues } = await import('./settings-data')
+  await saveProductCustomValues(productId, cfEntries)
 
   redirect(`/catalog/${productId}`)
 }
