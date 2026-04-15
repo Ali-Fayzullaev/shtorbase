@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useActionState, useState } from 'react'
 import { type Product, type Category } from '@/lib/types/database'
@@ -7,13 +7,21 @@ import {
   updateProductAction,
   type ProductFormState,
 } from '@/lib/actions/product-mutations'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { Plus, Trash2, ImageIcon, Loader2 } from 'lucide-react'
+
+const inputCls =
+  'flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50'
+const labelCls = 'text-sm font-medium leading-none'
+const selectCls =
+  'flex h-9 w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm shadow-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50'
+const btnPrimaryCls =
+  'inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50'
+const btnOutlineCls =
+  'inline-flex items-center justify-center rounded-lg border border-input bg-background text-sm shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50'
+const btnGhostCls =
+  'inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-1 text-sm transition-colors hover:bg-muted hover:text-foreground'
+const errCls = 'border-destructive focus-visible:ring-destructive/30'
 
 interface ProductFormProps {
   categories: Category[]
@@ -24,14 +32,23 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const isEdit = !!product
   const action = isEdit ? updateProductAction : createProductAction
   const [state, formAction, isPending] = useActionState<ProductFormState, FormData>(action, null)
+  const [sku, setSku] = useState(product?.sku ?? '')
+  const [name, setName] = useState(product?.name ?? '')
+  const [description, setDescription] = useState(product?.description ?? '')
+  const [note, setNote] = useState(product?.note ?? '')
+  const [price, setPrice] = useState(product?.price?.toString() ?? '')
+  const [stock, setStock] = useState(product?.stock?.toString() ?? '')
   const [imageUrls, setImageUrls] = useState<string[]>([''])
   const [vatIncluded, setVatIncluded] = useState(product?.vat_included ?? true)
+  const [categoryId, setCategoryId] = useState(product?.category_id ?? '')
+  const [unit, setUnit] = useState(product?.unit ?? '')
 
   return (
     <form action={formAction} className="space-y-6">
       {product && <input type="hidden" name="product_id" value={product.id} />}
-      {/* Hidden input for checkbox — base-ui Checkbox doesn't submit via FormData */}
       <input type="hidden" name="vat_included" value={vatIncluded ? 'on' : ''} />
+      <input type="hidden" name="category_id" value={categoryId} />
+      <input type="hidden" name="unit" value={unit} />
 
       {state?.error && (
         <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
@@ -42,26 +59,30 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       {/* SKU + Name */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="sku">Артикул</Label>
-          <Input
+          <label htmlFor="sku" className={labelCls}>Артикул</label>
+          <input
             id="sku"
             name="sku"
-            defaultValue={product?.sku}
+            type="text"
+            value={sku}
+            onChange={(e) => setSku(e.target.value)}
             placeholder="SH-0001"
-            className={cn('font-mono', state?.fieldErrors?.sku && 'border-destructive')}
+            className={cn(inputCls, 'font-mono', state?.fieldErrors?.sku && errCls)}
           />
           {state?.fieldErrors?.sku && (
             <p className="text-xs text-destructive">{state.fieldErrors.sku}</p>
           )}
         </div>
         <div className="sm:col-span-2 space-y-2">
-          <Label htmlFor="name">Название</Label>
-          <Input
+          <label htmlFor="name" className={labelCls}>Название</label>
+          <input
             id="name"
             name="name"
-            defaultValue={product?.name}
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             placeholder="Штора «Венеция» бархат"
-            className={cn(state?.fieldErrors?.name && 'border-destructive')}
+            className={cn(inputCls, state?.fieldErrors?.name && errCls)}
           />
           {state?.fieldErrors?.name && (
             <p className="text-xs text-destructive">{state.fieldErrors.name}</p>
@@ -69,24 +90,19 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         </div>
       </div>
 
-      {/* Category + Unit — native <select> for FormData compatibility */}
+      {/* Category + Unit */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="category_id">Категория</Label>
+          <label htmlFor="category_id" className={labelCls}>Категория</label>
           <select
             id="category_id"
-            name="category_id"
-            defaultValue={product?.category_id ?? ''}
-            className={cn(
-              'flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
-              state?.fieldErrors?.category_id && 'border-destructive ring-3 ring-destructive/20'
-            )}
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className={cn(selectCls, state?.fieldErrors?.category_id && errCls)}
           >
             <option value="">Выберите категорию</option>
             {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
           {state?.fieldErrors?.category_id && (
@@ -94,17 +110,13 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="unit">Единица измерения</Label>
+          <label htmlFor="unit" className={labelCls}>Единица измерения</label>
           <select
             id="unit"
-            name="unit"
-            defaultValue={product?.unit ?? ''}
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
             disabled={isEdit}
-            className={cn(
-              'flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
-              state?.fieldErrors?.unit && 'border-destructive ring-3 ring-destructive/20',
-              isEdit && 'opacity-50 cursor-not-allowed'
-            )}
+            className={cn(selectCls, state?.fieldErrors?.unit && errCls, isEdit && 'opacity-50 cursor-not-allowed')}
           >
             <option value="">Выберите</option>
             <option value="meter">Метр</option>
@@ -122,73 +134,78 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       {/* Price + Stock + VAT */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="price">Цена, ₸</Label>
-          <Input
+          <label htmlFor="price" className={labelCls}>Цена</label>
+          <input
             id="price"
             name="price"
             type="number"
             step="0.01"
             min="0"
-            defaultValue={product?.price?.toString()}
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
             placeholder="4500"
-            className={cn(state?.fieldErrors?.price && 'border-destructive')}
+            className={cn(inputCls, state?.fieldErrors?.price && errCls)}
           />
           {state?.fieldErrors?.price && (
             <p className="text-xs text-destructive">{state.fieldErrors.price}</p>
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="stock">Остаток</Label>
-          <Input
+          <label htmlFor="stock" className={labelCls}>Остаток</label>
+          <input
             id="stock"
             name="stock"
             type="number"
             step="0.1"
             min="0"
-            defaultValue={product?.stock?.toString()}
+            value={stock}
+            onChange={(e) => setStock(e.target.value)}
             placeholder="100"
-            className={cn(state?.fieldErrors?.stock && 'border-destructive')}
+            className={cn(inputCls, state?.fieldErrors?.stock && errCls)}
           />
           {state?.fieldErrors?.stock && (
             <p className="text-xs text-destructive">{state.fieldErrors.stock}</p>
           )}
         </div>
         <div className="space-y-2">
-          <Label>НДС</Label>
-          <div className="flex items-center gap-2 pt-1">
-            <Checkbox
-              id="vat_included"
+          <span className={labelCls}>НДС</span>
+          <label className="flex items-center gap-2 pt-1.5 cursor-pointer">
+            <input
+              type="checkbox"
               checked={vatIncluded}
-              onCheckedChange={(checked) => setVatIncluded(checked === true)}
+              onChange={(e) => setVatIncluded(e.target.checked)}
+              className="h-4 w-4 rounded border-input text-primary accent-primary"
             />
-            <Label htmlFor="vat_included" className="text-sm font-normal cursor-pointer">
-              Цена включает НДС
-            </Label>
-          </div>
+            <span className="text-sm text-foreground">Цена включает НДС</span>
+          </label>
         </div>
       </div>
 
       {/* Description */}
       <div className="space-y-2">
-        <Label htmlFor="description">Описание</Label>
-        <Textarea
+        <label htmlFor="description" className={labelCls}>Описание</label>
+        <textarea
           id="description"
           name="description"
-          defaultValue={product?.description ?? ''}
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder="Краткое описание товара..."
-          className="min-h-20 resize-none"
+          className={cn(inputCls, 'min-h-20 resize-none py-2')}
         />
       </div>
 
       {/* Note */}
       <div className="space-y-2">
-        <Label htmlFor="note">Заметка для сотрудников</Label>
-        <Input
+        <label htmlFor="note" className={labelCls}>Заметка для сотрудников</label>
+        <input
           id="note"
           name="note"
-          defaultValue={product?.note ?? ''}
-          placeholder="Например: «Режется от 1 м, шаг 0.5 м»"
-          className={cn(state?.fieldErrors?.note && 'border-destructive')}
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Например: Режется от 1 м, шаг 0.5 м"
+          className={cn(inputCls, state?.fieldErrors?.note && errCls)}
         />
         {state?.fieldErrors?.note && (
           <p className="text-xs text-destructive">{state.fieldErrors.note}</p>
@@ -198,15 +215,16 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       {/* Image URLs (only for creation) */}
       {!isEdit && (
         <div className="space-y-3">
-          <Label className="gap-1.5">
+          <span className={cn(labelCls, 'flex items-center gap-1.5')}>
             <ImageIcon size={14} />
             Изображения (URL)
-          </Label>
+          </span>
           <div className="space-y-2">
             {imageUrls.map((url, i) => (
               <div key={i} className="flex gap-2">
-                <Input
+                <input
                   name="image_urls"
+                  type="url"
                   value={url}
                   onChange={(e) => {
                     const next = [...imageUrls]
@@ -214,39 +232,38 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                     setImageUrls(next)
                   }}
                   placeholder="https://example.com/photo.jpg"
+                  className={inputCls}
                 />
                 {imageUrls.length > 1 && (
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="icon"
                     onClick={() => setImageUrls(imageUrls.filter((_, j) => j !== i))}
-                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                    className={cn(btnOutlineCls, 'h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive')}
                   >
                     <Trash2 size={14} />
-                  </Button>
+                  </button>
                 )}
               </div>
             ))}
           </div>
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
             onClick={() => setImageUrls([...imageUrls, ''])}
+            className={btnGhostCls}
           >
             <Plus size={14} />
             Добавить ещё
-          </Button>
+          </button>
         </div>
       )}
 
       {/* Submit */}
       <div className="flex items-center gap-3 pt-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending && <Loader2 size={14} className="animate-spin" />}
+        <button type="submit" disabled={isPending} className={btnPrimaryCls}>
           {isEdit ? 'Сохранить' : 'Создать товар'}
-        </Button>
+          {isPending && <Loader2 size={14} className="animate-spin" />}
+
+        </button>
       </div>
     </form>
   )

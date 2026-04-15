@@ -9,7 +9,7 @@ const ProductSchema = z.object({
   sku: z.string().min(2, 'Мин. 2 символа').max(50),
   name: z.string().min(2, 'Мин. 2 символа').max(200),
   description: z.string().max(2000).nullable(),
-  category_id: z.string().uuid('Выберите категорию'),
+  category_id: z.string().min(1, 'Выберите категорию').regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Неверный формат категории'),
   price: z.coerce.number().positive('Цена должна быть > 0'),
   unit: z.enum(['meter', 'piece'], { message: 'Выберите единицу' }),
   stock: z.coerce.number().min(0, 'Остаток ≥ 0'),

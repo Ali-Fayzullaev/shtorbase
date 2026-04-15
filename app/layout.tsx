@@ -28,7 +28,7 @@ export default function RootLayout({
       lang="ru"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="h-full bg-background text-foreground">
+      <body className="h-full bg-background text-foreground" suppressHydrationWarning>
         {children}
         <Toaster position="top-right" richColors />
       </body>
