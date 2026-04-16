@@ -1,6 +1,7 @@
 import { Header } from '@/components/layout/header'
 import { CatalogFilters } from '@/components/search/catalog-filters'
-import { ProductTable } from '@/components/products/product-table'
+import { CatalogGrid } from '@/components/catalog/catalog-grid'
+import { CartProvider, CartPanel } from '@/components/catalog/catalog-cart'
 import { Pagination } from '@/components/ui/pagination'
 import { PrintButton } from '@/components/ui/print-button'
 import { getCatalogProducts, getCategories } from '@/lib/actions/products'
@@ -31,7 +32,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   ])
 
   return (
-    <>
+    <CartProvider>
       <Header title="Каталог" description={`${total} товаров`}>
         <div className="flex items-center gap-2 no-print">
           <PrintButton />
@@ -53,11 +54,13 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           currentUnit={params.unit}
           currentStock={params.stock}
         />
-        <ProductTable products={products} />
+        <CatalogGrid products={products} />
         {totalPages > 1 && (
           <Pagination currentPage={page} totalPages={totalPages} />
         )}
       </div>
-    </>
+
+      <CartPanel />
+    </CartProvider>
   )
 }

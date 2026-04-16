@@ -70,7 +70,7 @@ export async function getOrder(id: string) {
   const admin = createAdminClient()
   const { data } = await admin
     .from('orders')
-    .select('*, client:clients(*), assigned_user:profiles!orders_assigned_to_fkey(*), created_user:profiles!orders_created_by_fkey(*)')
+    .select('*, client:clients(*), assigned_user:profiles!assigned_to(*), created_user:profiles!created_by(*)')
     .eq('id', id)
     .single()
 
@@ -201,6 +201,55 @@ export async function createOrderAction(
   }
 
   redirect('/orders')
+}
+
+// ============================================
+// Быстрый заказ из каталога (без redirect)
+// ============================================
+export async function createQuickOrder(
+  items: { product_id: string; quantity: number; unit_price: number }[],
+  note?: string
+): Promise<{ error?: string; success?: boolean }> {
+  try {
+    const { user } = await requireAuth()
+
+    if (!items.length) return { error: 'Добавьте хотя бы одну позицию' }
+
+    const validated = z.array(OrderItemSchema).parse(items)
+
+    const admin = createAdminClient()
+
+    const { data: order, error: orderErr } = await admin
+      .from('orders')
+      .insert({
+        note: note?.trim() || null,
+        created_by: user.id,
+      })
+      .select('id')
+      .single()
+
+    if (orderErr) return { error: `Не удалось создать заказ: ${orderErr.message}` }
+
+    const rows = validated.map((item) => ({
+      order_id: order.id,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      note: item.note || null,
+    }))
+
+    const { error: itemsErr } = await admin.from('order_items').insert(rows)
+    if (itemsErr) {
+      await admin.from('orders').delete().eq('id', order.id)
+      return { error: `Ошибка добавления позиций: ${itemsErr.message}` }
+    }
+
+    revalidatePath('/orders')
+    revalidatePath('/catalog')
+    return { success: true }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Неизвестная ошибка' }
+  }
 }
 
 // ============================================
