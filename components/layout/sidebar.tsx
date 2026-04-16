@@ -195,8 +195,8 @@ export function Sidebar({ role, userName }: SidebarProps) {
       {/* Mobile sidebar */}
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden" onClick={close} />
-          <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-zinc-100/50 shadow-2xl lg:hidden">
+          <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden animate-fade-in" onClick={close} />
+          <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-zinc-100/50 shadow-2xl lg:hidden animate-slide-in-left">
             {sidebarContent}
           </aside>
         </>

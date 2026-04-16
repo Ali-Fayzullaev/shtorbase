@@ -55,7 +55,7 @@ export default async function DashboardPage() {
 
       <LowStockAlert count={stats.lowStock + stats.outOfStock} />
 
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6 page-enter">
         {/* Welcome banner */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 p-6 text-white shadow-lg shadow-indigo-500/20">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
@@ -84,7 +84,7 @@ export default async function DashboardPage() {
               {userRole === 'employee' ? 'Мои заказы' : 'Заказы'}
             </h2>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
             <StatCard label="Всего" value={orderStats.total} icon={ClipboardList} color="indigo" />
             <StatCard label="Новые" value={orderStats.new} icon={Inbox} color="indigo" />
             <StatCard label="В работе" value={orderStats.inProgress} icon={Clock} color="amber" />
@@ -98,7 +98,7 @@ export default async function DashboardPage() {
             <div className="h-5 w-1 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500" />
             <h2 className="text-sm font-semibold text-zinc-700">Склад</h2>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
             <StatCard label="Всего товаров" value={stats.total} icon={Package} color="indigo" />
             <StatCard label="Активных" value={stats.active} icon={PackageCheck} color="emerald" />
             <StatCard label="Нет в наличии" value={stats.outOfStock} icon={PackageX} color="red" />

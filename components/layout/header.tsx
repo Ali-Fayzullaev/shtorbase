@@ -46,7 +46,7 @@ export function Header({ title, description, children }: HeaderProps) {
   return (
     <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md">
       <div className="flex h-14 items-center justify-between px-4 sm:px-6">
-        <div className="flex flex-col justify-center min-w-0 pl-10 lg:pl-0">
+        <div className="flex flex-col justify-center min-w-0">
           {/* Breadcrumbs */}
           {crumbs.length > 0 && (
             <nav className="flex items-center gap-1 text-[11px] text-zinc-400 -mb-0.5">
