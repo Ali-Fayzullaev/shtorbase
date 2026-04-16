@@ -3,8 +3,11 @@ import { OrdersTable } from '@/components/orders/orders-table'
 import { OrdersFilters } from '@/components/orders/orders-filters'
 import { Pagination } from '@/components/ui/pagination'
 import { getOrders, getOrderStats } from '@/lib/actions/orders'
+import { createClient } from '@/lib/supabase/server'
+import { type UserRole } from '@/lib/types/database'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 interface OrdersPageProps {
   searchParams: Promise<{
@@ -16,6 +19,16 @@ interface OrdersPageProps {
 
 export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const params = await searchParams
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  const userRole = (profile?.role ?? 'employee') as UserRole
 
   const [{ orders, total, page, totalPages }, stats] = await Promise.all([
     getOrders({
@@ -63,7 +76,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
           currentStatus={params.status}
           currentSearch={params.q}
         />
-        <OrdersTable orders={orders} />
+        <OrdersTable orders={orders} userRole={userRole} />
         {totalPages > 1 && (
           <Pagination currentPage={page} totalPages={totalPages} />
         )}

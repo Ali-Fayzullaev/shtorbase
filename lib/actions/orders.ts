@@ -40,7 +40,7 @@ export async function getOrders(params: OrdersParams = {}) {
 
   let query = admin
     .from('orders')
-    .select('*, client:clients(*), assigned_user:profiles!assigned_to(*), created_user:profiles!created_by(*)', { count: 'exact' })
+    .select('*, client:clients(*)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(from, to)
 
@@ -58,8 +58,29 @@ export async function getOrders(params: OrdersParams = {}) {
     console.error('getOrders error:', error)
   }
 
+  // FK assigned_to/created_by -> auth.users, not profiles.
+  // Fetch profiles separately.
+  const rows = data ?? []
+  const userIds = [...new Set(rows.flatMap((r) => [r.assigned_to, r.created_by]).filter(Boolean))] as string[]
+  let profileMap: Record<string, { id: string; full_name: string; role: string }> = {}
+  if (userIds.length > 0) {
+    const { data: profiles } = await admin
+      .from('profiles')
+      .select('id, full_name, role')
+      .in('id', userIds)
+    for (const p of profiles ?? []) {
+      profileMap[p.id] = p
+    }
+  }
+
+  const orders = rows.map((r) => ({
+    ...r,
+    assigned_user: r.assigned_to ? profileMap[r.assigned_to] ?? null : null,
+    created_user: r.created_by ? profileMap[r.created_by] ?? null : null,
+  }))
+
   return {
-    orders: (data ?? []) as Order[],
+    orders: orders as Order[],
     total: count ?? 0,
     page,
     totalPages: Math.ceil((count ?? 0) / perPage),
@@ -70,11 +91,24 @@ export async function getOrder(id: string) {
   const admin = createAdminClient()
   const { data } = await admin
     .from('orders')
-    .select('*, client:clients(*), assigned_user:profiles!assigned_to(*), created_user:profiles!created_by(*)')
+    .select('*, client:clients(*)')
     .eq('id', id)
     .single()
 
   if (!data) return null
+
+  // Fetch profiles for assigned_to / created_by
+  const userIds = [data.assigned_to, data.created_by].filter(Boolean) as string[]
+  let profileMap: Record<string, { id: string; full_name: string; role: string }> = {}
+  if (userIds.length > 0) {
+    const { data: profiles } = await admin
+      .from('profiles')
+      .select('id, full_name, role')
+      .in('id', userIds)
+    for (const p of profiles ?? []) {
+      profileMap[p.id] = p
+    }
+  }
 
   // Fetch items
   const { data: items } = await admin
@@ -83,7 +117,12 @@ export async function getOrder(id: string) {
     .eq('order_id', id)
     .order('created_at')
 
-  return { ...data, items: items ?? [] } as Order
+  return {
+    ...data,
+    assigned_user: data.assigned_to ? profileMap[data.assigned_to] ?? null : null,
+    created_user: data.created_by ? profileMap[data.created_by] ?? null : null,
+    items: items ?? [],
+  } as Order
 }
 
 // ============================================
@@ -255,37 +294,24 @@ export async function createQuickOrder(
 // ============================================
 // Обновление статуса
 // ============================================
-const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-  new: ['in_progress', 'cancelled'],
-  in_progress: ['ready', 'cancelled'],
-  ready: ['delivered', 'in_progress'],
-  delivered: [],
-  cancelled: ['new'],
-}
-
 export async function updateOrderStatus(orderId: string, newStatus: OrderStatus) {
   const { user, role } = await requireAuth()
-
-  const admin = createAdminClient()
-  const { data: order } = await admin
-    .from('orders')
-    .select('status, assigned_to')
-    .eq('id', orderId)
-    .single()
-
-  if (!order) return { error: 'Заказ не найден' }
-
-  const currentStatus = order.status as OrderStatus
-  const allowed = validTransitions[currentStatus]
-
-  if (!allowed.includes(newStatus)) {
-    return { error: `Нельзя перевести из "${currentStatus}" в "${newStatus}"` }
-  }
 
   // Только менеджер и админ могут менять статусы
   if (role === 'employee') {
     return { error: 'Только менеджер или админ может изменять статус заказа' }
   }
+
+  const admin = createAdminClient()
+  const { data: order } = await admin
+    .from('orders')
+    .select('status')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) return { error: 'Заказ не найден' }
+
+  if (order.status === newStatus) return { success: true }
 
   const { error } = await admin
     .from('orders')

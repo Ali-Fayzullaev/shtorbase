@@ -1,17 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { type Order, type OrderStatus } from '@/lib/types/database'
+import { useState, useTransition } from 'react'
+import { type Order, type OrderStatus, type UserRole } from '@/lib/types/database'
+import { updateOrderStatus } from '@/lib/actions/orders'
 import { cn } from '@/lib/utils/format'
-import { ClipboardList, User, Calendar } from 'lucide-react'
+import { ClipboardList, User, Calendar, ChevronDown, Loader2, Check } from 'lucide-react'
 
-const statusConfig: Record<OrderStatus, { label: string; color: string }> = {
-  new: { label: 'Новый', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  in_progress: { label: 'В работе', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  ready: { label: 'Готов', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  delivered: { label: 'Выдан', color: 'bg-slate-50 text-slate-500 border-slate-200' },
-  cancelled: { label: 'Отменён', color: 'bg-red-50 text-red-600 border-red-200' },
+const statusConfig: Record<OrderStatus, { label: string; color: string; dot: string }> = {
+  new: { label: 'Новый', color: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
+  in_progress: { label: 'В работе', color: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+  ready: { label: 'Готов', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  delivered: { label: 'Выдан', color: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
+  cancelled: { label: 'Отменён', color: 'bg-red-50 text-red-600 border-red-200', dot: 'bg-red-500' },
 }
+
+const allStatuses: OrderStatus[] = ['new', 'in_progress', 'ready', 'delivered', 'cancelled']
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -26,11 +30,95 @@ function formatPrice(amount: number) {
   return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'KZT', maximumFractionDigits: 0 }).format(amount)
 }
 
-interface OrdersTableProps {
-  orders: Order[]
+// ============================================
+// Status dropdown for managers/admins
+// ============================================
+function StatusDropdown({ order }: { order: Order }) {
+  const [open, setOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const current = statusConfig[order.status] ?? statusConfig.new
+
+  function handleChange(newStatus: OrderStatus) {
+    if (newStatus === order.status) {
+      setOpen(false)
+      return
+    }
+    startTransition(async () => {
+      await updateOrderStatus(order.id, newStatus)
+      setOpen(false)
+    })
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          setOpen(!open)
+        }}
+        disabled={isPending}
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all hover:shadow-sm',
+          current.color,
+          isPending && 'opacity-60'
+        )}
+      >
+        {isPending ? (
+          <Loader2 size={11} className="animate-spin" />
+        ) : (
+          <span className={cn('h-1.5 w-1.5 rounded-full', current.dot)} />
+        )}
+        {current.label}
+        <ChevronDown size={11} className={cn('transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false) }} />
+          <div className="absolute top-full left-0 mt-1.5 z-40 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-200/50 animate-in fade-in slide-in-from-top-1 duration-150">
+            {allStatuses.map((s) => {
+              const cfg = statusConfig[s]
+              const isActive = order.status === s
+              return (
+                <button
+                  key={s}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleChange(s)
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium transition-colors',
+                    isActive
+                      ? 'bg-slate-100 text-slate-800'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  )}
+                >
+                  <span className={cn('h-2 w-2 rounded-full', cfg.dot)} />
+                  <span className="flex-1 text-left">{cfg.label}</span>
+                  {isActive && <Check size={13} className="text-slate-400" />}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
-export function OrdersTable({ orders }: OrdersTableProps) {
+// ============================================
+// Table
+// ============================================
+interface OrdersTableProps {
+  orders: Order[]
+  userRole: UserRole
+}
+
+export function OrdersTable({ orders, userRole }: OrdersTableProps) {
+  const canChangeStatus = userRole === 'admin' || userRole === 'manager'
+
   if (orders.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center">
@@ -57,37 +145,46 @@ export function OrdersTable({ orders }: OrdersTableProps) {
         const status = statusConfig[order.status] ?? statusConfig.new
 
         return (
-          <Link
+          <div
             key={order.id}
-            href={`/orders/${order.id}`}
             className="grid sm:grid-cols-[80px_1fr_140px_120px_140px_100px] gap-2 sm:gap-3 px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors"
           >
             {/* Order number */}
             <div className="flex items-center gap-2 sm:gap-0">
-              <span className="text-sm font-bold text-slate-700">#{order.order_number}</span>
+              <Link href={`/orders/${order.id}`} className="text-sm font-bold text-slate-700 hover:text-indigo-600 transition-colors">
+                #{order.order_number}
+              </Link>
               {/* Mobile: show status badge inline */}
-              <span className={cn('sm:hidden inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium border', status.color)}>
-                {status.label}
-              </span>
+              {!canChangeStatus && (
+                <span className={cn('sm:hidden inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium border', status.color)}>
+                  <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+                  {status.label}
+                </span>
+              )}
             </div>
 
             {/* Client + Note */}
-            <div className="min-w-0">
+            <Link href={`/orders/${order.id}`} className="min-w-0">
               {order.client ? (
-                <p className="text-[13px] font-medium text-slate-800 truncate">{order.client.name}</p>
+                <p className="text-[13px] font-medium text-slate-800 truncate hover:text-indigo-600 transition-colors">{order.client.name}</p>
               ) : (
                 <p className="text-[13px] text-slate-400 italic">Без клиента</p>
               )}
               {order.note && (
                 <p className="text-[11px] text-slate-400 truncate mt-0.5">{order.note}</p>
               )}
-            </div>
+            </Link>
 
             {/* Status (desktop) */}
             <div className="hidden sm:flex items-center">
-              <span className={cn('inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium border', status.color)}>
-                {status.label}
-              </span>
+              {canChangeStatus ? (
+                <StatusDropdown order={order} />
+              ) : (
+                <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border', status.color)}>
+                  <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+                  {status.label}
+                </span>
+              )}
             </div>
 
             {/* Assigned */}
@@ -109,12 +206,13 @@ export function OrdersTable({ orders }: OrdersTableProps) {
             </div>
 
             {/* Amount */}
-            <div className="text-right">
+            <Link href={`/orders/${order.id}`} className="text-right">
               <span className="text-sm font-semibold text-slate-800">{formatPrice(order.total_amount)}</span>
-            </div>
+            </Link>
 
-            {/* Mobile row: date + assigned */}
+            {/* Mobile row: status + date + assigned */}
             <div className="flex items-center gap-3 sm:hidden text-[11px] text-slate-400">
+              {canChangeStatus && <StatusDropdown order={order} />}
               <span>{formatDate(order.created_at)}</span>
               {order.assigned_user && (
                 <span className="flex items-center gap-1">
@@ -122,7 +220,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 </span>
               )}
             </div>
-          </Link>
+          </div>
         )
       })}
     </div>

@@ -3,7 +3,7 @@
 import { type Product } from '@/lib/types/database'
 import { formatPrice, formatStock, unitLabel, cn } from '@/lib/utils/format'
 import { useCart } from '@/components/catalog/catalog-cart'
-import { ShoppingCart, Plus, Check, ImageIcon, AlertTriangle } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Check, ImageIcon, AlertTriangle, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import Link from 'next/link'
 
@@ -38,7 +38,7 @@ export function CatalogGrid({ products }: CatalogGridProps) {
 }
 
 function CatalogCard({ product }: { product: ProductWithThumb }) {
-  const { addItem, items } = useCart()
+  const { addItem, items, updateQuantity, removeItem } = useCart()
   const [justAdded, setJustAdded] = useState(false)
 
   const isLow = product.stock < 10 && product.stock > 0
@@ -147,38 +147,66 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
           </div>
         </div>
 
-        {/* Add to cart button */}
-        <button
-          onClick={handleAdd}
-          disabled={isOut}
-          className={cn(
-            'mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]',
-            isOut
-              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-              : justAdded
-                ? 'bg-emerald-500 text-white'
-                : inCart
-                  ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+        {/* Add to cart / quantity controls */}
+        {inCart && !justAdded ? (
+          <div className="mt-3 flex items-center gap-1.5">
+            <button
+              onClick={() => {
+                if (inCart.quantity <= 1) removeItem(product.id)
+                else updateQuantity(product.id, inCart.quantity - 1)
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+            >
+              {inCart.quantity <= 1 ? <Trash2 size={14} /> : <Minus size={14} />}
+            </button>
+            <input
+              type="number"
+              min={1}
+              max={product.stock}
+              value={inCart.quantity}
+              onChange={(e) => {
+                const v = Number(e.target.value)
+                if (v > 0) updateQuantity(product.id, Math.min(v, product.stock))
+              }}
+              className="h-9 flex-1 min-w-0 rounded-lg border border-slate-200 text-center text-sm font-semibold text-slate-800 tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            <button
+              onClick={() => updateQuantity(product.id, inCart.quantity + 1)}
+              disabled={inCart.quantity >= product.stock}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors disabled:opacity-40"
+            >
+              <Plus size={14} />
+            </button>
+            <span className="text-[11px] text-slate-400 shrink-0">
+              {product.unit === 'meter' ? 'м' : 'шт'}
+            </span>
+          </div>
+        ) : (
+          <button
+            onClick={handleAdd}
+            disabled={isOut}
+            className={cn(
+              'mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]',
+              isOut
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : justAdded
+                  ? 'bg-emerald-500 text-white'
                   : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
-          )}
-        >
-          {justAdded ? (
-            <>
-              <Check size={16} />
-              Добавлено!
-            </>
-          ) : inCart ? (
-            <>
-              <Plus size={16} />
-              Ещё ({inCart.quantity})
-            </>
-          ) : (
-            <>
-              <ShoppingCart size={16} />
-              В корзину
-            </>
-          )}
-        </button>
+            )}
+          >
+            {justAdded ? (
+              <>
+                <Check size={16} />
+                Добавлено!
+              </>
+            ) : (
+              <>
+                <ShoppingCart size={16} />
+                В корзину
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   )
