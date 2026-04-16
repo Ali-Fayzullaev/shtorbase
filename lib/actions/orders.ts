@@ -22,6 +22,46 @@ async function requireAuth() {
   return { user, role: profile?.role ?? 'employee' }
 }
 
+/** Reduce stock for each item in an order */
+async function deductStock(
+  admin: ReturnType<typeof createAdminClient>,
+  items: { product_id: string; quantity: number }[]
+) {
+  for (const item of items) {
+    const { data: product } = await admin
+      .from('products')
+      .select('stock')
+      .eq('id', item.product_id)
+      .single()
+    if (product) {
+      const newStock = Math.max(0, product.stock - item.quantity)
+      await admin.from('products').update({ stock: newStock }).eq('id', item.product_id)
+    }
+  }
+}
+
+/** Restore stock for each item in an order */
+async function restoreStock(
+  admin: ReturnType<typeof createAdminClient>,
+  orderId: string
+) {
+  const { data: items } = await admin
+    .from('order_items')
+    .select('product_id, quantity')
+    .eq('order_id', orderId)
+  if (!items?.length) return
+  for (const item of items) {
+    const { data: product } = await admin
+      .from('products')
+      .select('stock')
+      .eq('id', item.product_id)
+      .single()
+    if (product) {
+      await admin.from('products').update({ stock: product.stock + item.quantity }).eq('id', item.product_id)
+    }
+  }
+}
+
 // ============================================
 // Получение заказов
 // ============================================
@@ -70,11 +110,11 @@ export async function getOrders(params: OrdersParams = {}) {
   // Fetch profiles separately.
   const rows = data ?? []
   const userIds = [...new Set(rows.flatMap((r) => [r.assigned_to, r.created_by]).filter(Boolean))] as string[]
-  let profileMap: Record<string, { id: string; full_name: string; role: string }> = {}
+  let profileMap: Record<string, { id: string; full_name: string; role: string; phone: string | null }> = {}
   if (userIds.length > 0) {
     const { data: profiles } = await admin
       .from('profiles')
-      .select('id, full_name, role')
+      .select('id, full_name, role, phone')
       .in('id', userIds)
     for (const p of profiles ?? []) {
       profileMap[p.id] = p
@@ -107,11 +147,11 @@ export async function getOrder(id: string) {
 
   // Fetch profiles for assigned_to / created_by
   const userIds = [data.assigned_to, data.created_by].filter(Boolean) as string[]
-  let profileMap: Record<string, { id: string; full_name: string; role: string }> = {}
+  let profileMap: Record<string, { id: string; full_name: string; role: string; phone: string | null }> = {}
   if (userIds.length > 0) {
     const { data: profiles } = await admin
       .from('profiles')
-      .select('id, full_name, role')
+      .select('id, full_name, role, phone')
       .in('id', userIds)
     for (const p of profiles ?? []) {
       profileMap[p.id] = p
@@ -190,6 +230,9 @@ export async function createOrderAction(
 
     const clientId = formData.get('client_id') as string
     const assignedTo = formData.get('assigned_to') as string
+    const phone = formData.get('phone') as string
+    const phoneDigits = phone?.replace(/\D/g, '')
+    if (!phoneDigits || phoneDigits.length !== 11) return { error: 'Укажите полный номер телефона' }
 
     // Сотрудники автоматически назначаются исполнителями
     const finalAssignedTo = role === 'employee' ? user.id : (assignedTo || null)
@@ -218,6 +261,7 @@ export async function createOrderAction(
         client_id: clientId || null,
         assigned_to: finalAssignedTo,
         note: note?.trim() || null,
+        phone: phone?.trim() || null,
         created_by: user.id,
       })
       .select('id')
@@ -241,7 +285,11 @@ export async function createOrderAction(
       return { error: `Ошибка добавления позиций: ${itemsErr.message}` }
     }
 
+    // Deduct stock
+    await deductStock(admin, items)
+
     revalidatePath('/orders')
+    revalidatePath('/catalog')
   } catch (err) {
     if (err && typeof err === 'object' && 'digest' in err) throw err
     return { error: err instanceof Error ? err.message : 'Неизвестная ошибка' }
@@ -255,12 +303,15 @@ export async function createOrderAction(
 // ============================================
 export async function createQuickOrder(
   items: { product_id: string; quantity: number; unit_price: number }[],
-  note?: string
+  note?: string,
+  phone?: string
 ): Promise<{ error?: string; success?: boolean }> {
   try {
     const { user, role } = await requireAuth()
 
     if (!items.length) return { error: 'Добавьте хотя бы одну позицию' }
+    const phoneDigits = phone?.replace(/\D/g, '')
+    if (!phoneDigits || phoneDigits.length !== 11) return { error: 'Укажите полный номер телефона' }
 
     const validated = z.array(OrderItemSchema).parse(items)
 
@@ -270,6 +321,7 @@ export async function createQuickOrder(
       .from('orders')
       .insert({
         note: note?.trim() || null,
+        phone: phone!.trim(),
         created_by: user.id,
         assigned_to: role === 'employee' ? user.id : null,
       })
@@ -291,6 +343,9 @@ export async function createQuickOrder(
       await admin.from('orders').delete().eq('id', order.id)
       return { error: `Ошибка добавления позиций: ${itemsErr.message}` }
     }
+
+    // Deduct stock
+    await deductStock(admin, validated)
 
     revalidatePath('/orders')
     revalidatePath('/catalog')
@@ -321,6 +376,20 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
   if (!order) return { error: 'Заказ не найден' }
 
   if (order.status === newStatus) return { success: true }
+
+  // Restore stock when cancelling an active order
+  const cancelledSlugs = ['cancelled']
+  const wasCancelled = cancelledSlugs.includes(order.status)
+  const nowCancelled = cancelledSlugs.includes(newStatus)
+
+  if (!wasCancelled && nowCancelled) {
+    // Order is being cancelled → restore stock
+    await restoreStock(admin, orderId)
+  } else if (wasCancelled && !nowCancelled) {
+    // Order is being un-cancelled → deduct stock again
+    const { data: items } = await admin.from('order_items').select('product_id, quantity').eq('order_id', orderId)
+    if (items?.length) await deductStock(admin, items)
+  }
 
   const { error } = await admin
     .from('orders')
@@ -376,9 +445,17 @@ export async function deleteOrder(orderId: string) {
   if (role !== 'admin') return { error: 'Только администратор может удалять заказы' }
 
   const admin = createAdminClient()
+
+  // Check if order was not cancelled — if so, restore stock
+  const { data: order } = await admin.from('orders').select('status').eq('id', orderId).single()
+  if (order && order.status !== 'cancelled') {
+    await restoreStock(admin, orderId)
+  }
+
   const { error } = await admin.from('orders').delete().eq('id', orderId)
   if (error) return { error: `Ошибка: ${error.message}` }
 
   revalidatePath('/orders')
+  revalidatePath('/catalog')
   return { success: true }
 }

@@ -143,14 +143,14 @@ function RowActions({ order, userRole }: { order: Order; userRole: UserRole }) {
               Открыть заказ
             </Link>
 
-            {order.client?.phone && (
+            {(order.phone || order.client?.phone) && (
               <a
-                href={`tel:${order.client.phone}`}
+                href={`tel:${order.phone || order.client?.phone}`}
                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Phone size={13} />
-                Позвонить клиенту
+                Позвонить
               </a>
             )}
 
@@ -225,9 +225,10 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
       {/* Desktop header */}
-      <div className="hidden lg:grid grid-cols-[70px_1fr_140px_120px_130px_90px_36px] gap-3 px-4 py-2.5 bg-slate-50/50 border-b border-slate-100 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+      <div className="hidden lg:grid grid-cols-[60px_1fr_120px_130px_140px_120px_80px_36px] gap-2 px-4 py-2.5 bg-slate-50/50 border-b border-slate-100 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
         <span>№</span>
         <span>Клиент</span>
+        <span>Телефон</span>
         <span>Статус</span>
         <span>Исполнитель</span>
         <span>Дата</span>
@@ -241,14 +242,13 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
         return (
           <div
             key={order.id}
-            className="group grid lg:grid-cols-[70px_1fr_140px_120px_130px_90px_36px] gap-2 lg:gap-3 px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors"
+            className="group grid lg:grid-cols-[60px_1fr_120px_130px_140px_120px_80px_36px] gap-2 px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors"
           >
             {/* Order number */}
             <div className="flex items-center gap-2 lg:gap-0">
               <Link href={`/orders/${order.id}`} className="text-sm font-bold text-slate-700 hover:text-indigo-600 transition-colors">
                 #{order.order_number}
               </Link>
-              {/* Mobile: show status badge inline */}
               {!canChangeStatus && (
                 <span className={cn('lg:hidden inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium border', status.color)}>
                   <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
@@ -257,30 +257,34 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
               )}
             </div>
 
-            {/* Client + Phone + Note */}
+            {/* Client + Note */}
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Link href={`/orders/${order.id}`} className="min-w-0">
-                  {order.client ? (
-                    <p className="text-[13px] font-medium text-slate-800 truncate hover:text-indigo-600 transition-colors">{order.client.name}</p>
-                  ) : (
-                    <p className="text-[13px] text-slate-400 italic">Без клиента</p>
-                  )}
-                </Link>
-                {order.client?.phone && (
-                  <a
-                    href={`tel:${order.client.phone}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex-shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
-                    title={`Позвонить: ${order.client.phone}`}
-                  >
-                    <Phone size={11} />
-                    <span className="hidden sm:inline">{order.client.phone}</span>
-                  </a>
+              <Link href={`/orders/${order.id}`} className="min-w-0">
+                {order.client ? (
+                  <p className="text-[13px] font-medium text-slate-800 truncate hover:text-indigo-600 transition-colors">{order.client.name}</p>
+                ) : (
+                  <p className="text-[13px] text-slate-400 italic">Без клиента</p>
                 )}
-              </div>
+              </Link>
               {order.note && (
                 <p className="text-[11px] text-slate-400 truncate mt-0.5">{order.note}</p>
+              )}
+            </div>
+
+            {/* Phone */}
+            <div className="hidden lg:flex items-center">
+              {(order.phone || order.client?.phone) ? (
+                <a
+                  href={`tel:${order.phone || order.client?.phone}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 text-[12px] text-emerald-600 hover:text-emerald-700 transition-colors"
+                  title={`Позвонить: ${order.phone || order.client?.phone}`}
+                >
+                  <Phone size={11} />
+                  <span className="truncate">{order.phone || order.client?.phone}</span>
+                </a>
+              ) : (
+                <span className="text-slate-300 text-[12px]">—</span>
               )}
             </div>
 
@@ -297,14 +301,26 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
             </div>
 
             {/* Assigned */}
-            <div className="hidden lg:flex items-center gap-1.5 text-[12px] text-slate-500">
+            <div className="hidden lg:flex flex-col justify-center min-w-0">
               {order.assigned_user ? (
                 <>
-                  <User size={12} className="text-slate-400" />
-                  <span className="truncate">{order.assigned_user.full_name}</span>
+                  <span className="flex items-center gap-1.5 text-[12px] text-slate-600 truncate">
+                    <User size={12} className="text-slate-400 flex-shrink-0" />
+                    {order.assigned_user.full_name}
+                  </span>
+                  {order.assigned_user.phone && (
+                    <a
+                      href={`tel:${order.assigned_user.phone}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-1 text-[11px] text-emerald-600 hover:text-emerald-700 ml-[18px] transition-colors"
+                    >
+                      <Phone size={10} />
+                      {order.assigned_user.phone}
+                    </a>
+                  )}
                 </>
               ) : (
-                <span className="text-slate-300">—</span>
+                <span className="text-slate-300 text-[12px]">—</span>
               )}
             </div>
 
@@ -324,14 +340,24 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
               <RowActions order={order} userRole={userRole} />
             </div>
 
-            {/* Mobile row: status + phone + date + assigned + amount + actions */}
+            {/* Mobile row */}
             <div className="flex items-center gap-3 lg:hidden text-[11px] text-slate-400 flex-wrap">
               {canChangeStatus && <StatusDropdown order={order} statuses={statuses} statusMap={statusMap} />}
               <span className="font-semibold text-slate-700">{formatPrice(order.total_amount)}</span>
+              {(order.phone || order.client?.phone) && (
+                <a href={`tel:${order.phone || order.client?.phone}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-0.5 text-emerald-600">
+                  <Phone size={10} /> {order.phone || order.client?.phone}
+                </a>
+              )}
               <span>{formatDate(order.created_at)}</span>
               {order.assigned_user && (
                 <span className="flex items-center gap-1">
                   <User size={10} /> {order.assigned_user.full_name}
+                  {order.assigned_user.phone && (
+                    <a href={`tel:${order.assigned_user.phone}`} onClick={(e) => e.stopPropagation()} className="text-emerald-600">
+                      {order.assigned_user.phone}
+                    </a>
+                  )}
                 </span>
               )}
               <div className="ml-auto">

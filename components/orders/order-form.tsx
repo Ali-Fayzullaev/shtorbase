@@ -5,6 +5,7 @@ import { createOrderAction, type OrderFormState } from '@/lib/actions/orders'
 import { createNewClient as createClientAction } from '@/lib/actions/clients'
 import { type Client, type Product, type UserRole } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
+import { formatPhoneInput, isValidPhone } from '@/lib/utils/phone'
 import { Plus, Trash2, Search, Loader2, UserPlus, Package } from 'lucide-react'
 
 const inputCls =
@@ -34,6 +35,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
   const [clientId, setClientId] = useState('')
   const [assignedTo, setAssignedTo] = useState('')
   const [note, setNote] = useState('')
+  const [phone, setPhone] = useState('')
   const [items, setItems] = useState<OrderItem[]>([])
 
   // New client form
@@ -110,6 +112,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
     formData.set('client_id', clientId)
     formData.set('assigned_to', assignedTo)
     formData.set('note', note)
+    formData.set('phone', phone)
     formAction(formData)
   }
 
@@ -216,6 +219,22 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
           placeholder="Например: Доставка до 15:00, подъезд 2"
           className={inputCls}
         />
+      </div>
+
+      {/* Contact phone */}
+      <div className="space-y-2">
+        <label className={labelCls}>Контактный телефон <span className="text-red-500">*</span></label>
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
+          placeholder="87771234567"
+          required
+          className={cn(inputCls, phone && !isValidPhone(phone) && 'border-amber-400 focus-visible:border-amber-400 focus-visible:ring-amber-400/20')}
+        />
+        {phone && !isValidPhone(phone) && (
+          <p className="text-[12px] text-amber-600">Введите 11 цифр, например: 87771234567</p>
+        )}
       </div>
 
       {/* Product search + add items */}

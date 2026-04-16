@@ -126,6 +126,7 @@ export interface Order {
   status: OrderStatus
   assigned_to: string | null
   note: string | null
+  phone: string | null
   total_amount: number
   created_at: string
   updated_at: string

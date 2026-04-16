@@ -3,6 +3,7 @@
 import { useState, useTransition, createContext, useContext, useCallback, type ReactNode } from 'react'
 import { ShoppingCart, Trash2, Minus, Plus, X, Loader2, ShoppingBag } from 'lucide-react'
 import { formatPrice, cn } from '@/lib/utils/format'
+import { formatPhoneInput, isValidPhone } from '@/lib/utils/phone'
 import { createQuickOrder } from '@/lib/actions/orders'
 
 // ============================================
@@ -91,12 +92,17 @@ export function CartPanel() {
   const { items, removeItem, updateQuantity, clearCart, totalItems, totalAmount } = useCart()
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState('')
+  const [phone, setPhone] = useState('')
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   function handleSubmit() {
     if (items.length === 0) return
+    if (!isValidPhone(phone)) {
+      setError('Укажите полный номер телефона')
+      return
+    }
     setError(null)
 
     const orderItems = items.map((i) => ({
@@ -106,13 +112,14 @@ export function CartPanel() {
     }))
 
     startTransition(async () => {
-      const result = await createQuickOrder(orderItems, note || undefined)
+      const result = await createQuickOrder(orderItems, note || undefined, phone || undefined)
       if (result.error) {
         setError(result.error)
       } else {
         setSuccess(true)
         clearCart()
         setNote('')
+        setPhone('')
         setTimeout(() => {
           setSuccess(false)
           setOpen(false)
@@ -267,6 +274,23 @@ export function CartPanel() {
               rows={2}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 resize-none"
             />
+
+            <div className="space-y-1">
+              <input
+                type="tel"
+                placeholder="87771234567 *"
+                value={phone}
+                onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
+                required
+                className={cn(
+                  'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300',
+                  phone && !isValidPhone(phone) && 'border-amber-400 focus:border-amber-400 focus:ring-amber-400/20'
+                )}
+              />
+              {phone && !isValidPhone(phone) && (
+                <p className="text-[11px] text-amber-600">Введите 11 цифр, например: 87771234567</p>
+              )}
+            </div>
 
             <div className="flex items-center justify-between">
               <button
