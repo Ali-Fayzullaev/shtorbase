@@ -57,7 +57,7 @@ export function SettingsTabs({ categories, units, customFields, registrationAllo
         <div className="max-w-lg space-y-4">
           <div className="rounded-xl border border-slate-200/80 bg-white p-5">
             <h3 className="text-sm font-semibold text-slate-900 mb-3">Регистрация</h3>
-            <RegistrationToggle initialAllowed={registrationAllowed} />
+            <RegistrationToggle allowed={registrationAllowed} />
           </div>
         </div>
       )}

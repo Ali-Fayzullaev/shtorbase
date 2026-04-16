@@ -3,7 +3,7 @@
 -- ============================================
 
 -- 1. Таблица единиц измерения
-create table public.units (
+create table if not exists public.units (
   id uuid primary key default gen_random_uuid(),
   name text not null unique check (char_length(name) between 1 and 50),
   short_name text not null check (char_length(short_name) between 1 and 10),
@@ -13,16 +13,19 @@ create table public.units (
 
 -- Seed дефолтные единицы
 insert into public.units (id, name, short_name, sort_order) values
-  ('u1000000-0000-0000-0000-000000000001', 'Метр', 'м', 1),
-  ('u1000000-0000-0000-0000-000000000002', 'Штука', 'шт', 2);
+  ('a1000000-0000-0000-0000-000000000001', 'Метр', 'м', 1),
+  ('a1000000-0000-0000-0000-000000000002', 'Штука', 'шт', 2)
+on conflict (id) do nothing;
 
 -- RLS для units
 alter table public.units enable row level security;
+drop policy if exists "units_select" on public.units;
 create policy "units_select" on public.units for select using (true);
+drop policy if exists "units_all_admin" on public.units;
 create policy "units_all_admin" on public.units for all using (true) with check (true);
 
 -- 2. Кастомные поля товаров (метаданные)
-create table public.custom_fields (
+create table if not exists public.custom_fields (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(name) between 2 and 100),
   field_type text not null default 'text' check (field_type in ('text', 'number', 'select')),
@@ -33,11 +36,13 @@ create table public.custom_fields (
 );
 
 alter table public.custom_fields enable row level security;
+drop policy if exists "custom_fields_select" on public.custom_fields;
 create policy "custom_fields_select" on public.custom_fields for select using (true);
+drop policy if exists "custom_fields_all_admin" on public.custom_fields;
 create policy "custom_fields_all_admin" on public.custom_fields for all using (true) with check (true);
 
 -- 3. Значения кастомных полей для товаров
-create table public.product_custom_values (
+create table if not exists public.product_custom_values (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.products(id) on delete cascade,
   field_id uuid not null references public.custom_fields(id) on delete cascade,
@@ -46,7 +51,9 @@ create table public.product_custom_values (
 );
 
 alter table public.product_custom_values enable row level security;
+drop policy if exists "pcv_select" on public.product_custom_values;
 create policy "pcv_select" on public.product_custom_values for select using (true);
+drop policy if exists "pcv_all_admin" on public.product_custom_values;
 create policy "pcv_all_admin" on public.product_custom_values for all using (true) with check (true);
 
 -- 4. Добавляем phone в profiles
