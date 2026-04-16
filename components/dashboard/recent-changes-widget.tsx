@@ -18,33 +18,33 @@ const fieldNames: Record<string, string> = {
 
 export function RecentChangesWidget({ logs }: RecentChangesWidgetProps) {
   return (
-    <div className="rounded-xl bg-white border border-slate-200 overflow-hidden">
-      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100">
+    <div className="rounded-2xl bg-white border border-zinc-200/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-zinc-100 bg-gradient-to-r from-indigo-50/50 to-transparent">
         <History size={15} className="text-indigo-500" />
-        <h3 className="text-sm font-semibold text-slate-900">Последние изменения</h3>
+        <h3 className="text-sm font-semibold text-zinc-900">Последние изменения</h3>
       </div>
-      <div className="divide-y divide-slate-50">
+      <div className="divide-y divide-zinc-50">
         {logs.length === 0 ? (
           <div className="px-5 py-8 text-center">
-            <p className="text-sm text-slate-400">Нет изменений</p>
+            <p className="text-sm text-zinc-400">Нет изменений</p>
           </div>
         ) : (
           logs.map((log) => (
-            <div key={log.id} className="px-5 py-2.5 hover:bg-slate-50 transition-colors">
+            <div key={log.id} className="px-5 py-2.5 hover:bg-zinc-50 transition-colors">
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-xs font-medium text-slate-700">{log.user?.full_name}</span>
-                <span className="text-[11px] text-slate-400 tabular-nums">{formatDateShort(log.created_at)}</span>
+                <span className="text-xs font-medium text-zinc-700">{log.user?.full_name}</span>
+                <span className="text-[11px] text-zinc-400 tabular-nums">{formatDateShort(log.created_at)}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                <span className="font-mono text-slate-400">{log.product?.sku}</span>
-                <span className="text-slate-300">·</span>
+              <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                <span className="font-mono text-zinc-400">{log.product?.sku}</span>
+                <span className="text-zinc-300">·</span>
                 <span>{fieldNames[log.field_name] || log.field_name}</span>
                 {log.old_value && (
                   <>
                     <span className="text-red-400 line-through">
                       {log.field_name === 'price' ? `${formatPrice(Number(log.old_value))} ₸` : log.old_value}
                     </span>
-                    <ArrowRight size={9} className="text-slate-300" />
+                    <ArrowRight size={9} className="text-zinc-300" />
                   </>
                 )}
                 <span className="text-emerald-600 font-medium">

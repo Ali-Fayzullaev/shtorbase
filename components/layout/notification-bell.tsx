@@ -51,7 +51,7 @@ export function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => { setOpen(!open); if (!open) load() }}
-        className="relative p-2 text-slate-500 hover:text-slate-700 rounded-md hover:bg-slate-100"
+        className="relative p-2 text-zinc-500 hover:text-zinc-700 rounded-md hover:bg-zinc-100"
       >
         <Bell className="h-5 w-5" />
         {unread > 0 && (
@@ -62,9 +62,9 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-50 max-h-96 overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100">
-            <span className="text-sm font-semibold text-slate-700">Уведомления</span>
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-zinc-200 z-50 max-h-96 overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-100">
+            <span className="text-sm font-semibold text-zinc-700">Уведомления</span>
             {unread > 0 && (
               <button onClick={handleMarkAll} className="text-xs text-blue-600 hover:text-blue-800">
                 Прочитать все
@@ -73,24 +73,24 @@ export function NotificationBell() {
           </div>
           <div className="overflow-y-auto flex-1">
             {notifications.length === 0 ? (
-              <p className="p-4 text-sm text-slate-400 text-center">Нет уведомлений</p>
+              <p className="p-4 text-sm text-zinc-400 text-center">Нет уведомлений</p>
             ) : (
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`px-4 py-3 border-b border-slate-50 hover:bg-slate-50 ${!n.is_read ? 'bg-blue-50/50' : ''}`}
+                  className={`px-4 py-3 border-b border-zinc-50 hover:bg-zinc-50 ${!n.is_read ? 'bg-blue-50/50' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       {n.link ? (
-                        <Link href={n.link} onClick={() => { handleMarkRead(n.id); setOpen(false) }} className="text-sm font-medium text-slate-800 hover:text-blue-600">
+                        <Link href={n.link} onClick={() => { handleMarkRead(n.id); setOpen(false) }} className="text-sm font-medium text-zinc-800 hover:text-blue-600">
                           {n.title}
                         </Link>
                       ) : (
-                        <p className="text-sm font-medium text-slate-800">{n.title}</p>
+                        <p className="text-sm font-medium text-zinc-800">{n.title}</p>
                       )}
-                      <p className="text-xs text-slate-500 mt-0.5">{n.message}</p>
-                      <p className="text-[10px] text-slate-400 mt-1">
+                      <p className="text-xs text-zinc-500 mt-0.5">{n.message}</p>
+                      <p className="text-[10px] text-zinc-400 mt-1">
                         {new Date(n.created_at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>

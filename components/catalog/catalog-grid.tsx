@@ -19,17 +19,17 @@ export function CatalogGrid({ products }: CatalogGridProps) {
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="rounded-full bg-slate-100 p-5 mb-4">
-          <ShoppingCart size={28} className="text-slate-400" />
+        <div className="rounded-full bg-zinc-100 p-5 mb-4">
+          <ShoppingCart size={28} className="text-zinc-400" />
         </div>
-        <p className="text-base font-semibold text-slate-600">Товары не найдены</p>
-        <p className="text-sm text-slate-400 mt-1">Попробуйте изменить фильтры или поиск</p>
+        <p className="text-base font-semibold text-zinc-600">Товары не найдены</p>
+        <p className="text-sm text-zinc-400 mt-1">Попробуйте изменить фильтры или поиск</p>
       </div>
     )
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {products.map((product) => (
         <CatalogCard key={product.id} product={product} />
       ))}
@@ -61,18 +61,18 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
   }
 
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-slate-200/80 bg-white overflow-hidden transition-all hover:shadow-lg hover:shadow-slate-200/50 hover:border-slate-300">
+    <div className="group relative flex flex-col rounded-2xl bg-white shadow-sm shadow-zinc-200/50 ring-1 ring-zinc-100 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-zinc-200/60 hover:-translate-y-1 hover:ring-zinc-200">
       {/* Image / placeholder */}
-      <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="relative aspect-[4/3] bg-gradient-to-br from-zinc-50 to-zinc-100 overflow-hidden">
         {product.thumbnail ? (
           <img
             src={product.thumbnail}
             alt={product.name}
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <ImageIcon size={40} className="text-slate-300" />
+            <ImageIcon size={40} className="text-zinc-200" />
           </div>
         )}
 
@@ -107,43 +107,44 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
         {/* Category + SKU */}
         <div className="flex items-center gap-2 mb-2">
           {product.category && (
-            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+            <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500">
               {product.category.name}
             </span>
           )}
-          <span className="font-mono text-[11px] text-slate-400">{product.sku}</span>
+          <span className="font-mono text-[11px] text-zinc-400">{product.sku}</span>
         </div>
 
         {/* Name */}
         <Link
           href={`/catalog/${product.id}`}
-          className="text-[15px] font-semibold text-slate-800 leading-snug hover:text-indigo-600 transition-colors line-clamp-2 mb-auto"
+          className="text-[15px] font-semibold text-zinc-800 leading-snug hover:text-indigo-600 transition-colors line-clamp-2 mb-auto"
         >
           {product.name}
         </Link>
 
         {/* Price + Stock row */}
-        <div className="flex items-end justify-between mt-3 pt-3 border-t border-slate-100">
+        <div className="flex items-end justify-between mt-3 pt-3 border-t border-zinc-100">
           <div>
-            <p className="text-xl font-bold text-slate-800 tabular-nums">
-              {formatPrice(product.price)} <span className="text-sm font-semibold text-slate-400">₸</span>
-            </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <div className="inline-flex items-baseline gap-1 rounded-lg bg-gradient-to-r from-indigo-50 to-violet-50 px-2.5 py-1">
+              <span className="text-lg font-bold text-indigo-700 tabular-nums">{formatPrice(product.price)}</span>
+              <span className="text-xs font-semibold text-indigo-400">₸</span>
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-1">
               {unitLabel(product.unit)} · {product.vat_included ? 'НДС' : 'без НДС'}
             </p>
           </div>
           <div className="text-right">
             <p
               className={cn(
-                'text-sm font-semibold tabular-nums',
+                'text-sm font-bold tabular-nums',
                 isOut && 'text-red-500',
                 isLow && 'text-amber-600',
-                !isOut && !isLow && 'text-slate-700'
+                !isOut && !isLow && 'text-zinc-700'
               )}
             >
               {isOut ? '0' : formatStock(product.stock, product.unit)}
             </p>
-            <p className="text-[11px] text-slate-400">в наличии</p>
+            <p className="text-[11px] text-zinc-400">в наличии</p>
           </div>
         </div>
 
@@ -155,7 +156,7 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
                 if (inCart.quantity <= 1) removeItem(product.id)
                 else updateQuantity(product.id, inCart.quantity - 1)
               }}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700 transition-colors"
             >
               {inCart.quantity <= 1 ? <Trash2 size={14} /> : <Minus size={14} />}
             </button>
@@ -168,16 +169,16 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
                 const v = Number(e.target.value)
                 if (v > 0) updateQuantity(product.id, Math.min(v, product.stock))
               }}
-              className="h-9 flex-1 min-w-0 rounded-lg border border-slate-200 text-center text-sm font-semibold text-slate-800 tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="h-9 flex-1 min-w-0 rounded-lg border border-zinc-200 text-center text-sm font-semibold text-zinc-800 tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
             <button
               onClick={() => updateQuantity(product.id, inCart.quantity + 1)}
               disabled={inCart.quantity >= product.stock}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors disabled:opacity-40"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700 transition-colors disabled:opacity-40"
             >
               <Plus size={14} />
             </button>
-            <span className="text-[11px] text-slate-400 shrink-0">
+            <span className="text-[11px] text-zinc-400 shrink-0">
               {product.unit === 'meter' ? 'м' : 'шт'}
             </span>
           </div>
@@ -186,12 +187,12 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
             onClick={handleAdd}
             disabled={isOut}
             className={cn(
-              'mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]',
+              'mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.97]',
               isOut
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
                 : justAdded
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                  : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:shadow-lg hover:shadow-indigo-500/30 shadow-sm'
             )}
           >
             {justAdded ? (
