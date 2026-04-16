@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { type Category, type Unit, type CustomField } from '@/lib/types/database'
+import { type Category, type Unit, type CustomField, type OrderStatusConfig } from '@/lib/types/database'
 
 // ============================================
 // Auth helper
@@ -283,4 +283,110 @@ export async function saveProductCustomValues(
   if (rows.length > 0) {
     await admin.from('product_custom_values').insert(rows)
   }
+}
+
+// ============================================
+// Order Statuses CRUD
+// ============================================
+export async function getOrderStatuses() {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('order_statuses')
+    .select('*')
+    .order('sort_order')
+  return (data ?? []) as OrderStatusConfig[]
+}
+
+export async function createOrderStatus(slug: string, label: string, color: string, dotColor: string) {
+  await requireAdmin()
+  const admin = createAdminClient()
+
+  const { data: maxOrder } = await admin
+    .from('order_statuses')
+    .select('sort_order')
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .single()
+
+  const { error } = await admin.from('order_statuses').insert({
+    slug: slug.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_|_$/g, ''),
+    label,
+    color,
+    dot_color: dotColor,
+    sort_order: (maxOrder?.sort_order ?? 0) + 1,
+    is_default: false,
+  })
+
+  if (error) {
+    if (error.code === '23505') return { error: 'Статус с таким slug уже существует' }
+    return { error: error.message }
+  }
+
+  revalidatePath('/settings')
+  revalidatePath('/orders')
+  return { success: true }
+}
+
+export async function updateOrderStatus(id: string, label: string, color: string, dotColor: string) {
+  await requireAdmin()
+  const admin = createAdminClient()
+
+  const { error } = await admin
+    .from('order_statuses')
+    .update({ label, color, dot_color: dotColor })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/settings')
+  revalidatePath('/orders')
+  return { success: true }
+}
+
+export async function deleteOrderStatus(id: string) {
+  await requireAdmin()
+  const admin = createAdminClient()
+
+  // Get the status slug
+  const { data: status } = await admin
+    .from('order_statuses')
+    .select('slug')
+    .eq('id', id)
+    .single()
+
+  if (!status) return { error: 'Статус не найден' }
+
+  // Check if any orders use this status
+  const { count } = await admin
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', status.slug)
+
+  if (count && count > 0) {
+    return { error: `Нельзя удалить: ${count} заказов имеют этот статус` }
+  }
+
+  const { error } = await admin.from('order_statuses').delete().eq('id', id)
+  if (error) return { error: error.message }
+
+  revalidatePath('/settings')
+  revalidatePath('/orders')
+  return { success: true }
+}
+
+export async function reorderStatuses(orderedIds: string[]) {
+  await requireAdmin()
+  const admin = createAdminClient()
+
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await admin
+      .from('order_statuses')
+      .update({ sort_order: i + 1 })
+      .eq('id', orderedIds[i])
+    if (error) return { error: error.message }
+  }
+
+  revalidatePath('/settings')
+  revalidatePath('/orders')
+  return { success: true }
 }

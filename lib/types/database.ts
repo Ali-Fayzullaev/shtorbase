@@ -96,7 +96,17 @@ export interface ProductCustomValue {
 // ============================================
 // Заказы и клиенты
 // ============================================
-export type OrderStatus = 'new' | 'in_progress' | 'ready' | 'delivered' | 'cancelled'
+export type OrderStatus = string
+
+export interface OrderStatusConfig {
+  id: string
+  slug: string
+  label: string
+  color: string
+  dot_color: string
+  sort_order: number
+  is_default: boolean
+}
 
 export interface Client {
   id: string

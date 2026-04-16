@@ -29,6 +29,9 @@ export interface OrdersParams {
   status?: string
   search?: string
   page?: number
+  /** When role=employee, only show orders assigned to or created by this user */
+  userId?: string
+  userRole?: string
 }
 
 export async function getOrders(params: OrdersParams = {}) {
@@ -43,6 +46,11 @@ export async function getOrders(params: OrdersParams = {}) {
     .select('*, client:clients(*)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(from, to)
+
+  // Employees see only their own orders (assigned or created)
+  if (params.userRole === 'employee' && params.userId) {
+    query = query.or(`assigned_to.eq.${params.userId},created_by.eq.${params.userId}`)
+  }
 
   if (params.status && params.status !== 'all') {
     query = query.eq('status', params.status)
@@ -128,26 +136,26 @@ export async function getOrder(id: string) {
 // ============================================
 // Dashboard stats
 // ============================================
-export async function getOrderStats() {
+export async function getOrderStats(userId?: string, userRole?: string) {
   const admin = createAdminClient()
 
-  const { count: total } = await admin
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
+  function baseQuery() {
+    let q = admin.from('orders').select('*', { count: 'exact', head: true })
+    if (userRole === 'employee' && userId) {
+      q = q.or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
+    }
+    return q
+  }
 
-  const { count: newCount } = await admin
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
+  const { count: total } = await baseQuery()
+
+  const { count: newCount } = await baseQuery()
     .eq('status', 'new')
 
-  const { count: inProgress } = await admin
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
+  const { count: inProgress } = await baseQuery()
     .eq('status', 'in_progress')
 
-  const { count: ready } = await admin
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
+  const { count: ready } = await baseQuery()
     .eq('status', 'ready')
 
   return {
@@ -183,8 +191,8 @@ export async function createOrderAction(
     const clientId = formData.get('client_id') as string
     const assignedTo = formData.get('assigned_to') as string
 
-    // Сотрудники не могут назначать исполнителей
-    const finalAssignedTo = role === 'employee' ? null : (assignedTo || null)
+    // Сотрудники автоматически назначаются исполнителями
+    const finalAssignedTo = role === 'employee' ? user.id : (assignedTo || null)
     const note = formData.get('note') as string
 
     // Parse items from form
@@ -250,7 +258,7 @@ export async function createQuickOrder(
   note?: string
 ): Promise<{ error?: string; success?: boolean }> {
   try {
-    const { user } = await requireAuth()
+    const { user, role } = await requireAuth()
 
     if (!items.length) return { error: 'Добавьте хотя бы одну позицию' }
 
@@ -263,6 +271,7 @@ export async function createQuickOrder(
       .insert({
         note: note?.trim() || null,
         created_by: user.id,
+        assigned_to: role === 'employee' ? user.id : null,
       })
       .select('id')
       .single()
@@ -354,6 +363,7 @@ export async function getEmployees() {
     .from('profiles')
     .select('id, full_name, role')
     .eq('is_active', true)
+    .eq('role', 'employee')
     .order('full_name')
   return (data ?? []) as { id: string; full_name: string; role: string }[]
 }

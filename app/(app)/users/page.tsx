@@ -2,14 +2,13 @@ import { Header } from '@/components/layout/header'
 import { CreateUserForm } from '@/components/users/create-user-form'
 import { RegistrationToggle } from '@/components/users/registration-toggle'
 import { UserRoleSelect, ToggleActiveButton, DeleteUserButton } from '@/components/users/user-actions'
-import { getUsers, getInviteTokens } from '@/lib/actions/users'
+import { getUsers } from '@/lib/actions/users'
 import { isRegistrationAllowed } from '@/lib/actions/settings'
 import { requireProfile } from '@/lib/actions/profile'
 import { redirect } from 'next/navigation'
 import { formatDate } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/format'
 import { type UserRole } from '@/lib/types/database'
-import { Clock, Mail } from 'lucide-react'
 
 const roleColors: Record<UserRole, string> = {
   employee: 'bg-blue-50 text-blue-600 ring-1 ring-blue-200',
@@ -39,9 +38,8 @@ export default async function UsersPage() {
   const profile = await requireProfile()
   if (profile.role !== 'admin') redirect('/')
 
-  const [users, pendingInvites, regAllowed] = await Promise.all([
+  const [users, regAllowed] = await Promise.all([
     getUsers(),
-    getInviteTokens(),
     isRegistrationAllowed(),
   ])
 
@@ -55,31 +53,6 @@ export default async function UsersPage() {
 
         {/* Create user directly */}
         <CreateUserForm />
-
-        {/* Pending invites */}
-        {pendingInvites.length > 0 && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-            <h3 className="text-[13px] font-semibold text-amber-700 mb-3 flex items-center gap-1.5">
-              <Clock size={14} />
-              Ожидающие приглашения ({pendingInvites.length})
-            </h3>
-            <div className="space-y-2">
-              {pendingInvites.map((invite: { id: string; email: string; full_name: string; role: string; expires_at: string }) => (
-                <div key={invite.id} className="flex items-center gap-3 rounded-lg bg-white/80 border border-amber-100 px-3 py-2">
-                  <Mail size={14} className="text-amber-500 shrink-0" />
-                  <span className="text-[13px] font-medium text-slate-700">{invite.full_name}</span>
-                  <span className="text-[12px] text-slate-400">{invite.email}</span>
-                  <span className={cn('rounded px-1.5 py-[1px] text-[10px] font-medium', roleColors[invite.role as UserRole])}>
-                    {roleLabels[invite.role as UserRole]}
-                  </span>
-                  <span className="ml-auto text-[11px] text-slate-400">
-                    до {formatDate(invite.expires_at)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Users table */}
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">

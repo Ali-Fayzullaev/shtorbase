@@ -3,6 +3,7 @@ import { OrdersTable } from '@/components/orders/orders-table'
 import { OrdersFilters } from '@/components/orders/orders-filters'
 import { Pagination } from '@/components/ui/pagination'
 import { getOrders, getOrderStats } from '@/lib/actions/orders'
+import { getOrderStatuses } from '@/lib/actions/settings-data'
 import { createClient } from '@/lib/supabase/server'
 import { type UserRole } from '@/lib/types/database'
 import { Plus } from 'lucide-react'
@@ -30,18 +31,24 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
     .single()
   const userRole = (profile?.role ?? 'employee') as UserRole
 
-  const [{ orders, total, page, totalPages }, stats] = await Promise.all([
+  const [{ orders, total, page, totalPages }, stats, orderStatuses] = await Promise.all([
     getOrders({
       status: params.status,
       search: params.q,
       page: params.page ? parseInt(params.page) : 1,
+      userId: user.id,
+      userRole,
     }),
-    getOrderStats(),
+    getOrderStats(user.id, userRole),
+    getOrderStatuses(),
   ])
 
   return (
     <>
-      <Header title="Заказы" description={`${total} заказов`}>
+      <Header
+        title={userRole === 'employee' ? 'Мои заказы' : 'Заказы'}
+        description={userRole === 'employee' ? `${total} назначенных вам` : `${total} заказов`}
+      >
         <Link
           href="/orders/new"
           className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 transition-colors"
@@ -75,8 +82,9 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         <OrdersFilters
           currentStatus={params.status}
           currentSearch={params.q}
+          statuses={orderStatuses}
         />
-        <OrdersTable orders={orders} userRole={userRole} />
+        <OrdersTable orders={orders} userRole={userRole} statuses={orderStatuses} />
         {totalPages > 1 && (
           <Pagination currentPage={page} totalPages={totalPages} />
         )}

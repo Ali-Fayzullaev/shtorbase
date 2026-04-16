@@ -3,26 +3,24 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { Search, X } from 'lucide-react'
+import { type OrderStatusConfig } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
-
-const statuses = [
-  { value: 'all', label: 'Все' },
-  { value: 'new', label: 'Новые' },
-  { value: 'in_progress', label: 'В работе' },
-  { value: 'ready', label: 'Готовы' },
-  { value: 'delivered', label: 'Выданы' },
-  { value: 'cancelled', label: 'Отменены' },
-]
 
 interface OrdersFiltersProps {
   currentStatus?: string
   currentSearch?: string
+  statuses: OrderStatusConfig[]
 }
 
-export function OrdersFilters({ currentStatus, currentSearch }: OrdersFiltersProps) {
+export function OrdersFilters({ currentStatus, currentSearch, statuses }: OrdersFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [search, setSearch] = useState(currentSearch ?? '')
+
+  const filterTabs = [
+    { value: 'all', label: 'Все' },
+    ...statuses.map((s) => ({ value: s.slug, label: s.label })),
+  ]
 
   function updateParams(updates: Record<string, string | undefined>) {
     const params = new URLSearchParams(searchParams.toString())
@@ -61,7 +59,7 @@ export function OrdersFilters({ currentStatus, currentSearch }: OrdersFiltersPro
 
       {/* Status filter */}
       <div className="flex gap-1 overflow-x-auto">
-        {statuses.map((s) => (
+        {filterTabs.map((s) => (
           <button
             key={s.value}
             onClick={() => updateParams({ status: s.value === 'all' ? undefined : s.value })}

@@ -1,7 +1,7 @@
 'use client'
 
-import { useTransition, useState } from 'react'
-import { type Order, type OrderStatus, type UserRole } from '@/lib/types/database'
+import { useTransition, useState, useMemo } from 'react'
+import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
 import { updateOrderStatus, assignOrder, deleteOrder } from '@/lib/actions/orders'
 import { cn } from '@/lib/utils/format'
 import {
@@ -11,38 +11,13 @@ import {
   Mail,
   MapPin,
   Package,
-  ChevronRight,
   Trash2,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-const statusConfig: Record<OrderStatus, { label: string; color: string; bg: string }> = {
-  new: { label: 'Новый', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
-  in_progress: { label: 'В работе', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
-  ready: { label: 'Готов', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
-  delivered: { label: 'Выдан', color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200' },
-  cancelled: { label: 'Отменён', color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
-}
-
-const statusActions: Record<OrderStatus, { label: string; next: OrderStatus; style: string }[]> = {
-  new: [
-    { label: 'Взять в работу', next: 'in_progress', style: 'bg-amber-500 hover:bg-amber-600 text-white' },
-    { label: 'Отменить', next: 'cancelled', style: 'bg-white border border-red-200 text-red-600 hover:bg-red-50' },
-  ],
-  in_progress: [
-    { label: 'Готов', next: 'ready', style: 'bg-emerald-500 hover:bg-emerald-600 text-white' },
-    { label: 'Отменить', next: 'cancelled', style: 'bg-white border border-red-200 text-red-600 hover:bg-red-50' },
-  ],
-  ready: [
-    { label: 'Выдать', next: 'delivered', style: 'bg-primary hover:bg-primary/90 text-white' },
-    { label: 'Вернуть в работу', next: 'in_progress', style: 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50' },
-  ],
-  delivered: [],
-  cancelled: [
-    { label: 'Восстановить', next: 'new', style: 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50' },
-  ],
-}
+const defaultBadge = { label: '???', color: 'text-slate-500', bg: 'bg-slate-50 border-slate-200' }
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -62,24 +37,38 @@ interface OrderDetailProps {
   order: Order
   employees: { id: string; full_name: string; role: string }[]
   userRole: UserRole
+  statuses: OrderStatusConfig[]
 }
 
-export function OrderDetail({ order, employees, userRole }: OrderDetailProps) {
+export function OrderDetail({ order, employees, userRole, statuses }: OrderDetailProps) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [showDelete, setShowDelete] = useState(false)
 
+  const [changingTo, setChangingTo] = useState<string | null>(null)
+
   const isManager = userRole === 'manager' || userRole === 'admin'
-  const status = statusConfig[order.status] ?? statusConfig.new
-  const actions = isManager ? (statusActions[order.status] ?? []) : []
+
+  const statusMap = useMemo(() => {
+    const map: Record<string, { label: string; color: string; bg: string; dot_color: string }> = {}
+    for (const s of statuses) {
+      map[s.slug] = { label: s.label, color: s.color.replace('bg-', 'text-').split(' ').find(c => c.startsWith('text-')) ?? 'text-slate-500', bg: s.color, dot_color: s.dot_color }
+    }
+    return map
+  }, [statuses])
+
+  const status = statusMap[order.status] ?? defaultBadge
 
   function handleStatusChange(newStatus: OrderStatus) {
+    if (newStatus === order.status) return
     setError('')
+    setChangingTo(newStatus)
     startTransition(async () => {
       const result = await updateOrderStatus(order.id, newStatus)
       if (result?.error) setError(result.error)
       else router.refresh()
+      setChangingTo(null)
     })
   }
 
@@ -109,30 +98,40 @@ export function OrderDetail({ order, employees, userRole }: OrderDetailProps) {
 
       {/* Status + Actions */}
       <div className="rounded-xl border border-slate-200/80 bg-white p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className={cn('inline-flex rounded-full px-3 py-1 text-sm font-semibold border', status.bg, status.color)}>
-              {status.label}
-            </span>
-            <span className="text-sm text-slate-400">{formatDate(order.created_at)}</span>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {actions.map((action) => (
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Статус</span>
+          <span className="text-sm text-slate-300">·</span>
+          <span className="text-sm text-slate-400">{formatDate(order.created_at)}</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {statuses.map((s) => {
+            const cfg = statusMap[s.slug] ?? defaultBadge
+            const isActive = order.status === s.slug
+            const isLoading = changingTo === s.slug
+            return (
               <button
-                key={action.next}
-                onClick={() => handleStatusChange(action.next)}
-                disabled={pending}
+                key={s.slug}
+                onClick={() => isManager && handleStatusChange(s.slug)}
+                disabled={pending || !isManager}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50',
-                  action.style
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium border transition-all',
+                  isActive
+                    ? cn(cfg.bg, 'ring-2 ring-offset-1 ring-primary/30 shadow-sm')
+                    : isManager
+                      ? 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50 cursor-pointer'
+                      : 'bg-white border-slate-100 text-slate-300 cursor-default',
+                  pending && !isLoading && 'opacity-50'
                 )}
               >
-                <ChevronRight size={14} />
-                {action.label}
+                {isLoading ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <span className={cn('h-2 w-2 rounded-full', isActive ? cfg.dot_color : 'bg-slate-300')} />
+                )}
+                {cfg.label}
               </button>
-            ))}
-          </div>
+            )
+          })}
         </div>
       </div>
 

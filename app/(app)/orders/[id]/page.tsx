@@ -1,6 +1,7 @@
 import { Header } from '@/components/layout/header'
 import { OrderDetail } from '@/components/orders/order-detail'
 import { getOrder, getEmployees } from '@/lib/actions/orders'
+import { getOrderStatuses } from '@/lib/actions/settings-data'
 import { createClient } from '@/lib/supabase/server'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -26,12 +27,18 @@ export default async function OrderPage({ params }: OrderPageProps) {
 
   const userRole = (profile?.role ?? 'employee') as UserRole
 
-  const [order, employees] = await Promise.all([
+  const [order, employees, orderStatuses] = await Promise.all([
     getOrder(id),
     getEmployees(),
+    getOrderStatuses(),
   ])
 
   if (!order) notFound()
+
+  // Employees can only view orders assigned to them or created by them
+  if (userRole === 'employee' && order.assigned_to !== user.id && order.created_by !== user.id) {
+    notFound()
+  }
 
   return (
     <>
@@ -46,7 +53,7 @@ export default async function OrderPage({ params }: OrderPageProps) {
       </Header>
 
       <div className="p-5">
-        <OrderDetail order={order} employees={employees} userRole={userRole} />
+        <OrderDetail order={order} employees={employees} userRole={userRole} statuses={orderStatuses} />
       </div>
     </>
   )
