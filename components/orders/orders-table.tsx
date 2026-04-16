@@ -79,7 +79,7 @@ function StatusDropdown({ order, statuses, statusMap }: { order: Order; statuses
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false) }} />
-          <div className="absolute top-full left-0 mt-1.5 z-40 w-44 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl shadow-zinc-200/50 animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="absolute top-full left-0 mt-1.5 z-40 w-44 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl shadow-zinc-200/50">
             {statuses.map((s) => {
               const cfg = statusMap[s.slug] ?? defaultBadge
               const isActive = order.status === s.slug
@@ -144,7 +144,7 @@ function RowActions({ order, userRole }: { order: Order; userRole: UserRole }) {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false) }} />
-          <div className="absolute top-full right-0 mt-1 z-40 w-48 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl shadow-zinc-200/50 animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="absolute top-full right-0 mt-1 z-40 w-48 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl shadow-zinc-200/50">
             <Link
               href={`/orders/${order.id}`}
               className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
@@ -237,185 +237,262 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
 
   if (orders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl bg-white shadow-sm shadow-zinc-200/50 ring-1 ring-zinc-100 py-16 text-center">
-        <ClipboardList size={40} className="text-zinc-300 mb-3" />
-        <p className="text-sm font-medium text-zinc-500">Заказов пока нет</p>
+      <div className="flex flex-col items-center justify-center rounded-2xl bg-white shadow-sm shadow-zinc-200/50 ring-1 ring-zinc-100 py-16 text-center animate-fade-in-up">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-200 mb-4">
+          <ClipboardList size={28} className="text-zinc-400" />
+        </div>
+        <p className="text-sm font-semibold text-zinc-600">Заказов пока нет</p>
         <p className="text-xs text-zinc-400 mt-1">Создайте первый заказ</p>
       </div>
     )
   }
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm shadow-zinc-200/50 ring-1 ring-zinc-100 overflow-hidden">
-      {/* Desktop header */}
-      <div className="hidden lg:grid grid-cols-[60px_1fr_120px_130px_140px_120px_80px_36px] gap-2 px-5 py-3 bg-gradient-to-r from-zinc-50 to-zinc-50/50 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
-        <span>№</span>
-        <span>Клиент</span>
-        <span>Телефон</span>
-        <span>Статус</span>
-        <span>Исполнитель</span>
-        <span>Дата</span>
-        <span className="text-right">Сумма</span>
-        <span></span>
-      </div>
+    <div className="space-y-0">
+      {/* Desktop table */}
+      <div className="hidden lg:block rounded-2xl bg-white shadow-sm shadow-zinc-200/50 ring-1 ring-zinc-100">
+        {/* Header */}
+        <div className="grid grid-cols-[60px_1fr_120px_130px_140px_120px_90px_36px] gap-2 px-5 py-3 bg-gradient-to-r from-zinc-50 to-zinc-50/50 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-100/80 rounded-t-2xl">
+          <span>№</span>
+          <span>Клиент</span>
+          <span>Телефон</span>
+          <span>Статус</span>
+          <span>Исполнитель</span>
+          <span>Дата</span>
+          <span className="text-right">Сумма</span>
+          <span></span>
+        </div>
 
-      {orders.map((order) => {
-        const status = statusMap[order.status] ?? defaultBadge
+        {orders.map((order, idx) => {
+          const status = statusMap[order.status] ?? defaultBadge
+          const overdue = isOverdue(order.deadline, order.status)
 
-        return (
-          <div
-            key={order.id}
-            className="group grid lg:grid-cols-[60px_1fr_120px_130px_140px_120px_80px_36px] gap-2 px-4 py-3 border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50 transition-colors"
-          >
-            {/* Order number */}
-            <div className="flex items-center gap-2 lg:gap-0">
-              <Link href={`/orders/${order.id}`} className="text-sm font-bold text-zinc-700 hover:text-indigo-600 transition-colors tabular-nums">
-                #{order.order_number}
-              </Link>
-              {!canChangeStatus && (
-                <span className={cn('lg:hidden inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium border', status.color)}>
-                  <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
-                  {status.label}
-                </span>
+          return (
+            <Link
+              key={order.id}
+              href={`/orders/${order.id}`}
+              className={cn(
+                'group grid grid-cols-[60px_1fr_120px_130px_140px_120px_90px_36px] gap-2 px-5 py-3.5 border-b border-zinc-50 last:border-0 transition-all duration-200 hover:bg-indigo-50/30',
+                overdue && 'bg-red-50/20',
+                idx % 2 === 1 && 'bg-zinc-50/30'
               )}
-            </div>
+            >
+              {/* Order number */}
+              <div className="flex items-center">
+                <span className="text-sm font-bold text-zinc-700 group-hover:text-indigo-600 transition-colors tabular-nums">
+                  #{order.order_number}
+                </span>
+              </div>
 
-            {/* Client + Note */}
-            <div className="min-w-0">
-              <Link href={`/orders/${order.id}`} className="min-w-0">
+              {/* Client + Note */}
+              <div className="flex flex-col justify-center min-w-0">
                 {order.client ? (
-                  <p className="text-[13px] font-medium text-zinc-800 truncate hover:text-indigo-600 transition-colors">{order.client.name}</p>
+                  <p className="text-[13px] font-medium text-zinc-800 truncate group-hover:text-indigo-600 transition-colors">{order.client.name}</p>
                 ) : (
                   <p className="text-[13px] text-zinc-400 italic">Без клиента</p>
                 )}
-              </Link>
-              {order.note && (
-                <p className="text-[11px] text-zinc-400 truncate mt-0.5">{order.note}</p>
-              )}
-            </div>
+                {order.note && (
+                  <p className="text-[11px] text-zinc-400 truncate mt-0.5">{order.note}</p>
+                )}
+              </div>
 
-            {/* Phone */}
-            <div className="hidden lg:flex items-center gap-1.5">
-              {(order.phone || order.client?.phone) ? (
-                <>
-                  <a
-                    href={`tel:${order.phone || order.client?.phone}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 text-[12px] text-emerald-600 hover:text-emerald-700 transition-colors"
-                    title={`Позвонить: ${order.phone || order.client?.phone}`}
-                  >
-                    <Phone size={11} />
-                    <span className="truncate">{order.phone || order.client?.phone}</span>
-                  </a>
-                  <a
-                    href={whatsappLink(order.phone || order.client!.phone!)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="shrink-0 text-[10px] text-green-600 hover:text-green-700 transition-colors"
-                    title="WhatsApp"
-                  >
-                    WA
-                  </a>
-                </>
-              ) : (
-                <span className="text-zinc-300 text-[12px]">—</span>
-              )}
-            </div>
-
-            {/* Status (desktop) */}
-            <div className="hidden lg:flex items-center">
-              {canChangeStatus ? (
-                <StatusDropdown order={order} statuses={statuses} statusMap={statusMap} />
-              ) : (
-                <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border', status.color)}>
-                  <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
-                  {status.label}
-                </span>
-              )}
-            </div>
-
-            {/* Assigned */}
-            <div className="hidden lg:flex flex-col justify-center min-w-0">
-              {order.assigned_user ? (
-                <>
-                  <span className="flex items-center gap-1.5 text-[12px] text-zinc-600 truncate">
-                    <User size={12} className="text-zinc-400 flex-shrink-0" />
-                    {order.assigned_user.full_name}
-                  </span>
-                  {order.assigned_user.phone && (
-                    <a
-                      href={`tel:${order.assigned_user.phone}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center gap-1 text-[11px] text-emerald-600 hover:text-emerald-700 ml-[18px] transition-colors"
+              {/* Phone */}
+              <div className="flex items-center gap-1.5">
+                {(order.phone || order.client?.phone) ? (
+                  <>
+                    <span
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `tel:${order.phone || order.client?.phone}` }}
+                      className="inline-flex items-center gap-1 text-[12px] text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
+                      title={`Позвонить: ${order.phone || order.client?.phone}`}
                     >
-                      <Phone size={10} />
-                      {order.assigned_user.phone}
-                    </a>
-                  )}
-                </>
-              ) : (
-                <span className="text-zinc-300 text-[12px]">—</span>
-              )}
-            </div>
+                      <Phone size={11} />
+                      <span className="truncate">{order.phone || order.client?.phone}</span>
+                    </span>
+                    <span
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(whatsappLink(order.phone || order.client!.phone!), '_blank') }}
+                      className="shrink-0 text-[10px] text-green-600 hover:text-green-700 transition-colors cursor-pointer font-medium"
+                      title="WhatsApp"
+                    >
+                      WA
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-zinc-300 text-[12px]">—</span>
+                )}
+              </div>
 
-            {/* Date + Deadline */}
-            <div className="hidden lg:flex flex-col justify-center">
-              <span className="flex items-center gap-1 text-[12px] text-zinc-400">
-                <Calendar size={12} />
-                {formatDate(order.created_at)}
-              </span>
-              {order.deadline && (
-                <span className={cn(
-                  'flex items-center gap-1 text-[11px] mt-0.5',
-                  isOverdue(order.deadline, order.status) ? 'text-red-500 font-medium' : 'text-zinc-400'
-                )}>
-                  {isOverdue(order.deadline, order.status) ? <AlertTriangle size={10} /> : <Clock size={10} />}
-                  {formatDate(order.deadline)}
+              {/* Status */}
+              <div className="flex items-center" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                {canChangeStatus ? (
+                  <StatusDropdown order={order} statuses={statuses} statusMap={statusMap} />
+                ) : (
+                  <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border', status.color)}>
+                    <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+                    {status.label}
+                  </span>
+                )}
+              </div>
+
+              {/* Assigned */}
+              <div className="flex flex-col justify-center min-w-0">
+                {order.assigned_user ? (
+                  <>
+                    <span className="flex items-center gap-1.5 text-[12px] text-zinc-600 truncate">
+                      <User size={12} className="text-zinc-400 flex-shrink-0" />
+                      {order.assigned_user.full_name}
+                    </span>
+                    {order.assigned_user.phone && (
+                      <span
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `tel:${order.assigned_user!.phone}` }}
+                        className="flex items-center gap-1 text-[11px] text-emerald-600 hover:text-emerald-700 ml-[18px] transition-colors cursor-pointer"
+                      >
+                        <Phone size={10} />
+                        {order.assigned_user.phone}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-zinc-300 text-[12px]">—</span>
+                )}
+              </div>
+
+              {/* Date + Deadline */}
+              <div className="flex flex-col justify-center">
+                <span className="flex items-center gap-1 text-[12px] text-zinc-400">
+                  <Calendar size={12} />
+                  {formatDate(order.created_at)}
                 </span>
-              )}
-            </div>
+                {order.deadline && (
+                  <span className={cn(
+                    'flex items-center gap-1 text-[11px] mt-0.5',
+                    overdue ? 'text-red-500 font-medium' : 'text-zinc-400'
+                  )}>
+                    {overdue ? <AlertTriangle size={10} /> : <Clock size={10} />}
+                    {formatDate(order.deadline)}
+                  </span>
+                )}
+              </div>
 
-            {/* Amount */}
-            <div className="hidden lg:flex items-center justify-end">
-              <span className="text-sm font-bold text-zinc-800 tabular-nums">{formatPrice(order.total_amount)}</span>
-            </div>
+              {/* Amount */}
+              <div className="flex items-center justify-end">
+                <span className="text-sm font-bold text-zinc-800 tabular-nums">{formatPrice(order.total_amount)}</span>
+              </div>
 
-            {/* Actions menu */}
-            <div className="hidden lg:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <RowActions order={order} userRole={userRole} />
-            </div>
-
-            {/* Mobile row */}
-            <div className="flex items-center gap-3 lg:hidden text-[11px] text-zinc-400 flex-wrap">
-              {canChangeStatus && <StatusDropdown order={order} statuses={statuses} statusMap={statusMap} />}
-              <span className="font-semibold text-zinc-700">{formatPrice(order.total_amount)}</span>
-              {(order.phone || order.client?.phone) && (
-                <>
-                  <a href={`tel:${order.phone || order.client?.phone}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-0.5 text-emerald-600">
-                    <Phone size={10} /> {order.phone || order.client?.phone}
-                  </a>
-                  <a href={whatsappLink(order.phone || order.client!.phone!)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-green-600 font-medium">WA</a>
-                </>
-              )}
-              <span>{formatDate(order.created_at)}</span>
-              {order.assigned_user && (
-                <span className="flex items-center gap-1">
-                  <User size={10} /> {order.assigned_user.full_name}
-                  {order.assigned_user.phone && (
-                    <a href={`tel:${order.assigned_user.phone}`} onClick={(e) => e.stopPropagation()} className="text-emerald-600">
-                      {order.assigned_user.phone}
-                    </a>
-                  )}
-                </span>
-              )}
-              <div className="ml-auto">
+              {/* Actions */}
+              <div className="flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
                 <RowActions order={order} userRole={userRole} />
               </div>
-            </div>
-          </div>
-        )
-      })}
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Mobile cards */}
+      <div className="lg:hidden space-y-3 stagger-children">
+        {orders.map((order) => {
+          const status = statusMap[order.status] ?? defaultBadge
+          const overdue = isOverdue(order.deadline, order.status)
+
+          return (
+            <Link
+              key={order.id}
+              href={`/orders/${order.id}`}
+              className={cn(
+                'block rounded-2xl bg-white shadow-sm ring-1 ring-zinc-100 overflow-hidden transition-all duration-200 active:scale-[0.98]',
+                overdue && 'ring-red-200/60'
+              )}
+            >
+              {/* Card header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-50">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-sm font-bold text-zinc-800 tabular-nums">#{order.order_number}</span>
+                  <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                    {canChangeStatus ? (
+                      <StatusDropdown order={order} statuses={statuses} statusMap={statusMap} />
+                    ) : (
+                      <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium border', status.color)}>
+                        <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+                        {status.label}
+                      </span>
+                    )}
+                  </div>
+                  {overdue && (
+                    <span className="flex items-center gap-0.5 text-[10px] font-medium text-red-500">
+                      <AlertTriangle size={10} />
+                      Просрочен
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm font-bold text-zinc-800 tabular-nums">{formatPrice(order.total_amount)}</span>
+              </div>
+
+              {/* Card body */}
+              <div className="px-4 py-3 space-y-2">
+                {/* Client */}
+                <div className="flex items-center justify-between">
+                  {order.client ? (
+                    <p className="text-[13px] font-medium text-zinc-800 truncate">{order.client.name}</p>
+                  ) : (
+                    <p className="text-[13px] text-zinc-400 italic">Без клиента</p>
+                  )}
+                </div>
+
+                {/* Info row */}
+                <div className="flex items-center gap-3 text-[11px] text-zinc-400 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <Calendar size={11} />
+                    {formatDate(order.created_at)}
+                  </span>
+                  {order.assigned_user && (
+                    <span className="flex items-center gap-1">
+                      <User size={11} />
+                      {order.assigned_user.full_name}
+                    </span>
+                  )}
+                  {order.deadline && !overdue && (
+                    <span className="flex items-center gap-1">
+                      <Clock size={11} />
+                      {formatDate(order.deadline)}
+                    </span>
+                  )}
+                </div>
+
+                {order.note && (
+                  <p className="text-[11px] text-zinc-400 truncate">{order.note}</p>
+                )}
+              </div>
+
+              {/* Card footer — contact actions */}
+              {(order.phone || order.client?.phone) && (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-zinc-50/50 border-t border-zinc-50" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                  <span
+                    onClick={() => { window.location.href = `tel:${order.phone || order.client?.phone}` }}
+                    className="btn-press inline-flex items-center gap-1.5 rounded-lg bg-white border border-zinc-200 px-3 py-1.5 text-[11px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm cursor-pointer"
+                  >
+                    <Phone size={11} className="text-emerald-500" />
+                    {order.phone || order.client?.phone}
+                  </span>
+                  <span
+                    onClick={() => { window.open(whatsappLink(order.phone || order.client!.phone!), '_blank') }}
+                    className="btn-press inline-flex items-center gap-1 rounded-lg bg-green-50 border border-green-200/60 px-3 py-1.5 text-[11px] font-medium text-green-700 hover:bg-green-100 transition-colors cursor-pointer"
+                  >
+                    <Phone size={11} />
+                    WA
+                  </span>
+                  <div className="ml-auto">
+                    <RowActions order={order} userRole={userRole} />
+                  </div>
+                </div>
+              )}
+              {!(order.phone || order.client?.phone) && (
+                <div className="flex items-center justify-end px-4 py-2.5 bg-zinc-50/50 border-t border-zinc-50" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                  <RowActions order={order} userRole={userRole} />
+                </div>
+              )}
+            </Link>
+          )
+        })}
+      </div>
     </div>
   )
 }

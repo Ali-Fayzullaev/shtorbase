@@ -6,7 +6,7 @@ import { getOrders, getOrderStats, getEmployees } from '@/lib/actions/orders'
 import { getOrderStatuses } from '@/lib/actions/settings-data'
 import { createClient } from '@/lib/supabase/server'
 import { type UserRole } from '@/lib/types/database'
-import { Plus } from 'lucide-react'
+import { Plus, ClipboardList, Inbox, Clock, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -54,31 +54,63 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
       >
         <Link
           href="/orders/new"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 transition-colors"
+          className="btn-press inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
         >
           <Plus size={16} />
           Новый заказ
         </Link>
       </Header>
 
-      <div className="p-5 space-y-4">
+      <div className="p-4 sm:p-6 space-y-5 page-enter">
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4">
-            <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Всего</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">{stats.total}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-children">
+          <div className="group relative overflow-hidden rounded-2xl bg-white border border-zinc-200/60 p-4 transition-all duration-300 hover:shadow-md hover:shadow-zinc-200/50">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-zinc-400/20 to-transparent" />
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200 shadow-sm">
+                <ClipboardList size={18} className="text-zinc-600" />
+              </div>
+              <div>
+                <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Всего</p>
+                <p className="text-2xl font-bold text-zinc-900 tabular-nums">{stats.total}</p>
+              </div>
+            </div>
           </div>
-          <div className="rounded-xl border border-blue-200/80 bg-blue-50/50 p-4">
-            <p className="text-[11px] font-medium text-blue-400 uppercase tracking-wider">Новые</p>
-            <p className="text-2xl font-bold text-blue-700 mt-1">{stats.new}</p>
+          <div className="group relative overflow-hidden rounded-2xl bg-white border border-zinc-200/60 p-4 transition-all duration-300 hover:shadow-md hover:shadow-indigo-100/50">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-indigo-500/30 to-transparent" />
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm shadow-indigo-500/20">
+                <Inbox size={18} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Новые</p>
+                <p className="text-2xl font-bold text-zinc-900 tabular-nums">{stats.new}</p>
+              </div>
+            </div>
           </div>
-          <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-4">
-            <p className="text-[11px] font-medium text-amber-400 uppercase tracking-wider">В работе</p>
-            <p className="text-2xl font-bold text-amber-700 mt-1">{stats.inProgress}</p>
+          <div className="group relative overflow-hidden rounded-2xl bg-white border border-zinc-200/60 p-4 transition-all duration-300 hover:shadow-md hover:shadow-amber-100/50">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-500/30 to-transparent" />
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-sm shadow-amber-500/20">
+                <Clock size={18} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">В работе</p>
+                <p className="text-2xl font-bold text-zinc-900 tabular-nums">{stats.inProgress}</p>
+              </div>
+            </div>
           </div>
-          <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-4">
-            <p className="text-[11px] font-medium text-emerald-400 uppercase tracking-wider">Готовы</p>
-            <p className="text-2xl font-bold text-emerald-700 mt-1">{stats.ready}</p>
+          <div className="group relative overflow-hidden rounded-2xl bg-white border border-zinc-200/60 p-4 transition-all duration-300 hover:shadow-md hover:shadow-emerald-100/50">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500/30 to-transparent" />
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm shadow-emerald-500/20">
+                <CheckCircle size={18} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Готовы</p>
+                <p className="text-2xl font-bold text-zinc-900 tabular-nums">{stats.ready}</p>
+              </div>
+            </div>
           </div>
         </div>
 
