@@ -14,6 +14,7 @@ import {
   LogOut,
   Upload,
   X,
+  ShoppingCart,
 } from 'lucide-react'
 import { type UserRole } from '@/lib/types/database'
 import { logoutAction } from '@/lib/actions/auth'
@@ -26,6 +27,7 @@ interface SidebarProps {
 const navigation = [
   { name: 'Главная', href: '/', icon: LayoutDashboard, roles: ['employee', 'manager', 'admin'] },
   { name: 'Каталог', href: '/catalog', icon: Package, roles: ['employee', 'manager', 'admin'] },
+  { name: 'Заказы', href: '/orders', icon: ShoppingCart, roles: ['employee', 'manager', 'admin'] },
   { name: 'Добавить товар', href: '/products/new', icon: Plus, roles: ['manager', 'admin'] },
   { name: 'Импорт остатков', href: '/import', icon: Upload, roles: ['manager', 'admin'] },
   { name: 'Логи изменений', href: '/audit', icon: ClipboardList, roles: ['manager', 'admin'] },

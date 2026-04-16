@@ -92,3 +92,50 @@ export interface ProductCustomValue {
   field_id: string
   value: string
 }
+
+// ============================================
+// Заказы и клиенты
+// ============================================
+export type OrderStatus = 'new' | 'in_progress' | 'ready' | 'delivered' | 'cancelled'
+
+export interface Client {
+  id: string
+  name: string
+  phone: string | null
+  email: string | null
+  address: string | null
+  note: string | null
+  created_at: string
+  created_by: string | null
+}
+
+export interface Order {
+  id: string
+  order_number: number
+  client_id: string | null
+  status: OrderStatus
+  assigned_to: string | null
+  note: string | null
+  total_amount: number
+  created_at: string
+  updated_at: string
+  created_by: string
+  // Joined
+  client?: Client
+  assigned_user?: Profile
+  created_user?: Profile
+  items?: OrderItem[]
+}
+
+export interface OrderItem {
+  id: string
+  order_id: string
+  product_id: string
+  quantity: number
+  unit_price: number
+  total_price: number
+  note: string | null
+  created_at: string
+  // Joined
+  product?: Product
+}
