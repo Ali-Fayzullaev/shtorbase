@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useTransition, createContext, useContext, useCallback, type ReactNode } from 'react'
-import { ShoppingCart, Trash2, Minus, Plus, X, Loader2, ShoppingBag } from 'lucide-react'
+import { useState, useTransition, useEffect, createContext, useContext, useCallback, type ReactNode } from 'react'
+import { ShoppingCart, Trash2, Minus, Plus, X, Loader2, ShoppingBag, Search } from 'lucide-react'
 import { formatPrice, cn } from '@/lib/utils/format'
 import { formatPhoneInput, isValidPhone } from '@/lib/utils/phone'
 import { createQuickOrder } from '@/lib/actions/orders'
+import { getClients } from '@/lib/actions/clients'
+import type { Client } from '@/lib/types/database'
 
 // ============================================
 // Cart context + provider
@@ -93,9 +95,33 @@ export function CartPanel() {
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState('')
   const [phone, setPhone] = useState('')
+  const [clientId, setClientId] = useState<string | null>(null)
+  const [clients, setClients] = useState<Client[]>([])
+  const [clientSearch, setClientSearch] = useState('')
+  const [clientDropdown, setClientDropdown] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    if (open && clients.length === 0) {
+      getClients().then(setClients)
+    }
+  }, [open, clients.length])
+
+  const filteredClients = clientSearch.trim()
+    ? clients.filter((c) => {
+        const q = clientSearch.toLowerCase()
+        return c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q))
+      })
+    : clients
+
+  function selectClient(c: Client) {
+    setClientId(c.id)
+    setClientSearch(c.name)
+    setClientDropdown(false)
+    if (c.phone && !phone) setPhone(c.phone.replace(/\D/g, '').slice(0, 11))
+  }
 
   function handleSubmit() {
     if (items.length === 0) return
@@ -112,7 +138,7 @@ export function CartPanel() {
     }))
 
     startTransition(async () => {
-      const result = await createQuickOrder(orderItems, note || undefined, phone || undefined)
+      const result = await createQuickOrder(orderItems, note || undefined, phone || undefined, clientId || undefined)
       if (result.error) {
         setError(result.error)
       } else {
@@ -120,6 +146,8 @@ export function CartPanel() {
         clearCart()
         setNote('')
         setPhone('')
+        setClientId(null)
+        setClientSearch('')
         setTimeout(() => {
           setSuccess(false)
           setOpen(false)
@@ -267,6 +295,39 @@ export function CartPanel() {
         {/* Footer */}
         {items.length > 0 && (
           <div className="border-t border-slate-100 px-5 py-4 space-y-3">
+            {/* Client search */}
+            <div className="relative">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Клиент (поиск по имени или телефону)"
+                  value={clientSearch}
+                  onChange={(e) => { setClientSearch(e.target.value); setClientDropdown(true); if (!e.target.value) setClientId(null) }}
+                  onFocus={() => setClientDropdown(true)}
+                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300"
+                />
+              </div>
+              {clientDropdown && filteredClients.length > 0 && (
+                <div className="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                  {filteredClients.slice(0, 20).map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => selectClient(c)}
+                      className={cn(
+                        'w-full text-left px-3 py-2 text-sm hover:bg-slate-50',
+                        clientId === c.id && 'bg-indigo-50 text-indigo-700'
+                      )}
+                    >
+                      <span className="font-medium">{c.name}</span>
+                      {c.phone && <span className="text-slate-400 ml-2">{c.phone}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <textarea
               placeholder="Примечание к заказу..."
               value={note}

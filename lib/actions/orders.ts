@@ -384,7 +384,8 @@ export async function createOrderAction(
 export async function createQuickOrder(
   items: { product_id: string; quantity: number; unit_price: number }[],
   note?: string,
-  phone?: string
+  phone?: string,
+  clientId?: string
 ): Promise<{ error?: string; success?: boolean }> {
   try {
     const { user, role } = await requireAuth()
@@ -408,6 +409,7 @@ export async function createQuickOrder(
       .insert({
         note: note?.trim() || null,
         phone: phone!.trim(),
+        client_id: clientId || null,
         created_by: user.id,
         assigned_to: role === 'employee' ? user.id : null,
       })

@@ -3,7 +3,7 @@ import { OrderDetail } from '@/components/orders/order-detail'
 import { getOrder, getEmployees } from '@/lib/actions/orders'
 import { getOrderStatuses } from '@/lib/actions/settings-data'
 import { createClient } from '@/lib/supabase/server'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Printer } from 'lucide-react'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { type UserRole } from '@/lib/types/database'
@@ -43,6 +43,13 @@ export default async function OrderPage({ params }: OrderPageProps) {
   return (
     <>
       <Header title={`Заказ #${order.order_number}`} description={order.client?.name ?? 'Без клиента'}>
+        <Link
+          href={`/orders/${id}/print`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-all"
+        >
+          <Printer size={14} />
+          Печать
+        </Link>
         <Link
           href="/orders"
           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-all"
