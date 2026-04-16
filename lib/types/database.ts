@@ -127,6 +127,7 @@ export interface Order {
   assigned_to: string | null
   note: string | null
   phone: string | null
+  deadline: string | null
   total_amount: number
   created_at: string
   updated_at: string
@@ -136,6 +137,7 @@ export interface Order {
   assigned_user?: Profile
   created_user?: Profile
   items?: OrderItem[]
+  history?: OrderHistory[]
 }
 
 export interface OrderItem {
@@ -149,4 +151,26 @@ export interface OrderItem {
   created_at: string
   // Joined
   product?: Product
+}
+
+export interface OrderHistory {
+  id: string
+  order_id: string
+  user_id: string
+  action: string
+  old_value: string | null
+  new_value: string | null
+  created_at: string
+  // Joined
+  user?: Profile
+}
+
+export interface Notification {
+  id: string
+  user_id: string
+  title: string
+  message: string
+  link: string | null
+  is_read: boolean
+  created_at: string
 }

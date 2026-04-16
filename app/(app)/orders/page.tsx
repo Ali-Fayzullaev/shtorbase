@@ -2,7 +2,7 @@ import { Header } from '@/components/layout/header'
 import { OrdersTable } from '@/components/orders/orders-table'
 import { OrdersFilters } from '@/components/orders/orders-filters'
 import { Pagination } from '@/components/ui/pagination'
-import { getOrders, getOrderStats } from '@/lib/actions/orders'
+import { getOrders, getOrderStats, getEmployees } from '@/lib/actions/orders'
 import { getOrderStatuses } from '@/lib/actions/settings-data'
 import { createClient } from '@/lib/supabase/server'
 import { type UserRole } from '@/lib/types/database'
@@ -15,6 +15,7 @@ interface OrdersPageProps {
     status?: string
     q?: string
     page?: string
+    assigned?: string
   }>
 }
 
@@ -31,16 +32,18 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
     .single()
   const userRole = (profile?.role ?? 'employee') as UserRole
 
-  const [{ orders, total, page, totalPages }, stats, orderStatuses] = await Promise.all([
+  const [{ orders, total, page, totalPages }, stats, orderStatuses, employees] = await Promise.all([
     getOrders({
       status: params.status,
       search: params.q,
       page: params.page ? parseInt(params.page) : 1,
       userId: user.id,
       userRole,
+      assignedTo: params.assigned,
     }),
     getOrderStats(user.id, userRole),
     getOrderStatuses(),
+    userRole !== 'employee' ? getEmployees() : Promise.resolve([]),
   ])
 
   return (
@@ -82,7 +85,10 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         <OrdersFilters
           currentStatus={params.status}
           currentSearch={params.q}
+          currentAssigned={params.assigned}
           statuses={orderStatuses}
+          employees={employees}
+          showEmployeeFilter={userRole !== 'employee'}
         />
         <OrdersTable orders={orders} userRole={userRole} statuses={orderStatuses} />
         {totalPages > 1 && (

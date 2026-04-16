@@ -14,6 +14,9 @@ import {
   Trash2,
   AlertTriangle,
   Loader2,
+  MessageCircle,
+  History,
+  Clock,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -196,14 +199,40 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
         <div className="space-y-5">
           {/* Client */}
           <div className="rounded-xl border border-slate-200/80 bg-white p-5">
-            <h3 className="text-sm font-semibold text-slate-900 mb-3">Клиент</h3>
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">Контакт</h3>
+            {order.phone && (
+              <div className="flex items-center gap-2 mb-3">
+                <a href={`tel:${order.phone}`} className="flex items-center gap-1.5 text-[13px] text-emerald-600 hover:text-emerald-700">
+                  <Phone size={13} /> {order.phone}
+                </a>
+                <a
+                  href={`https://wa.me/${order.phone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-600 hover:bg-green-100 transition-colors"
+                >
+                  <MessageCircle size={11} /> WhatsApp
+                </a>
+              </div>
+            )}
+            <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Клиент</h4>
             {order.client ? (
               <div className="space-y-2">
                 <p className="text-[13px] font-medium text-slate-800">{order.client.name}</p>
                 {order.client.phone && (
-                  <p className="flex items-center gap-1.5 text-[12px] text-slate-500">
-                    <Phone size={12} /> {order.client.phone}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <a href={`tel:${order.client.phone}`} className="flex items-center gap-1.5 text-[12px] text-slate-500">
+                      <Phone size={12} /> {order.client.phone}
+                    </a>
+                    <a
+                      href={`https://wa.me/${order.client.phone.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-green-600 hover:text-green-700"
+                    >
+                      WA
+                    </a>
+                  </div>
                 )}
                 {order.client.email && (
                   <p className="flex items-center gap-1.5 text-[12px] text-slate-500">
@@ -254,6 +283,20 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
               <Calendar size={12} />
               Обновлён: {formatDate(order.updated_at)}
             </p>
+            {order.deadline && (
+              <p className={cn(
+                'flex items-center gap-1.5 text-[12px]',
+                new Date(order.deadline) < new Date() && !['delivered', 'cancelled'].includes(order.status)
+                  ? 'text-red-500 font-medium'
+                  : 'text-slate-500'
+              )}>
+                <Clock size={12} />
+                Срок: {formatDate(order.deadline)}
+                {new Date(order.deadline) < new Date() && !['delivered', 'cancelled'].includes(order.status) && (
+                  <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded-full font-semibold">Просрочен</span>
+                )}
+              </p>
+            )}
             {order.created_user && (
               <p className="flex items-center gap-1.5 text-[12px] text-slate-500">
                 <User size={12} />
@@ -261,6 +304,32 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
               </p>
             )}
           </div>
+
+          {/* History */}
+          {order.history && order.history.length > 0 && (
+            <div className="rounded-xl border border-slate-200/80 bg-white p-5">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 mb-3">
+                <History size={14} /> История
+              </h3>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {order.history.map((h) => (
+                  <div key={h.id} className="flex items-start gap-2 text-[12px]">
+                    <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5" />
+                    <div className="min-w-0">
+                      <span className="font-medium text-slate-700">{h.user?.full_name ?? 'Система'}</span>
+                      {' '}
+                      <span className="text-slate-500">
+                        {h.action === 'created' && 'создал заказ'}
+                        {h.action === 'status_change' && `изменил статус: ${h.old_value} → ${h.new_value}`}
+                        {h.action === 'assigned' && (h.new_value ? `назначил исполнителя` : 'снял исполнителя')}
+                      </span>
+                      <p className="text-[11px] text-slate-400">{formatDate(h.created_at)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Delete — только админ */}
           {userRole === 'admin' && (

@@ -2,17 +2,20 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
-import { Search, X } from 'lucide-react'
+import { Search, X, Filter } from 'lucide-react'
 import { type OrderStatusConfig } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
 
 interface OrdersFiltersProps {
   currentStatus?: string
   currentSearch?: string
+  currentAssigned?: string
   statuses: OrderStatusConfig[]
+  employees?: { id: string; full_name: string; role: string }[]
+  showEmployeeFilter?: boolean
 }
 
-export function OrdersFilters({ currentStatus, currentSearch, statuses }: OrdersFiltersProps) {
+export function OrdersFilters({ currentStatus, currentSearch, currentAssigned, statuses, employees, showEmployeeFilter }: OrdersFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [search, setSearch] = useState(currentSearch ?? '')
@@ -74,6 +77,23 @@ export function OrdersFilters({ currentStatus, currentSearch, statuses }: Orders
           </button>
         ))}
       </div>
+
+      {/* Executor filter */}
+      {showEmployeeFilter && employees && employees.length > 0 && (
+        <div className="relative">
+          <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <select
+            value={currentAssigned ?? ''}
+            onChange={(e) => updateParams({ assigned: e.target.value || undefined })}
+            className="appearance-none rounded-lg border border-slate-200 bg-white pl-9 pr-8 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+          >
+            <option value="">Все исполнители</option>
+            {employees.map((emp) => (
+              <option key={emp.id} value={emp.id}>{emp.full_name}</option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   )
 }

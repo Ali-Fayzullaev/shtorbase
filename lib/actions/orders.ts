@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { type Order, type OrderStatus } from '@/lib/types/database'
+import { createNotification } from './notifications'
 
 // ============================================
 // Helpers
@@ -62,6 +63,43 @@ async function restoreStock(
   }
 }
 
+/** Check stock availability, return errors for insufficient items */
+async function checkStock(
+  admin: ReturnType<typeof createAdminClient>,
+  items: { product_id: string; quantity: number }[]
+): Promise<string[]> {
+  const errors: string[] = []
+  for (const item of items) {
+    const { data: product } = await admin
+      .from('products')
+      .select('stock, name')
+      .eq('id', item.product_id)
+      .single()
+    if (product && item.quantity > product.stock) {
+      errors.push(`«${product.name}»: запрошено ${item.quantity}, на складе ${product.stock}`)
+    }
+  }
+  return errors
+}
+
+/** Log an order history event */
+async function logOrderHistory(
+  admin: ReturnType<typeof createAdminClient>,
+  orderId: string,
+  userId: string,
+  action: string,
+  oldValue?: string | null,
+  newValue?: string | null
+) {
+  await admin.from('order_history').insert({
+    order_id: orderId,
+    user_id: userId,
+    action,
+    old_value: oldValue ?? null,
+    new_value: newValue ?? null,
+  })
+}
+
 // ============================================
 // Получение заказов
 // ============================================
@@ -69,6 +107,7 @@ export interface OrdersParams {
   status?: string
   search?: string
   page?: number
+  assignedTo?: string
   /** When role=employee, only show orders assigned to or created by this user */
   userId?: string
   userRole?: string
@@ -98,6 +137,11 @@ export async function getOrders(params: OrdersParams = {}) {
 
   if (params.search) {
     query = query.or(`note.ilike.%${params.search}%,order_number.eq.${parseInt(params.search) || 0}`)
+  }
+
+  // Filter by executor
+  if (params.assignedTo) {
+    query = query.eq('assigned_to', params.assignedTo)
   }
 
   const { data, count, error } = await query
@@ -165,11 +209,32 @@ export async function getOrder(id: string) {
     .eq('order_id', id)
     .order('created_at')
 
+  // Fetch history
+  const { data: history } = await admin
+    .from('order_history')
+    .select('*')
+    .eq('order_id', id)
+    .order('created_at', { ascending: false })
+
+  // Add history user profiles to profileMap
+  const historyUserIds = [...new Set((history ?? []).map(h => h.user_id).filter(Boolean))] as string[]
+  const missingIds = historyUserIds.filter(id => !profileMap[id])
+  if (missingIds.length > 0) {
+    const { data: extraProfiles } = await admin
+      .from('profiles')
+      .select('id, full_name, role, phone')
+      .in('id', missingIds)
+    for (const p of extraProfiles ?? []) {
+      profileMap[p.id] = p
+    }
+  }
+
   return {
     ...data,
     assigned_user: data.assigned_to ? profileMap[data.assigned_to] ?? null : null,
     created_user: data.created_by ? profileMap[data.created_by] ?? null : null,
     items: items ?? [],
+    history: (history ?? []).map(h => ({ ...h, user: profileMap[h.user_id] ?? null })),
   } as Order
 }
 
@@ -237,6 +302,7 @@ export async function createOrderAction(
     // Сотрудники автоматически назначаются исполнителями
     const finalAssignedTo = role === 'employee' ? user.id : (assignedTo || null)
     const note = formData.get('note') as string
+    const deadline = formData.get('deadline') as string
 
     // Parse items from form
     const itemsJson = formData.get('items') as string
@@ -254,6 +320,12 @@ export async function createOrderAction(
 
     const admin = createAdminClient()
 
+    // Check stock availability
+    const stockErrors = await checkStock(admin, items)
+    if (stockErrors.length > 0) {
+      return { error: `Недостаточно на складе:\n${stockErrors.join('\n')}` }
+    }
+
     // Create order
     const { data: order, error: orderErr } = await admin
       .from('orders')
@@ -262,6 +334,7 @@ export async function createOrderAction(
         assigned_to: finalAssignedTo,
         note: note?.trim() || null,
         phone: phone?.trim() || null,
+        deadline: deadline || null,
         created_by: user.id,
       })
       .select('id')
@@ -280,13 +353,20 @@ export async function createOrderAction(
 
     const { error: itemsErr } = await admin.from('order_items').insert(rows)
     if (itemsErr) {
-      // Cleanup order if items failed
       await admin.from('orders').delete().eq('id', order.id)
       return { error: `Ошибка добавления позиций: ${itemsErr.message}` }
     }
 
     // Deduct stock
     await deductStock(admin, items)
+
+    // Log history
+    await logOrderHistory(admin, order.id, user.id, 'created', null, 'new')
+
+    // Notify assigned employee
+    if (finalAssignedTo && finalAssignedTo !== user.id) {
+      await createNotification(finalAssignedTo, 'Новый заказ', `Вам назначен новый заказ #${order.id.slice(0, 8)}`, `/orders/${order.id}`)
+    }
 
     revalidatePath('/orders')
     revalidatePath('/catalog')
@@ -317,6 +397,12 @@ export async function createQuickOrder(
 
     const admin = createAdminClient()
 
+    // Check stock availability
+    const stockErrors = await checkStock(admin, validated)
+    if (stockErrors.length > 0) {
+      return { error: `Недостаточно на складе:\n${stockErrors.join('\n')}` }
+    }
+
     const { data: order, error: orderErr } = await admin
       .from('orders')
       .insert({
@@ -346,6 +432,9 @@ export async function createQuickOrder(
 
     // Deduct stock
     await deductStock(admin, validated)
+
+    // Log history
+    await logOrderHistory(admin, order.id, user.id, 'created', null, 'new')
 
     revalidatePath('/orders')
     revalidatePath('/catalog')
@@ -398,6 +487,14 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
   if (error) return { error: `Не удалось обновить статус: ${error.message}` }
 
+  await logOrderHistory(admin, orderId, user.id, 'status_change', order.status, newStatus)
+
+  // Notify assigned employee about status change
+  const { data: fullOrder } = await admin.from('orders').select('assigned_to').eq('id', orderId).single()
+  if (fullOrder?.assigned_to && fullOrder.assigned_to !== user.id) {
+    await createNotification(fullOrder.assigned_to, 'Статус заказа изменён', `Заказ #${orderId.slice(0, 8)} — ${newStatus}`, `/orders/${orderId}`)
+  }
+
   revalidatePath('/orders')
   revalidatePath(`/orders/${orderId}`)
   return { success: true }
@@ -407,10 +504,14 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 // Назначение заказа сотруднику
 // ============================================
 export async function assignOrder(orderId: string, userId: string | null) {
-  const { role } = await requireAuth()
+  const { user, role } = await requireAuth()
   if (role === 'employee') return { error: 'Нет прав' }
 
   const admin = createAdminClient()
+
+  // Get current assigned_to for history
+  const { data: order } = await admin.from('orders').select('assigned_to').eq('id', orderId).single()
+
   const { error } = await admin
     .from('orders')
     .update({ assigned_to: userId, updated_at: new Date().toISOString() })
@@ -418,8 +519,13 @@ export async function assignOrder(orderId: string, userId: string | null) {
 
   if (error) return { error: `Ошибка: ${error.message}` }
 
-  revalidatePath('/orders')
-  revalidatePath(`/orders/${orderId}`)
+  await logOrderHistory(admin, orderId, user.id, 'assigned', order?.assigned_to ?? null, userId)
+
+  // Notify assigned employee
+  if (userId) {
+    await createNotification(userId, 'Назначен заказ', `Вам назначен заказ #${orderId.slice(0, 8)}`, `/orders/${orderId}`)
+  }
+
   return { success: true }
 }
 

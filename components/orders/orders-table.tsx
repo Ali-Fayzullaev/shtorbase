@@ -5,7 +5,7 @@ import { useState, useTransition, useMemo } from 'react'
 import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
 import { updateOrderStatus, deleteOrder } from '@/lib/actions/orders'
 import { cn } from '@/lib/utils/format'
-import { ClipboardList, User, Calendar, ChevronDown, Loader2, Check, Phone, Trash2, MoreHorizontal, ExternalLink } from 'lucide-react'
+import { ClipboardList, User, Calendar, ChevronDown, Loader2, Check, Phone, Trash2, MoreHorizontal, ExternalLink, Clock, AlertTriangle } from 'lucide-react'
 
 const defaultBadge = { label: '???', color: 'bg-slate-50 text-slate-500 border-slate-200', dot: 'bg-slate-400' }
 
@@ -16,6 +16,17 @@ function formatDate(dateStr: string) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function isOverdue(deadline: string | null, status: string): boolean {
+  if (!deadline) return false
+  if (['delivered', 'cancelled'].includes(status)) return false
+  return new Date(deadline) < new Date()
+}
+
+function whatsappLink(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  return `https://wa.me/${digits}`
 }
 
 function formatPrice(amount: number) {
@@ -144,6 +155,7 @@ function RowActions({ order, userRole }: { order: Order; userRole: UserRole }) {
             </Link>
 
             {(order.phone || order.client?.phone) && (
+              <>
               <a
                 href={`tel:${order.phone || order.client?.phone}`}
                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
@@ -152,6 +164,17 @@ function RowActions({ order, userRole }: { order: Order; userRole: UserRole }) {
                 <Phone size={13} />
                 Позвонить
               </a>
+              <a
+                href={whatsappLink(order.phone || order.client!.phone!)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium text-green-600 hover:bg-green-50 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Phone size={13} />
+                WhatsApp
+              </a>
+              </>
             )}
 
             {userRole === 'admin' && (
@@ -272,17 +295,29 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
             </div>
 
             {/* Phone */}
-            <div className="hidden lg:flex items-center">
+            <div className="hidden lg:flex items-center gap-1.5">
               {(order.phone || order.client?.phone) ? (
-                <a
-                  href={`tel:${order.phone || order.client?.phone}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 text-[12px] text-emerald-600 hover:text-emerald-700 transition-colors"
-                  title={`Позвонить: ${order.phone || order.client?.phone}`}
-                >
-                  <Phone size={11} />
-                  <span className="truncate">{order.phone || order.client?.phone}</span>
-                </a>
+                <>
+                  <a
+                    href={`tel:${order.phone || order.client?.phone}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 text-[12px] text-emerald-600 hover:text-emerald-700 transition-colors"
+                    title={`Позвонить: ${order.phone || order.client?.phone}`}
+                  >
+                    <Phone size={11} />
+                    <span className="truncate">{order.phone || order.client?.phone}</span>
+                  </a>
+                  <a
+                    href={whatsappLink(order.phone || order.client!.phone!)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0 text-[10px] text-green-600 hover:text-green-700 transition-colors"
+                    title="WhatsApp"
+                  >
+                    WA
+                  </a>
+                </>
               ) : (
                 <span className="text-slate-300 text-[12px]">—</span>
               )}
@@ -324,10 +359,21 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
               )}
             </div>
 
-            {/* Date */}
-            <div className="hidden lg:flex items-center gap-1 text-[12px] text-slate-400">
-              <Calendar size={12} />
-              {formatDate(order.created_at)}
+            {/* Date + Deadline */}
+            <div className="hidden lg:flex flex-col justify-center">
+              <span className="flex items-center gap-1 text-[12px] text-slate-400">
+                <Calendar size={12} />
+                {formatDate(order.created_at)}
+              </span>
+              {order.deadline && (
+                <span className={cn(
+                  'flex items-center gap-1 text-[11px] mt-0.5',
+                  isOverdue(order.deadline, order.status) ? 'text-red-500 font-medium' : 'text-slate-400'
+                )}>
+                  {isOverdue(order.deadline, order.status) ? <AlertTriangle size={10} /> : <Clock size={10} />}
+                  {formatDate(order.deadline)}
+                </span>
+              )}
             </div>
 
             {/* Amount */}
@@ -345,9 +391,12 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
               {canChangeStatus && <StatusDropdown order={order} statuses={statuses} statusMap={statusMap} />}
               <span className="font-semibold text-slate-700">{formatPrice(order.total_amount)}</span>
               {(order.phone || order.client?.phone) && (
-                <a href={`tel:${order.phone || order.client?.phone}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-0.5 text-emerald-600">
-                  <Phone size={10} /> {order.phone || order.client?.phone}
-                </a>
+                <>
+                  <a href={`tel:${order.phone || order.client?.phone}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-0.5 text-emerald-600">
+                    <Phone size={10} /> {order.phone || order.client?.phone}
+                  </a>
+                  <a href={whatsappLink(order.phone || order.client!.phone!)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-green-600 font-medium">WA</a>
+                </>
               )}
               <span>{formatDate(order.created_at)}</span>
               {order.assigned_user && (

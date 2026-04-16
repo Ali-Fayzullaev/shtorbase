@@ -36,7 +36,9 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
   const [assignedTo, setAssignedTo] = useState('')
   const [note, setNote] = useState('')
   const [phone, setPhone] = useState('')
+  const [deadline, setDeadline] = useState('')
   const [items, setItems] = useState<OrderItem[]>([])
+  const [clientSearch, setClientSearch] = useState('')
 
   // New client form
   const [showNewClient, setShowNewClient] = useState(false)
@@ -113,6 +115,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
     formData.set('assigned_to', assignedTo)
     formData.set('note', note)
     formData.set('phone', phone)
+    formData.set('deadline', deadline)
     formAction(formData)
   }
 
@@ -133,18 +136,46 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
           <label className={labelCls}>Клиент</label>
           {!showNewClient ? (
             <div className="flex gap-2">
-              <select
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                className={selectCls}
-              >
-                <option value="">Без клиента</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}{c.phone ? ` (${c.phone})` : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={clientSearch}
+                  onChange={(e) => { setClientSearch(e.target.value); if (clientId) { setClientId(''); } }}
+                  placeholder="Поиск по имени или телефону..."
+                  className={inputCls}
+                />
+                {clientSearch.trim() && (
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => { setClientId(''); setClientSearch(''); }}
+                      className="flex w-full px-3 py-2 text-[13px] text-slate-400 hover:bg-slate-50"
+                    >
+                      Без клиента
+                    </button>
+                    {clients
+                      .filter((c) => {
+                        const q = clientSearch.toLowerCase()
+                        return c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q))
+                      })
+                      .map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => { setClientId(c.id); setClientSearch(c.name + (c.phone ? ` (${c.phone})` : '')); }}
+                          className={cn('flex w-full px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50', clientId === c.id && 'bg-primary/5 font-medium')}
+                        >
+                          {c.name}{c.phone ? <span className="ml-1 text-slate-400">({c.phone})</span> : null}
+                        </button>
+                      ))}
+                  </div>
+                )}
+                {!clientSearch && clientId && (
+                  <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
+                    <span className="text-sm text-slate-700">{clients.find(c => c.id === clientId)?.name ?? ''}</span>
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setShowNewClient(true)}
@@ -209,18 +240,6 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
         )}
       </div>
 
-      {/* Note */}
-      <div className="space-y-2">
-        <label className={labelCls}>Заметка к заказу</label>
-        <input
-          type="text"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Например: Доставка до 15:00, подъезд 2"
-          className={inputCls}
-        />
-      </div>
-
       {/* Contact phone */}
       <div className="space-y-2">
         <label className={labelCls}>Контактный телефон <span className="text-red-500">*</span></label>
@@ -235,6 +254,29 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
         {phone && !isValidPhone(phone) && (
           <p className="text-[12px] text-amber-600">Введите 11 цифр, например: 87771234567</p>
         )}
+      </div>
+
+      {/* Note + Deadline row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className={labelCls}>Заметка к заказу</label>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Например: Доставка до 15:00, подъезд 2"
+            className={inputCls}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className={labelCls}>Срок выполнения</label>
+          <input
+            type="datetime-local"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            className={inputCls}
+          />
+        </div>
       </div>
 
       {/* Product search + add items */}

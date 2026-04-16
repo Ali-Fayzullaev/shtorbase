@@ -1,5 +1,7 @@
 'use client'
 
+import { NotificationBell } from './notification-bell'
+
 interface HeaderProps {
   title: string
   description?: string
@@ -16,11 +18,10 @@ export function Header({ title, description, children }: HeaderProps) {
             <span className="hidden sm:inline text-sm text-slate-400 shrink-0">{description}</span>
           )}
         </div>
-        {children && (
-          <div className="flex items-center gap-2 shrink-0 ml-4">
-            {children}
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0 ml-4">
+          <NotificationBell />
+          {children}
+        </div>
       </div>
     </header>
   )
