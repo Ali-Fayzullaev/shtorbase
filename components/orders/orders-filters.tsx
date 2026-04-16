@@ -48,7 +48,7 @@ export function OrdersFilters({ currentStatus, currentSearch, currentAssigned, s
             if (e.key === 'Enter') updateParams({ q: search || undefined })
           }}
           placeholder="Поиск по заказам..."
-          className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-9 py-2.5 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all shadow-sm"
+          className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 pl-10 pr-9 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 dark:focus:border-indigo-700 transition-all shadow-sm"
         />
         {search && (
           <button
@@ -61,7 +61,7 @@ export function OrdersFilters({ currentStatus, currentSearch, currentAssigned, s
       </div>
 
       {/* Status filter */}
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-zinc-100/80 p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-xl bg-zinc-100/80 dark:bg-zinc-800/80 p-1">
         {filterTabs.map((s) => (
           <button
             key={s.value}
@@ -69,8 +69,8 @@ export function OrdersFilters({ currentStatus, currentSearch, currentAssigned, s
             className={cn(
               'btn-press whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-all duration-200',
               (currentStatus ?? 'all') === s.value
-                ? 'bg-white text-zinc-900 shadow-sm'
-                : 'text-zinc-500 hover:text-zinc-700'
+                ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
             )}
           >
             {s.label}
@@ -85,7 +85,7 @@ export function OrdersFilters({ currentStatus, currentSearch, currentAssigned, s
           <select
             value={currentAssigned ?? ''}
             onChange={(e) => updateParams({ assigned: e.target.value || undefined })}
-            className="appearance-none rounded-xl border border-zinc-200 bg-white pl-10 pr-8 py-2.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all shadow-sm"
+            className="appearance-none rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 pl-10 pr-8 py-2.5 text-sm text-zinc-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 dark:focus:border-indigo-700 transition-all shadow-sm"
           >
             <option value="">Все исполнители</option>
             {employees.map((emp) => (

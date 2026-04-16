@@ -18,10 +18,10 @@ const fieldNames: Record<string, string> = {
 
 export function RecentChangesWidget({ logs }: RecentChangesWidgetProps) {
   return (
-    <div className="rounded-2xl bg-white border border-zinc-200/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-zinc-100 bg-gradient-to-r from-indigo-50/50 to-transparent">
+    <div className="rounded-2xl bg-white dark:bg-zinc-800/90 border border-zinc-200/60 dark:border-zinc-700/50 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-zinc-100 dark:border-zinc-700 bg-gradient-to-r from-indigo-50/50 dark:from-indigo-950/30 to-transparent">
         <History size={15} className="text-indigo-500" />
-        <h3 className="text-sm font-semibold text-zinc-900">Последние изменения</h3>
+        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Последние изменения</h3>
       </div>
       <div className="divide-y divide-zinc-50">
         {logs.length === 0 ? (
@@ -30,7 +30,7 @@ export function RecentChangesWidget({ logs }: RecentChangesWidgetProps) {
           </div>
         ) : (
           logs.map((log) => (
-            <div key={log.id} className="px-5 py-2.5 hover:bg-zinc-50 transition-colors">
+            <div key={log.id} className="px-5 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
               <div className="flex items-center justify-between mb-0.5">
                 <span className="text-xs font-medium text-zinc-700">{log.user?.full_name}</span>
                 <span className="text-[11px] text-zinc-400 tabular-nums">{formatDateShort(log.created_at)}</span>

@@ -14,10 +14,10 @@ export function LowStockWidget({ products }: LowStockWidgetProps) {
     .slice(0, 6)
 
   return (
-    <div className="rounded-2xl bg-white border border-zinc-200/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-zinc-100 bg-gradient-to-r from-amber-50/50 to-transparent">
+    <div className="rounded-2xl bg-white dark:bg-zinc-800/90 border border-zinc-200/60 dark:border-zinc-700/50 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-zinc-100 dark:border-zinc-700 bg-gradient-to-r from-amber-50/50 dark:from-amber-950/30 to-transparent">
         <TrendingDown size={15} className="text-amber-500" />
-        <h3 className="text-sm font-semibold text-zinc-900">Заканчиваются</h3>
+        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Заканчиваются</h3>
         {lowStock.length > 0 && (
           <span className="ml-auto text-xs font-medium text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">{lowStock.length}</span>
         )}
@@ -32,10 +32,10 @@ export function LowStockWidget({ products }: LowStockWidgetProps) {
             <Link
               key={product.id}
               href={`/catalog/${product.id}`}
-              className="flex items-center justify-between px-5 py-2.5 hover:bg-zinc-50 transition-colors"
+              className="flex items-center justify-between px-5 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-zinc-800 truncate">{product.name}</p>
+                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{product.name}</p>
                 <p className="text-xs text-zinc-400 font-mono">{product.sku}</p>
               </div>
               <span

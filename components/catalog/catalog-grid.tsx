@@ -61,7 +61,7 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
   }
 
   return (
-    <div className="group relative flex flex-col rounded-2xl bg-white shadow-sm shadow-zinc-200/50 ring-1 ring-zinc-100 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-zinc-200/60 hover:-translate-y-1 hover:ring-zinc-200">
+    <div className="group relative flex flex-col rounded-2xl bg-white dark:bg-zinc-800/90 shadow-sm shadow-zinc-200/50 dark:shadow-zinc-900/50 ring-1 ring-zinc-100 dark:ring-zinc-800 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-zinc-200/60 dark:hover:shadow-zinc-900/60 hover:-translate-y-1 hover:ring-zinc-200 dark:hover:ring-zinc-700">
       {/* Image / placeholder */}
       <div className="relative aspect-[4/3] bg-gradient-to-br from-zinc-50 to-zinc-100 overflow-hidden">
         {product.thumbnail ? (
@@ -117,7 +117,7 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
         {/* Name */}
         <Link
           href={`/catalog/${product.id}`}
-          className="text-[15px] font-semibold text-zinc-800 leading-snug hover:text-indigo-600 transition-colors line-clamp-2 mb-auto"
+          className="text-[15px] font-semibold text-zinc-800 dark:text-zinc-200 leading-snug hover:text-indigo-600 transition-colors line-clamp-2 mb-auto"
         >
           {product.name}
         </Link>
@@ -125,7 +125,7 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
         {/* Price + Stock row */}
         <div className="flex items-end justify-between mt-3 pt-3 border-t border-zinc-100">
           <div>
-            <div className="inline-flex items-baseline gap-1 rounded-lg bg-gradient-to-r from-indigo-50 to-violet-50 px-2.5 py-1">
+            <div className="inline-flex items-baseline gap-1 rounded-lg bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/50 dark:to-violet-950/50 px-2.5 py-1">
               <span className="text-lg font-bold text-indigo-700 tabular-nums">{formatPrice(product.price)}</span>
               <span className="text-xs font-semibold text-indigo-400">₸</span>
             </div>

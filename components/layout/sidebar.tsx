@@ -105,12 +105,12 @@ export function Sidebar({ role, userName }: SidebarProps) {
           Ш
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-sm font-bold text-zinc-800 tracking-tight">ШторБаза</h1>
+          <h1 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 tracking-tight">ШторБаза</h1>
           <p className="text-[10px] text-zinc-400 leading-none mt-0.5">Управление товарами</p>
         </div>
         <button
           onClick={close}
-          className="lg:hidden rounded-md p-1 text-zinc-400 hover:bg-white/60 hover:text-zinc-600 transition-colors"
+          className="lg:hidden rounded-md p-1 text-zinc-400 hover:bg-white/60 dark:hover:bg-zinc-800/60 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
         >
           <X size={16} />
         </button>
@@ -134,8 +134,8 @@ export function Sidebar({ role, userName }: SidebarProps) {
                       className={cn(
                         'group relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200',
                         isActive
-                          ? 'bg-gradient-to-r from-indigo-50 to-violet-50 text-indigo-700 shadow-sm shadow-indigo-100/50'
-                          : 'text-zinc-500 hover:bg-white/70 hover:text-zinc-800 hover:shadow-sm'
+                          ? 'bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/50 dark:to-violet-950/50 text-indigo-700 shadow-sm shadow-indigo-100/50 dark:shadow-indigo-900/30'
+                          : 'text-zinc-500 dark:text-zinc-400 hover:bg-white/70 dark:hover:bg-zinc-800/70 hover:text-zinc-800 dark:hover:text-zinc-200 hover:shadow-sm'
                       )}
                     >
                       {isActive && (
@@ -146,7 +146,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
                         strokeWidth={isActive ? 2 : 1.5}
                         className={cn(
                           'shrink-0 transition-colors duration-200',
-                          isActive ? 'text-indigo-600' : 'text-zinc-400 group-hover:text-zinc-600'
+                          isActive ? 'text-indigo-600' : 'text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300'
                         )}
                       />
                       {item.name}
@@ -161,12 +161,12 @@ export function Sidebar({ role, userName }: SidebarProps) {
 
       {/* User card */}
       <div className="p-3">
-        <div className="flex items-center gap-2.5 rounded-xl bg-white/60 backdrop-blur-sm px-3 py-3 border border-white/80 shadow-sm">
+        <div className="flex items-center gap-2.5 rounded-xl bg-white/60 dark:bg-zinc-800/60 backdrop-blur-sm px-3 py-3 border border-white/80 dark:border-zinc-700/80 shadow-sm">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white font-semibold text-[11px] shadow-sm shadow-indigo-500/20">
             {getInitials(userName)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-semibold text-zinc-800 truncate">{getDisplayName(userName)}</p>
+            <p className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-200 truncate">{getDisplayName(userName)}</p>
             <span className={cn('inline-block rounded-md px-1.5 py-px text-[10px] font-medium mt-0.5', roleColors[role])}>
               {roleLabels[role]}
             </span>
@@ -174,7 +174,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
           <form action={logoutAction}>
             <button
               type="submit"
-              className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 transition-all duration-200"
+              className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-500 transition-all duration-200"
               title="Выйти"
             >
               <LogOut size={15} />
@@ -188,7 +188,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-zinc-100/50 border-r border-zinc-200/60 h-full">
+      <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-zinc-100/50 dark:from-zinc-900 dark:via-zinc-900/80 dark:to-zinc-800/50 border-r border-zinc-200/60 dark:border-zinc-700/60 h-full">
         {sidebarContent}
       </aside>
 
@@ -196,7 +196,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden animate-fade-in" onClick={close} />
-          <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-zinc-100/50 shadow-2xl lg:hidden animate-slide-in-left">
+          <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-zinc-100/50 dark:from-zinc-900 dark:via-zinc-900/80 dark:to-zinc-800/50 shadow-2xl lg:hidden animate-slide-in-left">
             {sidebarContent}
           </aside>
         </>

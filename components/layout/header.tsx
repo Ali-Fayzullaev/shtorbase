@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight, Home } from 'lucide-react'
 import { NotificationBell } from './notification-bell'
+import { ThemeSelector } from '@/components/theme/theme-selector'
 
 interface HeaderProps {
   title: string
@@ -44,7 +45,7 @@ export function Header({ title, description, children }: HeaderProps) {
   const crumbs = getBreadcrumbs(pathname)
 
   return (
-    <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md">
+    <header className="sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md">
       <div className="flex h-14 items-center justify-between px-4 sm:px-6">
         <div className="flex flex-col justify-center min-w-0">
           {/* Breadcrumbs */}
@@ -68,19 +69,20 @@ export function Header({ title, description, children }: HeaderProps) {
             </nav>
           )}
           <div className="flex items-center gap-3">
-            <h1 className="text-base font-semibold text-zinc-900 truncate">{title}</h1>
+            <h1 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">{title}</h1>
             {description && (
               <span className="hidden sm:inline text-sm text-zinc-400 shrink-0">{description}</span>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-4">
+          <ThemeSelector />
           <NotificationBell />
           {children}
         </div>
       </div>
       {/* Gradient border */}
-      <div className="h-px bg-gradient-to-r from-transparent via-indigo-200 to-transparent" />
+      <div className="h-px bg-gradient-to-r from-transparent via-indigo-200 dark:via-indigo-800 to-transparent" />
     </header>
   )
 }

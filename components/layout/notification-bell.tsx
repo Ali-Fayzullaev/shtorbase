@@ -51,7 +51,7 @@ export function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => { setOpen(!open); if (!open) load() }}
-        className="relative p-2 text-zinc-500 hover:text-zinc-700 rounded-md hover:bg-zinc-100"
+        className="relative p-2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"
       >
         <Bell className="h-5 w-5" />
         {unread > 0 && (
@@ -62,8 +62,8 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-zinc-200 z-50 max-h-96 overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-100">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 z-50 max-h-96 overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-100 dark:border-zinc-700">
             <span className="text-sm font-semibold text-zinc-700">Уведомления</span>
             {unread > 0 && (
               <button onClick={handleMarkAll} className="text-xs text-blue-600 hover:text-blue-800">

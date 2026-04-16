@@ -13,25 +13,25 @@ const colorMap = {
   indigo: {
     iconBg: 'bg-gradient-to-br from-indigo-500 to-violet-600',
     shadow: 'shadow-indigo-500/20',
-    valueTint: 'text-zinc-900',
+    valueTint: 'text-zinc-900 dark:text-zinc-100',
     bar: 'from-indigo-500/20 to-transparent',
   },
   emerald: {
     iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600',
     shadow: 'shadow-emerald-500/20',
-    valueTint: 'text-zinc-900',
+    valueTint: 'text-zinc-900 dark:text-zinc-100',
     bar: 'from-emerald-500/20 to-transparent',
   },
   red: {
     iconBg: 'bg-gradient-to-br from-red-500 to-rose-600',
     shadow: 'shadow-red-500/20',
-    valueTint: 'text-zinc-900',
+    valueTint: 'text-zinc-900 dark:text-zinc-100',
     bar: 'from-red-500/20 to-transparent',
   },
   amber: {
     iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600',
     shadow: 'shadow-amber-500/20',
-    valueTint: 'text-zinc-900',
+    valueTint: 'text-zinc-900 dark:text-zinc-100',
     bar: 'from-amber-500/20 to-transparent',
   },
 }
@@ -39,7 +39,7 @@ const colorMap = {
 export function StatCard({ label, value, icon: Icon, color = 'indigo', subtitle }: StatCardProps) {
   const c = colorMap[color]
   return (
-    <div className="group relative overflow-hidden rounded-2xl bg-white border border-zinc-200/60 p-4 transition-all duration-300 hover:shadow-md hover:shadow-zinc-200/50 hover:border-zinc-200">
+    <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800/90 border border-zinc-200/60 dark:border-zinc-700/50 p-4 transition-all duration-300 hover:shadow-md hover:shadow-zinc-200/50 dark:hover:shadow-zinc-900/50 hover:border-zinc-200 dark:hover:border-zinc-600">
       {/* Subtle gradient accent bar at top */}
       <div className={cn('absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r', c.bar)} />
 

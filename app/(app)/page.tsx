@@ -80,7 +80,7 @@ export default async function DashboardPage() {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <div className="h-5 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
-            <h2 className="text-sm font-semibold text-zinc-700">
+            <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
               {userRole === 'employee' ? 'Мои заказы' : 'Заказы'}
             </h2>
           </div>
@@ -96,7 +96,7 @@ export default async function DashboardPage() {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <div className="h-5 w-1 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500" />
-            <h2 className="text-sm font-semibold text-zinc-700">Склад</h2>
+            <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Склад</h2>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
             <StatCard label="Всего товаров" value={stats.total} icon={Package} color="indigo" />
@@ -110,7 +110,7 @@ export default async function DashboardPage() {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <div className="h-5 w-1 rounded-full bg-gradient-to-b from-amber-500 to-orange-500" />
-            <h2 className="text-sm font-semibold text-zinc-700">Детали</h2>
+            <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Детали</h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <LowStockWidget products={lowStockProducts} />
