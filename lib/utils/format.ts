@@ -31,6 +31,7 @@ export function formatDate(date: string): string {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Almaty',
   }).format(new Date(date))
 }
 
@@ -40,6 +41,7 @@ export function formatDateShort(date: string): string {
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Almaty',
   }).format(new Date(date))
 }
 

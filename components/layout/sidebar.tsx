@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils/format'
 import { useMobileMenu } from './mobile-menu-context'
@@ -22,6 +23,8 @@ import { logoutAction } from '@/lib/actions/auth'
 interface SidebarProps {
   role: UserRole
   userName: string
+  logoUrl?: string | null
+  companyName?: string | null
 }
 
 interface NavItem {
@@ -86,7 +89,7 @@ function getDisplayName(name: string) {
   return name
 }
 
-export function Sidebar({ role, userName }: SidebarProps) {
+export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) {
   const pathname = usePathname()
   const { isOpen, close } = useMobileMenu()
 
@@ -97,20 +100,35 @@ export function Sidebar({ role, userName }: SidebarProps) {
     }))
     .filter((group) => group.items.length > 0)
 
+  const displayName = companyName && companyName.length > 0 ? companyName : 'ШторБаза'
+
   const sidebarContent = (
     <>
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-bold text-sm shadow-lg shadow-indigo-500/30">
-          Ш
-        </div>
+        {logoUrl ? (
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80 dark:bg-zinc-800/80 overflow-hidden shadow-sm border border-white/40 dark:border-white/[0.05]">
+            <Image
+              src={logoUrl}
+              alt={displayName}
+              fill
+              className="object-contain p-1"
+              sizes="40px"
+              unoptimized
+            />
+          </div>
+        ) : (
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-bold text-sm shadow-lg shadow-indigo-500/30">
+            {displayName.slice(0, 1).toUpperCase()}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
-          <h1 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 tracking-tight">ШторБаза</h1>
+          <h1 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 tracking-tight truncate">{displayName}</h1>
           <p className="text-[10px] text-zinc-400 leading-none mt-0.5">Управление товарами</p>
         </div>
         <button
           onClick={close}
-          className="lg:hidden rounded-md p-1 text-zinc-400 hover:bg-white/60 dark:hover:bg-zinc-800/60 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+          className="lg:hidden rounded-md p-1 text-zinc-400 hover:bg-white/60 dark:hover:bg-zinc-800/60 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/50"
         >
           <X size={16} />
         </button>
@@ -132,7 +150,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
                       href={item.href}
                       onClick={close}
                       className={cn(
-                        'group relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200',
+                        'group relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40',
                         isActive
                           ? 'bg-white/50 dark:bg-white/[0.07] text-indigo-700 dark:text-indigo-300 shadow-sm shadow-indigo-500/10 border border-white/40 dark:border-white/[0.06]'
                           : 'text-zinc-500 dark:text-zinc-400 hover:bg-white/40 dark:hover:bg-white/[0.05] hover:text-zinc-800 dark:hover:text-zinc-200'
@@ -174,7 +192,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
           <form action={logoutAction}>
             <button
               type="submit"
-              className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-500 transition-all duration-200"
+              className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-500 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
               title="Выйти"
             >
               <LogOut size={15} />

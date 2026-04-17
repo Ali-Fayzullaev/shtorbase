@@ -6,6 +6,7 @@ import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } f
 import { updateOrderStatus, deleteOrder } from '@/lib/actions/orders'
 import { cn } from '@/lib/utils/format'
 import { ClipboardList, User, Calendar, ChevronDown, Loader2, Check, Phone, Trash2, MoreHorizontal, ExternalLink, Clock, AlertTriangle } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 const defaultBadge = { label: '???', color: 'bg-zinc-50 text-zinc-500 border-zinc-200', dot: 'bg-zinc-400' }
 
@@ -15,6 +16,7 @@ function formatDate(dateStr: string) {
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Almaty',
   })
 }
 
@@ -116,14 +118,14 @@ function StatusDropdown({ order, statuses, statusMap }: { order: Order; statuses
 // ============================================
 function RowActions({ order, userRole }: { order: Order; userRole: UserRole }) {
   const [open, setOpen] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   function handleDelete() {
     startTransition(async () => {
       await deleteOrder(order.id)
+      setConfirmOpen(false)
       setOpen(false)
-      setConfirmDelete(false)
     })
   }
 
@@ -134,9 +136,8 @@ function RowActions({ order, userRole }: { order: Order; userRole: UserRole }) {
           e.preventDefault()
           e.stopPropagation()
           setOpen(!open)
-          setConfirmDelete(false)
         }}
-        className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
+        className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/50"
       >
         <MoreHorizontal size={15} />
       </button>
@@ -180,37 +181,34 @@ function RowActions({ order, userRole }: { order: Order; userRole: UserRole }) {
             {userRole === 'admin' && (
               <>
                 <div className="my-1 border-t border-zinc-100" />
-                {!confirmDelete ? (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setConfirmDelete(true)
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 size={13} />
-                    Удалить заказ
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleDelete()
-                    }}
-                    disabled={isPending}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
-                  >
-                    {isPending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                    Подтвердить удаление
-                  </button>
-                )}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setOpen(false)
+                    setConfirmOpen(true)
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 size={13} />
+                  Удалить заказ
+                </button>
               </>
             )}
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Удалить заказ?"
+        description={`Заказ #${order.order_number} будет удалён безвозвратно. Остатки товаров будут восстановлены.`}
+        confirmLabel="Удалить"
+        tone="danger"
+        loading={isPending}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   )
 }
@@ -250,10 +248,12 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
   return (
     <div className="space-y-0">
       {/* Desktop table */}
-      <div className="hidden lg:block rounded-2xl glass-card !p-0 overflow-hidden">
+      <div className="hidden md:block relative">
+        <div className="overflow-x-auto rounded-2xl">
+        <div className="rounded-2xl glass-card !p-0 overflow-hidden min-w-[820px]">
         {/* Header */}
         <div className="grid grid-cols-[60px_1fr_120px_130px_140px_120px_90px_36px] gap-2 px-5 py-3 bg-white/30 dark:bg-white/[0.03] text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-white/30 dark:border-white/[0.05] rounded-t-2xl">
-          <span>№</span>
+          <span className="sticky left-0">№</span>
           <span>Клиент</span>
           <span>Телефон</span>
           <span>Статус</span>
@@ -386,9 +386,13 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
           )
         })}
       </div>
+        </div>
+        {/* Scroll-right fade gradient */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 rounded-r-2xl bg-gradient-to-l from-white/50 to-transparent dark:from-zinc-900/40" />
+      </div>
 
       {/* Mobile cards */}
-      <div className="lg:hidden space-y-3 stagger-children">
+      <div className="md:hidden space-y-3 stagger-children">
         {orders.map((order) => {
           const status = statusMap[order.status] ?? defaultBadge
           const overdue = isOverdue(order.deadline, order.status)

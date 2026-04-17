@@ -91,7 +91,7 @@ export function NotificationBell() {
                       )}
                       <p className="text-xs text-zinc-500 mt-0.5">{n.message}</p>
                       <p className="text-[10px] text-zinc-400 mt-1">
-                        {new Date(n.created_at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(n.created_at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Almaty' })}
                       </p>
                     </div>
                     {!n.is_read && (

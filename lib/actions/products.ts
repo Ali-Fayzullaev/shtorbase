@@ -10,27 +10,17 @@ import { type Product, type Category, type AuditLog } from '@/lib/types/database
 export async function getDashboardStats() {
   const supabase = await createClient()
 
-  const { count: total } = await supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
-
-  const { count: active } = await supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'active')
-
-  const { count: outOfStock } = await supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'active')
-    .eq('stock', 0)
-
-  const { count: lowStock } = await supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'active')
-    .gt('stock', 0)
-    .lt('stock', 10)
+  const [
+    { count: total },
+    { count: active },
+    { count: outOfStock },
+    { count: lowStock },
+  ] = await Promise.all([
+    supabase.from('products').select('*', { count: 'exact', head: true }),
+    supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+    supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('stock', 0),
+    supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', 'active').gt('stock', 0).lt('stock', 10),
+  ])
 
   return {
     total: total ?? 0,
@@ -162,35 +152,42 @@ export async function getCatalogProducts(params: CatalogParams = {}) {
   const { data, count } = await query
   const products = (data ?? []) as Product[]
 
-  // Fetch first image for each product
-  let thumbnails: Record<string, string> = {}
+  // Fetch ALL images for each product (for hover gallery)
+  const imageMap: Record<string, string[]> = {}
   if (products.length > 0) {
-    const ids = products.map((p) => p.id)
-    const { createAdminClient } = await import('@/lib/supabase/admin')
-    const admin = createAdminClient()
-    const { data: images } = await admin
-      .from('product_images')
-      .select('product_id, storage_path, url')
-      .in('product_id', ids)
-      .order('sort_order', { ascending: true })
+    try {
+      const ids = products.map((p) => p.id)
+      const { data: images } = await supabase
+        .from('product_images')
+        .select('product_id, storage_path, url')
+        .in('product_id', ids)
+        .order('sort_order', { ascending: true })
 
-    if (images) {
-      for (const img of images) {
-        if (thumbnails[img.product_id]) continue // keep first only
-        if (img.url) {
-          thumbnails[img.product_id] = img.url
-        } else if (img.storage_path) {
-          const { data: urlData } = admin.storage.from('product-images').getPublicUrl(img.storage_path)
-          thumbnails[img.product_id] = urlData.publicUrl
+      if (images) {
+        for (const img of images) {
+          let url: string | null = null
+          if (img.url) {
+            url = img.url
+          } else if (img.storage_path) {
+            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(img.storage_path)
+            url = urlData.publicUrl
+          }
+          if (url) {
+            if (!imageMap[img.product_id]) imageMap[img.product_id] = []
+            imageMap[img.product_id].push(url)
+          }
         }
       }
+    } catch {
+      // Images are non-critical — proceed without thumbnails if fetch fails
     }
   }
 
-  // Attach thumbnail to each product
+  // Attach images array + thumbnail (first image) to each product
   const productsWithThumbs = products.map((p) => ({
     ...p,
-    thumbnail: thumbnails[p.id] ?? null,
+    images: imageMap[p.id] ?? [],
+    thumbnail: imageMap[p.id]?.[0] ?? null,
   }))
 
   return {

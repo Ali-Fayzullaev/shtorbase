@@ -4,11 +4,13 @@ import { type Product } from '@/lib/types/database'
 import { formatPrice, formatStock, unitLabel, cn } from '@/lib/utils/format'
 import { useCart } from '@/components/catalog/catalog-cart'
 import { ShoppingCart, Plus, Minus, Check, ImageIcon, AlertTriangle, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 
 interface ProductWithThumb extends Product {
   thumbnail?: string | null
+  images?: string[]
 }
 
 interface CatalogGridProps {
@@ -61,46 +63,9 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
   }
 
   return (
-    <div className="group relative flex flex-col rounded-2xl glass-card overflow-hidden hover:-translate-y-1">
-      {/* Image / placeholder */}
-      <div className="relative aspect-[4/3] bg-gradient-to-br from-zinc-50 to-zinc-100 overflow-hidden">
-        {product.thumbnail ? (
-          <img
-            src={product.thumbnail}
-            alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <ImageIcon size={40} className="text-zinc-200" />
-          </div>
-        )}
-
-        {/* Stock badge */}
-        {isOut && (
-          <div className="absolute top-3 left-3 rounded-lg bg-red-500/90 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
-            Нет в наличии
-          </div>
-        )}
-        {isLow && (
-          <div className="absolute top-3 left-3 flex items-center gap-1 rounded-lg bg-amber-500/90 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
-            <AlertTriangle size={12} />
-            Заканчивается
-          </div>
-        )}
-
-        {/* Unit badge */}
-        <div
-          className={cn(
-            'absolute top-3 right-3 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider backdrop-blur-sm',
-            product.unit === 'meter'
-              ? 'bg-blue-500/90 text-white'
-              : 'bg-emerald-500/90 text-white'
-          )}
-        >
-          {product.unit === 'meter' ? 'Метр' : 'Штука'}
-        </div>
-      </div>
+    <div className="group relative flex flex-col rounded-2xl glass-card overflow-hidden hover:-translate-y-1 transition-transform duration-300">
+      {/* Image / placeholder with hover gallery */}
+      <ProductImage product={product} />
 
       {/* Content */}
       <div className="flex flex-col flex-1 p-4">
@@ -208,6 +173,113 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
             )}
           </button>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// Product image with hover gallery
+// ============================================
+function ProductImage({ product }: { product: ProductWithThumb }) {
+  const images = product.images && product.images.length > 0
+    ? product.images
+    : product.thumbnail ? [product.thumbnail] : []
+  const [active, setActive] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const isLow = product.stock < 10 && product.stock > 0
+  const isOut = product.stock === 0
+
+  function onMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (images.length < 2) return
+    const rect = ref.current?.getBoundingClientRect()
+    if (!rect) return
+    const x = e.clientX - rect.left
+    const idx = Math.min(images.length - 1, Math.max(0, Math.floor((x / rect.width) * images.length)))
+    if (idx !== active) setActive(idx)
+  }
+
+  function onMouseLeave() {
+    setActive(0)
+  }
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+      className="relative aspect-[4/3] bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-900 overflow-hidden"
+    >
+      {images.length > 0 ? (
+        <>
+          {images.map((src, i) => (
+            <Image
+              key={src + i}
+              src={src}
+              alt={product.name}
+              fill
+              sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
+              className={cn(
+                'object-cover transition-opacity duration-300',
+                i === active ? 'opacity-100' : 'opacity-0'
+              )}
+              priority={i === 0}
+              unoptimized
+            />
+          ))}
+
+          {/* Hover segments dots */}
+          {images.length > 1 && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {images.map((_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    'h-1 rounded-full transition-all',
+                    i === active ? 'w-5 bg-white shadow-sm' : 'w-1.5 bg-white/60'
+                  )}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Image count badge */}
+          {images.length > 1 && (
+            <div className="absolute bottom-2 right-2 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+              {active + 1}/{images.length}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <ImageIcon size={40} className="text-zinc-300 dark:text-zinc-600" />
+        </div>
+      )}
+
+      {/* Stock badge */}
+      {isOut && (
+        <div className="absolute top-3 left-3 rounded-lg bg-red-500/90 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+          Нет в наличии
+        </div>
+      )}
+      {isLow && (
+        <div className="absolute top-3 left-3 flex items-center gap-1 rounded-lg bg-amber-500/90 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+          <AlertTriangle size={12} />
+          Заканчивается
+        </div>
+      )}
+
+      {/* Unit badge */}
+      <div
+        className={cn(
+          'absolute top-3 right-3 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider backdrop-blur-sm',
+          product.unit === 'meter'
+            ? 'bg-blue-500/90 text-white'
+            : 'bg-emerald-500/90 text-white'
+        )}
+      >
+        {product.unit === 'meter' ? 'Метр' : 'Штука'}
       </div>
     </div>
   )
