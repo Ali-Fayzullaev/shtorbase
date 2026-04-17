@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react'
 import { changeUserRole, toggleUserActive, deleteUser } from '@/lib/actions/users'
 import { type UserRole } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
+import { toast } from '@/lib/utils/toast'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Trash2 } from 'lucide-react'
 
 const roleLabels: Record<UserRole, string> = {
@@ -86,37 +88,42 @@ interface DeleteUserButtonProps {
 
 export function DeleteUserButton({ userId, userName, isSelf }: DeleteUserButtonProps) {
   const [pending, startTransition] = useTransition()
-  const [confirming, setConfirming] = useState(false)
-
-  const handleDelete = () => {
-    if (!confirming) {
-      setConfirming(true)
-      return
-    }
-    startTransition(async () => {
-      await deleteUser(userId)
-      setConfirming(false)
-    })
-  }
+  const [open, setOpen] = useState(false)
 
   if (isSelf) return null
 
+  const handleDelete = () => {
+    startTransition(async () => {
+      try {
+        await deleteUser(userId)
+        toast.success(`Пользователь «${userName}» удалён`)
+        setOpen(false)
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Не удалось удалить пользователя')
+      }
+    })
+  }
+
   return (
-    <button
-      onClick={handleDelete}
-      onBlur={() => setConfirming(false)}
-      disabled={pending}
-      className={cn(
-        'inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium transition-colors',
-        confirming
-          ? 'bg-red-500 text-white hover:bg-red-600'
-          : 'text-slate-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-50',
-        pending && 'opacity-50',
-      )}
-      title="Удалить пользователя"
-    >
-      <Trash2 size={12} />
-      {confirming ? 'Подтвердить' : ''}
-    </button>
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        disabled={pending}
+        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-slate-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-50 transition-colors"
+        title="Удалить пользователя"
+      >
+        <Trash2 size={12} />
+      </button>
+      <ConfirmDialog
+        open={open}
+        tone="danger"
+        title={`Удалить пользователя «${userName}»?`}
+        description="Аккаунт будет полностью удалён. Это действие нельзя отменить."
+        confirmLabel="Удалить"
+        loading={pending}
+        onConfirm={handleDelete}
+        onCancel={() => setOpen(false)}
+      />
+    </>
   )
 }

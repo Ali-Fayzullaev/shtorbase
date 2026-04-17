@@ -4,6 +4,9 @@ import { useState, useTransition } from 'react'
 import { type CustomField, type CustomFieldType } from '@/lib/types/database'
 import { createCustomField, updateCustomField, deleteCustomField } from '@/lib/actions/settings-data'
 import { cn } from '@/lib/utils'
+import { toast } from '@/lib/utils/toast'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react'
 
 const inputCls =
@@ -73,16 +76,15 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
     setShowForm(true)
   }
 
-  function handleDelete(id: string, fieldName: string) {
-    if (!confirm(`Удалить поле «${fieldName}»? Все значения товаров будут потеряны.`)) return
-    setError('')
-    startTransition(async () => {
-      const result = await deleteCustomField(id)
-      if (result.error) { setError(result.error); return }
+  const del = useConfirmDelete<CustomField>({
+    onDelete: (f) => deleteCustomField(f.id),
+    onSuccess: async (f) => {
+      toast.success(`Поле «${f.name}» удалено`)
       const mod = await import('@/lib/actions/settings-data')
       setItems(await mod.getCustomFields())
-    })
-  }
+    },
+    onError: (msg) => setError(msg),
+  })
 
   return (
     <div className="max-w-lg space-y-4">
@@ -191,9 +193,9 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
                 <Pencil size={13} />
               </button>
               <button
-                onClick={() => handleDelete(field.id, field.name)}
+                onClick={() => del.ask(field)}
                 disabled={isPending}
-                className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-red-50 hover:text-red-500"
+                className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
               >
                 <Trash2 size={13} />
               </button>
@@ -204,6 +206,16 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
           )}
         </ul>
       </div>
+      <ConfirmDialog
+        open={del.open}
+        tone="danger"
+        title={del.item ? `Удалить поле «${del.item.name}»?` : ''}
+        description="Все значения этого поля в товарах будут потеряны безвозвратно."
+        confirmLabel="Удалить"
+        loading={del.pending}
+        onConfirm={del.confirm}
+        onCancel={del.close}
+      />
     </div>
   )
 }

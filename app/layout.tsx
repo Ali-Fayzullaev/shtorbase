@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
-import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { ResponsiveToaster } from "@/components/ui/responsive-toaster";
+import { OfflineBanner } from "@/components/ui/offline-banner";
+import { KeyboardShortcuts } from "@/components/shortcuts/keyboard-shortcuts";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,8 +44,10 @@ export default async function RootLayout({
       <body className="h-full bg-background text-foreground" suppressHydrationWarning>
         <ThemeProvider>
           {children}
+          <KeyboardShortcuts />
+          <OfflineBanner />
         </ThemeProvider>
-        <Toaster position="top-right" richColors />
+        <ResponsiveToaster />
       </body>
     </html>
   );

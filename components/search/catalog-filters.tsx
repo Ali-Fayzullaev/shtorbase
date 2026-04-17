@@ -73,6 +73,7 @@ export function CatalogFilters({
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500" />
           <input
             type="text"
+            data-shortcut="search"
             placeholder="Поиск по названию или артикулу..."
             value={query}
             onChange={(e) => handleInputChange(e.target.value)}

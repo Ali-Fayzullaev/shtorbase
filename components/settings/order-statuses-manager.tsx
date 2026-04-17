@@ -4,6 +4,9 @@ import { useState, useTransition } from 'react'
 import { type OrderStatusConfig } from '@/lib/types/database'
 import { createOrderStatus, updateOrderStatus, deleteOrderStatus, reorderStatuses } from '@/lib/actions/settings-data'
 import { cn } from '@/lib/utils/format'
+import { toast } from '@/lib/utils/toast'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { Plus, Pencil, Trash2, Loader2, X, Check, ArrowUp, ArrowDown } from 'lucide-react'
 
 const colorPresets = [
@@ -40,7 +43,7 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
   const [editPending, startEditTransition] = useTransition()
 
   // Delete
-  const [deletePending, startDeleteTransition] = useTransition()
+  // delete pending tracked by useConfirmDelete
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Reorder
@@ -92,17 +95,15 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
     })
   }
 
-  function handleDelete(id: string) {
-    setDeleteError(null)
-    startDeleteTransition(async () => {
-      const result = await deleteOrderStatus(id)
-      if (result.error) {
-        setDeleteError(result.error)
-      } else {
-        setStatuses((prev) => prev.filter((s) => s.id !== id))
-      }
-    })
-  }
+  const del = useConfirmDelete<OrderStatusConfig>({
+    onDelete: (s) => deleteOrderStatus(s.id),
+    onSuccess: (s) => {
+      setStatuses((prev) => prev.filter((x) => x.id !== s.id))
+      setDeleteError(null)
+      toast.success(`Статус «${s.label}» удалён`)
+    },
+    onError: (msg) => setDeleteError(msg),
+  })
 
   function handleMove(index: number, direction: 'up' | 'down') {
     const newIdx = direction === 'up' ? index - 1 : index + 1
@@ -286,9 +287,9 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
                     <Pencil size={13} />
                   </button>
                   <button
-                    onClick={() => handleDelete(s.id)}
-                    disabled={deletePending}
-                    className="rounded-md p-1.5 text-slate-400 dark:text-zinc-500 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50"
+                    onClick={() => del.ask(s)}
+                    disabled={del.pending}
+                    className="rounded-md p-1.5 text-slate-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition-colors disabled:opacity-50"
                     title="Удалить"
                   >
                     <Trash2 size={13} />
@@ -299,6 +300,16 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
           </div>
         ))}
       </div>
+      <ConfirmDialog
+        open={del.open}
+        tone="danger"
+        title={del.item ? `Удалить статус «${del.item.label}»?` : ''}
+        description="Заказы с этим статусом сохранятся, но отображение может сломаться."
+        confirmLabel="Удалить"
+        loading={del.pending}
+        onConfirm={del.confirm}
+        onCancel={del.close}
+      />
     </div>
   )
 }

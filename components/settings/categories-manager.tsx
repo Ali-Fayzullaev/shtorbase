@@ -4,6 +4,9 @@ import { useState, useTransition } from 'react'
 import { type Category } from '@/lib/types/database'
 import { createCategory, updateCategory, deleteCategory } from '@/lib/actions/settings-data'
 import { cn } from '@/lib/utils'
+import { toast } from '@/lib/utils/toast'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react'
 
 const inputCls =
@@ -42,16 +45,15 @@ export function CategoriesManager({ initial }: { initial: Category[] }) {
     })
   }
 
-  function handleDelete(id: string, name: string) {
-    if (!confirm(`Удалить категорию «${name}»?`)) return
-    setError('')
-    startTransition(async () => {
-      const result = await deleteCategory(id)
-      if (result.error) { setError(result.error); return }
+  const del = useConfirmDelete<Category>({
+    onDelete: (c) => deleteCategory(c.id),
+    onSuccess: async (c) => {
+      toast.success(`Категория «${c.name}» удалена`)
       const mod = await import('@/lib/actions/settings-data')
       setItems(await mod.getCategories())
-    })
-  }
+    },
+    onError: (msg) => setError(msg),
+  })
 
   return (
     <div className="max-w-lg space-y-4">
@@ -114,9 +116,9 @@ export function CategoriesManager({ initial }: { initial: Category[] }) {
                     <Pencil size={13} />
                   </button>
                   <button
-                    onClick={() => handleDelete(item.id, item.name)}
+                    onClick={() => del.ask(item)}
                     disabled={isPending}
-                    className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-red-50 hover:text-red-500"
+                    className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -129,6 +131,16 @@ export function CategoriesManager({ initial }: { initial: Category[] }) {
           )}
         </ul>
       </div>
+      <ConfirmDialog
+        open={del.open}
+        tone="danger"
+        title={del.item ? `Удалить категорию «${del.item.name}»?` : ''}
+        description="Удалить можно только неиспользуемые категории."
+        confirmLabel="Удалить"
+        loading={del.pending}
+        onConfirm={del.confirm}
+        onCancel={del.close}
+      />
     </div>
   )
 }

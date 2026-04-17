@@ -4,6 +4,9 @@ import { useState, useTransition } from 'react'
 import { type Unit } from '@/lib/types/database'
 import { createUnit, updateUnit, deleteUnit } from '@/lib/actions/settings-data'
 import { cn } from '@/lib/utils'
+import { toast } from '@/lib/utils/toast'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react'
 
 const inputCls =
@@ -45,16 +48,15 @@ export function UnitsManager({ initial }: { initial: Unit[] }) {
     })
   }
 
-  function handleDelete(id: string, name: string) {
-    if (!confirm(`Удалить единицу «${name}»?`)) return
-    setError('')
-    startTransition(async () => {
-      const result = await deleteUnit(id)
-      if (result.error) { setError(result.error); return }
+  const del = useConfirmDelete<Unit>({
+    onDelete: (u) => deleteUnit(u.id),
+    onSuccess: async (u) => {
+      toast.success(`Единица «${u.name}» удалена`)
       const mod = await import('@/lib/actions/settings-data')
       setItems(await mod.getUnits())
-    })
-  }
+    },
+    onError: (msg) => setError(msg),
+  })
 
   return (
     <div className="max-w-lg space-y-4">
@@ -127,9 +129,9 @@ export function UnitsManager({ initial }: { initial: Unit[] }) {
                     <Pencil size={13} />
                   </button>
                   <button
-                    onClick={() => handleDelete(item.id, item.name)}
+                    onClick={() => del.ask(item)}
                     disabled={isPending}
-                    className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-red-50 hover:text-red-500"
+                    className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -142,6 +144,16 @@ export function UnitsManager({ initial }: { initial: Unit[] }) {
           )}
         </ul>
       </div>
+      <ConfirmDialog
+        open={del.open}
+        tone="danger"
+        title={del.item ? `Удалить единицу «${del.item.name}»?` : ''}
+        description="Если единица используется в товарах, удаление будет заблокировано."
+        confirmLabel="Удалить"
+        loading={del.pending}
+        onConfirm={del.confirm}
+        onCancel={del.close}
+      />
     </div>
   )
 }

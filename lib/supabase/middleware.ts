@@ -27,7 +27,10 @@ function buildCsp(nonce: string): string {
 
 export async function updateSession(request: NextRequest) {
   // Генерируем nonce для CSP и прокидываем его в server-components через header.
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
+  // 128-bit случайный nonce (OWASP рекомендует ≥128 бит энтропии)
+  const nonceBytes = new Uint8Array(16)
+  crypto.getRandomValues(nonceBytes)
+  const nonce = Buffer.from(nonceBytes).toString('base64')
   const csp = buildCsp(nonce)
 
   const requestHeaders = new Headers(request.headers)
