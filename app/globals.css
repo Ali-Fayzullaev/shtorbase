@@ -179,7 +179,7 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-  /* Accent color overrides — maps indigo/violet to dynamic accent vars */
+  /* Accent color overrides â€” maps indigo/violet to dynamic accent vars */
   --color-indigo-50: var(--ac-50);
   --color-indigo-100: var(--ac-100);
   --color-indigo-200: var(--ac-200);
@@ -208,9 +208,9 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
-/* === Liquid Glass — iOS 26 / Telegram style === */
+/* === Liquid Glass â€” iOS 26 / Telegram style === */
 
-/* Glass surface base — solid fallback */
+/* Glass surface base â€” solid fallback */
 .glass {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(228, 228, 231, 0.6);
@@ -221,7 +221,7 @@ body {
   border-color: rgba(63, 63, 70, 0.5);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-/* Glass surface — active */
+/* Glass surface â€” active */
 [data-glass] .glass {
   background: linear-gradient(
     135deg,
@@ -257,7 +257,7 @@ body {
     inset 0 -0.5px 0 rgba(255, 255, 255, 0.02);
 }
 
-/* Card glass — solid fallback */
+/* Card glass â€” solid fallback */
 .glass-card {
   background: white;
   border: 1px solid rgba(228, 228, 231, 0.7);
@@ -269,7 +269,7 @@ body {
   border-color: rgba(63, 63, 70, 0.5);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
-/* Card glass — active */
+/* Card glass â€” active */
 [data-glass] .glass-card {
   background: linear-gradient(
     160deg,
@@ -337,7 +337,7 @@ body {
   transform: translateY(-1px);
 }
 
-/* Dropdown glass — solid fallback */
+/* Dropdown glass â€” solid fallback */
 .glass-dropdown {
   background: white;
   border: 1px solid rgba(228, 228, 231, 0.7);
@@ -348,7 +348,7 @@ body {
   border-color: rgba(63, 63, 70, 0.5);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
 }
-/* Dropdown glass — active */
+/* Dropdown glass â€” active */
 [data-glass] .glass-dropdown {
   background: linear-gradient(
     180deg,
@@ -682,4 +682,55 @@ body {
   html {
     @apply font-sans;
   }
+}
+/* ================================================
+ * Auth page animations — aurora blobs & gradient shift
+ * ================================================ */
+@keyframes aurora-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -30px) scale(1.1); }
+  66% { transform: translate(-30px, 40px) scale(0.95); }
+}
+@keyframes aurora-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-50px, 30px) scale(0.9); }
+  66% { transform: translate(30px, -40px) scale(1.15); }
+}
+@keyframes aurora-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  50% { transform: translate(20px, 30px) scale(1.2); opacity: 0.9; }
+}
+@keyframes grid-pan {
+  0% { background-position: 0 0; }
+  100% { background-position: 48px 48px; }
+}
+@keyframes subtle-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}
+
+.animate-aurora-1 { animation: aurora-float-1 24s ease-in-out infinite; }
+.animate-aurora-2 { animation: aurora-float-2 30s ease-in-out infinite; }
+.animate-aurora-3 { animation: aurora-float-3 18s ease-in-out infinite; }
+.animate-grid-pan { animation: grid-pan 20s linear infinite; }
+.animate-subtle-pulse { animation: subtle-pulse 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora-1,
+  .animate-aurora-2,
+  .animate-aurora-3,
+  .animate-grid-pan,
+  .animate-subtle-pulse {
+    animation: none;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float { animation: float 5s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float { animation: none; }
 }
