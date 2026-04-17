@@ -4,12 +4,14 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { consume, getClientIp, formatRetry } from '@/lib/utils/rate-limit'
+import { emailSchema, honeypotSchema } from '@/lib/schemas/auth'
 
+// Логин использует упрощённую политику — существующие пароли могут быть короче.
+// Новые пароли (register/invite) идут через полную политику passwordSchema.
 const LoginSchema = z.object({
-  email: z.string().email('Некорректный email').max(254),
-  password: z.string().min(8, 'Минимум 8 символов').max(128),
-  // Honeypot — бот заполнит, человек нет. Поле скрыто через CSS.
-  website: z.string().max(0).optional(),
+  email: emailSchema,
+  password: z.string().min(1, 'Введите пароль').max(128),
+  website: honeypotSchema,
 })
 
 export type AuthState = {

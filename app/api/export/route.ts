@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
+import { consume, getClientIp } from '@/lib/utils/rate-limit'
+import { escapeIlike, sanitizeCsvCell } from '@/lib/utils/sanitize'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -8,6 +10,13 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return new Response('Unauthorized', { status: 401 })
+  }
+
+  // Rate-limit: экспорт — дорогая операция, 5 раз / 5 мин.
+  const ip = await getClientIp()
+  const rl = consume(`${user.id}:${ip}`, { key: 'export', limit: 5, windowMs: 5 * 60_000 })
+  if (!rl.ok) {
+    return new Response('Too many requests', { status: 429 })
   }
 
   const sp = request.nextUrl.searchParams
@@ -22,7 +31,8 @@ export async function GET(request: NextRequest) {
     .neq('status', 'discontinued')
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`)
+    const q = escapeIlike(search).slice(0, 100)
+    query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
   }
   if (category) {
     query = query.eq('category_id', category)
@@ -44,11 +54,14 @@ export async function GET(request: NextRequest) {
   const BOM = '\uFEFF'
   const headers = ['Артикул', 'Название', 'Категория', 'Цена', 'Единица', 'Остаток', 'НДС', 'Статус', 'Заметка']
 
-  const escapeCSV = (val: string) => {
-    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-      return `"${val.replace(/"/g, '""')}"`
+  // CSV-safe: сначала защита от формул Excel (`=`, `+`, `-`, `@`),
+  // затем эскейп запятых/кавычек/переводов строк.
+  const safe = (val: string | null | undefined) => {
+    const v = sanitizeCsvCell(val)
+    if (v.includes(',') || v.includes('"') || v.includes('\n') || v.includes(';')) {
+      return `"${v.replace(/"/g, '""')}"`
     }
-    return val
+    return v
   }
 
   const rows = products.map((p: Record<string, unknown>) => {
@@ -63,15 +76,17 @@ export async function GET(request: NextRequest) {
       p.vat_included ? 'Да' : 'Нет',
       p.status === 'active' ? 'Активен' : 'Скрыт',
       String(p.note ?? ''),
-    ].map(escapeCSV).join(',')
+    ].map(safe).join(',')
   })
 
-  const csv = BOM + headers.map(escapeCSV).join(',') + '\n' + rows.join('\n')
+  const csv = BOM + headers.map(safe).join(',') + '\n' + rows.join('\n')
 
   return new Response(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="products_${new Date().toISOString().slice(0, 10)}.csv"`,
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'no-store',
     },
   })
 }

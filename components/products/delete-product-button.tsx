@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { deleteProductAction } from '@/lib/actions/product-mutations'
 import { Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/utils/toast'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface DeleteProductButtonProps {
   productId: string
@@ -11,55 +12,39 @@ interface DeleteProductButtonProps {
 }
 
 export function DeleteProductButton({ productId, productName }: DeleteProductButtonProps) {
-  const [confirming, setConfirming] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [pending, startTransition] = useTransition()
 
-  const handleDelete = async () => {
-    setLoading(true)
-    const result = await deleteProductAction(productId)
-    if (result?.error) {
-      toast.error(result.error)
-      setLoading(false)
-      setConfirming(false)
-    }
-    // redirect happens in the action on success
+  const handleDelete = () => {
+    startTransition(async () => {
+      const result = await deleteProductAction(productId)
+      if (result?.error) {
+        toast.error(result.error)
+        setOpen(false)
+      }
+      // success → редирект происходит в action
+    })
   }
 
-  if (!confirming) {
-    return (
+  return (
+    <>
       <button
-        onClick={() => setConfirming(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-white dark:bg-zinc-900 px-3 py-1.5 text-[13px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
       >
         <Trash2 size={14} />
         Снять с продажи
       </button>
-    )
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[12px] text-red-600">
-        Снять «{productName}»?
-      </span>
-      <button
-        onClick={handleDelete}
-        disabled={loading}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
-      >
-        {loading ? (
-          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-        ) : (
-          <Trash2 size={14} />
-        )}
-        Да, снять
-      </button>
-      <button
-        onClick={() => setConfirming(false)}
-        className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-700 transition-colors"
-      >
-        Отмена
-      </button>
-    </div>
+      <ConfirmDialog
+        open={open}
+        tone="danger"
+        title={`Снять с продажи «${productName}»?`}
+        description="Товар останется в базе (soft delete) и будет скрыт из каталога."
+        confirmLabel="Да, снять"
+        loading={pending}
+        onConfirm={handleDelete}
+        onCancel={() => setOpen(false)}
+      />
+    </>
   )
 }

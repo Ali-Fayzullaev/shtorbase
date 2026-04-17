@@ -1,13 +1,50 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
+/**
+ * Формирует Content-Security-Policy с per-request nonce.
+ * В dev-режиме требуются 'unsafe-eval' и 'unsafe-inline' для Turbopack HMR,
+ * в production — строгая политика с 'strict-dynamic'.
+ */
+function buildCsp(nonce: string): string {
+  const isProd = process.env.NODE_ENV === 'production'
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' ${isProd ? "'strict-dynamic'" : "'unsafe-eval' 'unsafe-inline'"}`,
+    // Tailwind v4 эмитит inline-стили (CSS vars) — 'unsafe-inline' неизбежен.
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://*.supabase.co",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "worker-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    ...(isProd ? ['upgrade-insecure-requests'] : []),
+  ].join('; ')
+}
+
 export async function updateSession(request: NextRequest) {
-  // Если нет ключей Supabase — пропускаем авторизацию (режим разработки)
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.next({ request })
+  // Генерируем nonce для CSP и прокидываем его в server-components через header.
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
+  const csp = buildCsp(nonce)
+
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-nonce', nonce)
+  requestHeaders.set('Content-Security-Policy', csp)
+
+  const applyCsp = (res: NextResponse) => {
+    res.headers.set('Content-Security-Policy', csp)
+    return res
   }
 
-  let supabaseResponse = NextResponse.next({ request })
+  // Fallback: если Supabase не настроен — просто пропускаем с CSP.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }))
+  }
+
+  let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,23 +55,18 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } })
           cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, options),
           )
         },
       },
-    }
+    },
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  // Если не авторизован и не на странице входа — редирект
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
@@ -44,15 +76,14 @@ export async function updateSession(request: NextRequest) {
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return NextResponse.redirect(url)
+    return applyCsp(NextResponse.redirect(url))
   }
 
-  // Если авторизован и на странице входа/регистрации — редирект на главную
   if (user && (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register'))) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
-    return NextResponse.redirect(url)
+    return applyCsp(NextResponse.redirect(url))
   }
 
-  return supabaseResponse
+  return applyCsp(supabaseResponse)
 }

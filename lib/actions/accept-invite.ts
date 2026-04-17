@@ -3,11 +3,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
+import { passwordSchema } from '@/lib/schemas/auth'
 
 const AcceptInviteSchema = z.object({
-  token: z.string().min(1, 'Токен обязателен'),
-  password: z.string().min(8, 'Минимум 8 символов'),
-  password_confirm: z.string().min(8, 'Подтвердите пароль'),
+  token: z.string().min(1, 'Токен обязателен').max(200),
+  password: passwordSchema,
+  password_confirm: z.string(),
 }).refine(d => d.password === d.password_confirm, {
   message: 'Пароли не совпадают',
   path: ['password_confirm'],
