@@ -5,7 +5,6 @@ import { formatPrice, formatStock, unitLabel, cn } from '@/lib/utils/format'
 import { useCart } from '@/components/catalog/catalog-cart'
 import { ShoppingCart, Plus, Minus, Check, ImageIcon, AlertTriangle, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 
 interface ProductWithThumb extends Product {
@@ -21,10 +20,10 @@ export function CatalogGrid({ products }: CatalogGridProps) {
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="rounded-full bg-zinc-100 p-5 mb-4">
+        <div className="rounded-full bg-zinc-100 dark:bg-zinc-800 p-5 mb-4">
           <ShoppingCart size={28} className="text-zinc-400" />
         </div>
-        <p className="text-base font-semibold text-zinc-600">Товары не найдены</p>
+        <p className="text-base font-semibold text-zinc-600 dark:text-zinc-300">Товары не найдены</p>
         <p className="text-sm text-zinc-400 mt-1">Попробуйте изменить фильтры или поиск</p>
       </div>
     )
@@ -72,7 +71,7 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
         {/* Category + SKU */}
         <div className="flex items-center gap-2 mb-2">
           {product.category && (
-            <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500">
+            <span className="rounded-md bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
               {product.category.name}
             </span>
           )}
@@ -88,10 +87,10 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
         </Link>
 
         {/* Price + Stock row */}
-        <div className="flex items-end justify-between mt-3 pt-3 border-t border-zinc-100">
+        <div className="flex items-end justify-between mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
           <div>
             <div className="inline-flex items-baseline gap-1 rounded-lg bg-white/40 dark:bg-white/[0.06] backdrop-blur-sm border border-white/30 dark:border-white/[0.06] px-2.5 py-1">
-              <span className="text-lg font-bold text-indigo-700 tabular-nums">{formatPrice(product.price)}</span>
+              <span className="text-lg font-bold text-indigo-700 dark:text-indigo-300 tabular-nums">{formatPrice(product.price)}</span>
               <span className="text-xs font-semibold text-indigo-400">₸</span>
             </div>
             <p className="text-[11px] text-zinc-400 mt-1">
@@ -104,7 +103,7 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
                 'text-sm font-bold tabular-nums',
                 isOut && 'text-red-500',
                 isLow && 'text-amber-600',
-                !isOut && !isLow && 'text-zinc-700'
+                !isOut && !isLow && 'text-zinc-700 dark:text-zinc-300'
               )}
             >
               {isOut ? '0' : formatStock(product.stock, product.unit)}
@@ -121,7 +120,7 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
                 if (inCart.quantity <= 1) removeItem(product.id)
                 else updateQuantity(product.id, inCart.quantity - 1)
               }}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700 transition-colors"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
             >
               {inCart.quantity <= 1 ? <Trash2 size={14} /> : <Minus size={14} />}
             </button>
@@ -134,12 +133,12 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
                 const v = Number(e.target.value)
                 if (v > 0) updateQuantity(product.id, Math.min(v, product.stock))
               }}
-              className="h-9 flex-1 min-w-0 rounded-lg border border-zinc-200 text-center text-sm font-semibold text-zinc-800 tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="h-9 flex-1 min-w-0 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/50 text-center text-sm font-semibold text-zinc-800 dark:text-zinc-200 tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
             <button
               onClick={() => updateQuantity(product.id, inCart.quantity + 1)}
               disabled={inCart.quantity >= product.stock}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700 transition-colors disabled:opacity-40"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors disabled:opacity-40"
             >
               <Plus size={14} />
             </button>
@@ -154,7 +153,7 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
             className={cn(
               'mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.97]',
               isOut
-                ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed'
                 : justAdded
                   ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
                   : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:shadow-lg hover:shadow-indigo-500/30 shadow-sm'
@@ -214,18 +213,16 @@ function ProductImage({ product }: { product: ProductWithThumb }) {
       {images.length > 0 ? (
         <>
           {images.map((src, i) => (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               key={src + i}
               src={src}
               alt={product.name}
-              fill
-              sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
               className={cn(
-                'object-cover transition-opacity duration-300',
+                'absolute inset-0 h-full w-full object-cover transition-opacity duration-300',
                 i === active ? 'opacity-100' : 'opacity-0'
               )}
-              priority={i === 0}
-              unoptimized
+              loading={i === 0 ? 'eager' : 'lazy'}
             />
           ))}
 

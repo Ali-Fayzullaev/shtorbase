@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { cloudinary } from '@/lib/cloudinary'
 import { revalidatePath } from 'next/cache'
 
 async function requireEditor() {
@@ -39,32 +40,51 @@ export async function uploadProductImage(productId: string, formData: FormData) 
 
   if (file.size > 5 * 1024 * 1024) return { error: 'Файл слишком большой (макс. 5MB)' }
 
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-  const allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif']
-  if (!allowedExts.includes(ext)) return { error: 'Неподдерживаемый формат' }
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) return { error: 'Неподдерживаемый формат' }
 
-  const path = `${productId}/${crypto.randomUUID()}.${ext}`
+  // Convert File to Buffer for Cloudinary upload
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+
+  let uploadResult: { secure_url: string; public_id: string }
+  try {
+    uploadResult = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          folder: `shtorbase/products/${productId}`,
+          resource_type: 'image',
+          // Auto-quality and format for best compression
+          quality: 'auto',
+          fetch_format: 'auto',
+        },
+        (error, result) => {
+          if (error || !result) reject(error ?? new Error('Upload failed'))
+          else resolve(result as { secure_url: string; public_id: string })
+        }
+      ).end(buffer)
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { error: 'Ошибка загрузки: ' + msg }
+  }
 
   const admin = createAdminClient()
-  const { error: uploadError } = await admin.storage
-    .from('product-images')
-    .upload(path, file, { contentType: file.type })
-
-  if (uploadError) return { error: 'Ошибка загрузки: ' + uploadError.message }
-
   const nextOrder = await getNextSortOrder(productId)
 
   const { error: dbError } = await admin
     .from('product_images')
     .insert({
       product_id: productId,
-      storage_path: path,
+      storage_path: uploadResult.public_id, // Cloudinary public_id for deletion
+      url: uploadResult.secure_url,
       sort_order: nextOrder,
     })
 
   if (dbError) return { error: 'Ошибка сохранения' }
 
   revalidatePath(`/catalog/${productId}`)
+  revalidatePath('/catalog')
   return { success: true }
 }
 
@@ -72,7 +92,6 @@ export async function addProductImageUrl(productId: string, imageUrl: string) {
   const user = await requireEditor()
   if (!user) return { error: 'Нет прав' }
 
-  // Basic URL validation
   try {
     new URL(imageUrl)
   } catch {
@@ -93,6 +112,7 @@ export async function addProductImageUrl(productId: string, imageUrl: string) {
   if (error) return { error: 'Ошибка сохранения: ' + error.message }
 
   revalidatePath(`/catalog/${productId}`)
+  revalidatePath('/catalog')
   return { success: true }
 }
 
@@ -100,15 +120,20 @@ export async function deleteProductImage(imageId: string, storagePath: string | 
   const user = await requireEditor()
   if (!user) return { error: 'Нет прав' }
 
-  const admin = createAdminClient()
-
-  if (storagePath) {
-    await admin.storage.from('product-images').remove([storagePath])
+  // Delete from Cloudinary if we have a public_id (storage_path)
+  if (storagePath && storagePath.startsWith('shtorbase/')) {
+    try {
+      await cloudinary.uploader.destroy(storagePath)
+    } catch {
+      // Non-critical — continue with DB deletion
+    }
   }
 
+  const admin = createAdminClient()
   await admin.from('product_images').delete().eq('id', imageId)
 
   revalidatePath(`/catalog/${productId}`)
+  revalidatePath('/catalog')
   return { success: true }
 }
 
@@ -123,9 +148,13 @@ export async function getProductImages(productId: string) {
 
   if (!data) return []
 
-  // Return with resolved URLs
-  return data.map((img: { id: string; product_id: string; storage_path: string | null; url: string | null; sort_order: number; created_at: string }) => ({
-    ...img,
-    display_url: img.url ?? admin.storage.from('product-images').getPublicUrl(img.storage_path!).data.publicUrl,
-  }))
+  return data.map((img: { id: string; product_id: string; storage_path: string | null; url: string | null; sort_order: number; created_at: string }) => {
+    let display_url = img.url ?? ''
+    if (!display_url && img.storage_path) {
+      // Legacy images uploaded before Cloudinary migration — compute Supabase public URL
+      const { data: urlData } = admin.storage.from('product-images').getPublicUrl(img.storage_path)
+      display_url = urlData.publicUrl
+    }
+    return { ...img, display_url }
+  })
 }

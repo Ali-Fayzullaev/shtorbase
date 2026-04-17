@@ -155,31 +155,34 @@ export async function getCatalogProducts(params: CatalogParams = {}) {
   // Fetch ALL images for each product (for hover gallery)
   const imageMap: Record<string, string[]> = {}
   if (products.length > 0) {
-    try {
-      const ids = products.map((p) => p.id)
-      const { data: images } = await supabase
-        .from('product_images')
-        .select('product_id, storage_path, url')
-        .in('product_id', ids)
-        .order('sort_order', { ascending: true })
+    const admin = createAdminClient()
+    const ids = products.map((p) => p.id)
+    const { data: images, error: imgError } = await admin
+      .from('product_images')
+      .select('product_id, storage_path, url')
+      .in('product_id', ids)
+      .order('sort_order', { ascending: true })
 
-      if (images) {
-        for (const img of images) {
-          let url: string | null = null
-          if (img.url) {
-            url = img.url
-          } else if (img.storage_path) {
-            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(img.storage_path)
-            url = urlData.publicUrl
-          }
-          if (url) {
-            if (!imageMap[img.product_id]) imageMap[img.product_id] = []
-            imageMap[img.product_id].push(url)
-          }
+    if (imgError) {
+      console.error('[getCatalogProducts] Failed to fetch images:', imgError.message)
+    }
+
+    if (images) {
+      console.log(`[getCatalogProducts] Found ${images.length} image rows for ${ids.length} products`)
+      for (const img of images) {
+        let url: string | null = null
+        if (img.url) {
+          url = img.url
+        } else if (img.storage_path) {
+          const { data: urlData } = admin.storage.from('product-images').getPublicUrl(img.storage_path)
+          url = urlData.publicUrl
+        }
+        console.log(`[getCatalogProducts] img ${img.product_id}: url=${url?.slice(0, 80)}`)
+        if (url) {
+          if (!imageMap[img.product_id]) imageMap[img.product_id] = []
+          imageMap[img.product_id].push(url)
         }
       }
-    } catch {
-      // Images are non-critical — proceed without thumbnails if fetch fails
     }
   }
 
