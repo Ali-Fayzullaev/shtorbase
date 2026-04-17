@@ -33,6 +33,14 @@ export function LoginForm({ showRegister }: LoginFormProps) {
           </div>
         )}
 
+        {/* Honeypot — скрыто от людей, заполнится только ботами */}
+        <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden" tabIndex={-1}>
+          <label>
+            Website
+            <input type="text" name="website" tabIndex={-1} autoComplete="off" defaultValue="" />
+          </label>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
           <input

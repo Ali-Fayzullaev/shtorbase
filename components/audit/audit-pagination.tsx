@@ -41,13 +41,13 @@ export function AuditPagination({ currentPage, totalPages }: AuditPaginationProp
       <button
         onClick={() => goToPage(currentPage - 1)}
         disabled={currentPage === 1}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-600 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
       >
         <ChevronLeft size={16} />
       </button>
       {pages.map((p, i) =>
         p === '...' ? (
-          <span key={`dots-${i}`} className="px-1 text-[12px] text-slate-400">…</span>
+          <span key={`dots-${i}`} className="px-1 text-[12px] text-zinc-400 dark:text-zinc-600">…</span>
         ) : (
           <button
             key={p}
@@ -55,8 +55,8 @@ export function AuditPagination({ currentPage, totalPages }: AuditPaginationProp
             className={cn(
               'inline-flex h-8 min-w-[32px] items-center justify-center rounded-md text-[13px] font-medium transition-colors',
               p === currentPage
-                ? 'bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700',
+                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-200 dark:ring-indigo-900'
+                : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-200',
             )}
           >
             {p}
@@ -66,7 +66,7 @@ export function AuditPagination({ currentPage, totalPages }: AuditPaginationProp
       <button
         onClick={() => goToPage(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-600 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
       >
         <ChevronRight size={16} />
       </button>
