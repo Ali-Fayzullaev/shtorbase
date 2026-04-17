@@ -208,6 +208,141 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
+/* === Liquid Glass === */
+
+/* Glass surface base — solid fallback */
+.glass {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(228, 228, 231, 0.8);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.dark .glass {
+  background: rgba(24, 24, 27, 0.95);
+  border-color: rgba(63, 63, 70, 0.8);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+/* Glass surface — active */
+[data-glass] .glass {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.1),
+    0 4px 24px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.dark[data-glass] .glass {
+  background: rgba(24, 24, 27, 0.55);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.04),
+    0 4px 24px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Card glass — solid fallback */
+.glass-card {
+  background: white;
+  border: 1px solid rgba(228, 228, 231, 0.8);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s, border-color 0.3s, transform 0.3s;
+}
+.dark .glass-card {
+  background: rgba(39, 39, 42, 0.8);
+  border-color: rgba(63, 63, 70, 0.6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+/* Card glass — active */
+[data-glass] .glass-card {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.15),
+    0 2px 12px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+[data-glass] .glass-card:hover {
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.2),
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.dark[data-glass] .glass-card {
+  background: rgba(39, 39, 42, 0.45);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.03),
+    0 2px 12px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.dark[data-glass] .glass-card:hover {
+  background: rgba(39, 39, 42, 0.55);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.04),
+    0 8px 32px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Dropdown glass — solid fallback */
+.glass-dropdown {
+  background: white;
+  border: 1px solid rgba(228, 228, 231, 0.8);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+.dark .glass-dropdown {
+  background: rgba(39, 39, 42, 0.95);
+  border-color: rgba(63, 63, 70, 0.6);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+/* Dropdown glass — active */
+[data-glass] .glass-dropdown {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.1),
+    0 16px 48px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.dark[data-glass] .glass-dropdown {
+  background: rgba(39, 39, 42, 0.75);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.04),
+    0 16px 48px rgba(0, 0, 0, 0.25),
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Mesh gradient background */
+.bg-mesh {
+  background-color: #fafafa;
+}
+.dark .bg-mesh {
+  background-color: #09090b;
+}
+[data-glass] .bg-mesh {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(var(--ac-raw-200, 199, 210, 254), 0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 60% at 80% 20%, rgba(var(--ac2-raw-200, 221, 214, 254), 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 50% 90%, rgba(var(--ac-raw-100, 224, 231, 255), 0.1) 0%, transparent 70%);
+  background-color: #fafafa;
+}
+.dark[data-glass] .bg-mesh {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(var(--ac-raw-900, 49, 46, 129), 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 60% at 80% 20%, rgba(var(--ac2-raw-900, 76, 29, 149), 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 50% 90%, rgba(var(--ac-raw-950, 30, 27, 75), 0.05) 0%, transparent 70%);
+  background-color: #09090b;
+}
+
 /* === Micro-animations === */
 
 @keyframes fade-in-up {

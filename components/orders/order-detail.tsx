@@ -100,7 +100,7 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
       )}
 
       {/* Status + Actions */}
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5">
+      <div className="glass-card rounded-xl p-5">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Статус</span>
           <span className="text-sm text-slate-300">·</span>
@@ -142,7 +142,7 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
         {/* Left: Items */}
         <div className="lg:col-span-2 space-y-5">
           {/* Order items */}
-          <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
+          <div className="glass-card rounded-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
               <Package size={16} className="text-slate-400" />
               <h3 className="text-sm font-semibold text-slate-900">Позиции заказа</h3>
@@ -188,8 +188,8 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
 
           {/* Note */}
           {order.note && (
-            <div className="rounded-xl border border-slate-200/80 bg-white p-5">
-              <h3 className="text-sm font-semibold text-slate-900 mb-2">Заметка</h3>
+            <div className="glass-card rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-2">Заметка</h3>
               <p className="text-sm text-slate-600 whitespace-pre-wrap">{order.note}</p>
             </div>
           )}
@@ -198,8 +198,8 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
         {/* Right: Info */}
         <div className="space-y-5">
           {/* Client */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-5">
-            <h3 className="text-sm font-semibold text-slate-900 mb-3">Контакт</h3>
+          <div className="glass-card rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-3">Контакт</h3>
             {order.phone && (
               <div className="flex items-center gap-2 mb-3">
                 <a href={`tel:${order.phone}`} className="flex items-center gap-1.5 text-[13px] text-emerald-600 hover:text-emerald-700">
@@ -251,8 +251,8 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
           </div>
 
           {/* Assigned to */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-5">
-            <h3 className="text-sm font-semibold text-slate-900 mb-3">Исполнитель</h3>
+          <div className="glass-card rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-3">Исполнитель</h3>
             {isManager ? (
               <select
                 value={order.assigned_to ?? ''}
@@ -273,8 +273,8 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
           </div>
 
           {/* Meta info */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-5 space-y-2">
-            <h3 className="text-sm font-semibold text-slate-900 mb-3">Информация</h3>
+          <div className="glass-card rounded-xl p-5 space-y-2">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-3">Информация</h3>
             <p className="flex items-center gap-1.5 text-[12px] text-slate-500">
               <Calendar size={12} />
               Создан: {formatDate(order.created_at)}
@@ -307,8 +307,8 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
 
           {/* History */}
           {order.history && order.history.length > 0 && (
-            <div className="rounded-xl border border-slate-200/80 bg-white p-5">
-              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 mb-3">
+            <div className="glass-card rounded-xl p-5">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-3">
                 <History size={14} /> История
               </h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">

@@ -39,7 +39,7 @@ const colorMap = {
 export function StatCard({ label, value, icon: Icon, color = 'indigo', subtitle }: StatCardProps) {
   const c = colorMap[color]
   return (
-    <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800/90 border border-zinc-200/60 dark:border-zinc-700/50 p-4 transition-all duration-300 hover:shadow-md hover:shadow-zinc-200/50 dark:hover:shadow-zinc-900/50 hover:border-zinc-200 dark:hover:border-zinc-600">
+    <div className="group relative overflow-hidden rounded-2xl glass-card p-4">
       {/* Subtle gradient accent bar at top */}
       <div className={cn('absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r', c.bar)} />
 

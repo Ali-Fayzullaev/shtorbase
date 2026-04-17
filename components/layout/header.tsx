@@ -45,7 +45,7 @@ export function Header({ title, description, children }: HeaderProps) {
   const crumbs = getBreadcrumbs(pathname)
 
   return (
-    <header className="sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md">
+    <header className="sticky top-0 z-20 glass border-l-0 border-r-0 border-t-0 rounded-none">
       <div className="flex h-14 items-center justify-between px-4 sm:px-6">
         <div className="flex flex-col justify-center min-w-0">
           {/* Breadcrumbs */}

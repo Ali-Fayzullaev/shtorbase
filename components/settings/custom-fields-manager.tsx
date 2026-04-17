@@ -86,7 +86,7 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
 
   return (
     <div className="max-w-lg space-y-4">
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5">
+      <div className="glass-card rounded-xl p-5">
         <h3 className="text-sm font-semibold text-slate-900 mb-1">Дополнительные поля товаров</h3>
         <p className="text-xs text-slate-500 mb-4">
           Создавайте свои поля для товаров. Они будут показаны при создании/редактировании товара.

@@ -203,7 +203,7 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
       )}
 
       {/* Statuses list */}
-      <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden divide-y divide-slate-100">
+      <div className="glass-card rounded-xl overflow-hidden divide-y divide-slate-100">
         {statuses.map((s, i) => (
           <div key={s.id} className="px-4 py-3">
             {editingId === s.id ? (

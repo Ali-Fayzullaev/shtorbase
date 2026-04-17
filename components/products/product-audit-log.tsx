@@ -30,7 +30,7 @@ function formatValue(field: string, value: string | null) {
 
 export function ProductAuditLog({ logs }: ProductAuditLogProps) {
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white">
+    <div className="glass-card rounded-xl">
       <div className="px-4 py-3 border-b border-slate-100">
         <h3 className="text-[13px] font-semibold text-slate-700">История изменений</h3>
       </div>

@@ -38,7 +38,7 @@ export default async function NewOrderPage() {
       </Header>
 
       <div className="p-5">
-        <div className="rounded-xl border border-slate-200/80 bg-white p-5 sm:p-6">
+        <div className="rounded-xl glass-card p-5 sm:p-6">
           <OrderForm clients={clients} employees={employees} userRole={profile.role} />
         </div>
       </div>

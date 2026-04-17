@@ -66,7 +66,7 @@ export function SearchFilters({
 
       {/* Filters */}
       {showFilters && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200/80 bg-white p-3">
+        <div className="flex flex-wrap items-center gap-3 glass-card rounded-lg p-3">
           <div>
             <label className="block text-[11px] font-medium text-slate-400 mb-1 uppercase tracking-wider">Категория</label>
             <select

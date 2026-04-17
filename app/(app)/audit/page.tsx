@@ -46,7 +46,7 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
       <div className="p-5 space-y-4">
         <AuditFilters currentField={params.field} currentAction={params.action} />
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-xl glass-card">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">

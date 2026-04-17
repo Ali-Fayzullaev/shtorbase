@@ -64,10 +64,10 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
       <div className="p-4 sm:p-6 space-y-5 page-enter">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-children">
-          <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800/90 border border-zinc-200/60 dark:border-zinc-700/50 p-4 transition-all duration-300 hover:shadow-md hover:shadow-zinc-200/50 dark:hover:shadow-zinc-900/50">
+          <div className="group relative overflow-hidden rounded-2xl glass-card p-4">
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-zinc-400/20 to-transparent" />
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-700 dark:to-zinc-600 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/40 dark:bg-white/[0.06] shadow-sm">
                 <ClipboardList size={18} className="text-zinc-600 dark:text-zinc-300" />
               </div>
               <div>
@@ -76,7 +76,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
               </div>
             </div>
           </div>
-          <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800/90 border border-zinc-200/60 dark:border-zinc-700/50 p-4 transition-all duration-300 hover:shadow-md hover:shadow-indigo-100/50 dark:hover:shadow-zinc-900/50">
+          <div className="group relative overflow-hidden rounded-2xl glass-card p-4">
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-indigo-500/30 to-transparent" />
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm shadow-indigo-500/20">
@@ -88,7 +88,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
               </div>
             </div>
           </div>
-          <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800/90 border border-zinc-200/60 dark:border-zinc-700/50 p-4 transition-all duration-300 hover:shadow-md hover:shadow-amber-100/50 dark:hover:shadow-zinc-900/50">
+          <div className="group relative overflow-hidden rounded-2xl glass-card p-4">
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-500/30 to-transparent" />
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-sm shadow-amber-500/20">
@@ -100,7 +100,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
               </div>
             </div>
           </div>
-          <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800/90 border border-zinc-200/60 dark:border-zinc-700/50 p-4 transition-all duration-300 hover:shadow-md hover:shadow-emerald-100/50 dark:hover:shadow-zinc-900/50">
+          <div className="group relative overflow-hidden rounded-2xl glass-card p-4">
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500/30 to-transparent" />
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm shadow-emerald-500/20">

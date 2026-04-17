@@ -79,7 +79,7 @@ function StatusDropdown({ order, statuses, statusMap }: { order: Order; statuses
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false) }} />
-          <div className="absolute top-full left-0 mt-1.5 z-40 w-44 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-1.5 shadow-xl shadow-zinc-200/50 dark:shadow-zinc-900/50">
+          <div className="absolute top-full left-0 mt-1.5 z-40 w-44 rounded-xl glass-dropdown p-1.5">
             {statuses.map((s) => {
               const cfg = statusMap[s.slug] ?? defaultBadge
               const isActive = order.status === s.slug
@@ -144,7 +144,7 @@ function RowActions({ order, userRole }: { order: Order; userRole: UserRole }) {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false) }} />
-          <div className="absolute top-full right-0 mt-1 z-40 w-48 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-1.5 shadow-xl shadow-zinc-200/50 dark:shadow-zinc-900/50">
+          <div className="absolute top-full right-0 mt-1 z-40 w-48 rounded-xl glass-dropdown p-1.5">
             <Link
               href={`/orders/${order.id}`}
               className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
@@ -237,7 +237,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
 
   if (orders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl bg-white dark:bg-zinc-800/90 shadow-sm shadow-zinc-200/50 dark:shadow-zinc-900/50 ring-1 ring-zinc-100 dark:ring-zinc-800 py-16 text-center animate-fade-in-up">
+      <div className="flex flex-col items-center justify-center rounded-2xl glass-card py-16 text-center animate-fade-in-up">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-200 mb-4">
           <ClipboardList size={28} className="text-zinc-400" />
         </div>
@@ -250,9 +250,9 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
   return (
     <div className="space-y-0">
       {/* Desktop table */}
-      <div className="hidden lg:block rounded-2xl bg-white dark:bg-zinc-900 shadow-sm shadow-zinc-200/50 dark:shadow-zinc-900/50 ring-1 ring-zinc-100 dark:ring-zinc-800">
+      <div className="hidden lg:block rounded-2xl glass-card !p-0 overflow-hidden">
         {/* Header */}
-        <div className="grid grid-cols-[60px_1fr_120px_130px_140px_120px_90px_36px] gap-2 px-5 py-3 bg-gradient-to-r from-zinc-50 to-zinc-50/50 dark:from-zinc-800 dark:to-zinc-800/50 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-100/80 dark:border-zinc-700/80 rounded-t-2xl">
+        <div className="grid grid-cols-[60px_1fr_120px_130px_140px_120px_90px_36px] gap-2 px-5 py-3 bg-white/30 dark:bg-white/[0.03] text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-white/30 dark:border-white/[0.05] rounded-t-2xl">
           <span>№</span>
           <span>Клиент</span>
           <span>Телефон</span>
@@ -272,9 +272,9 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
               key={order.id}
               href={`/orders/${order.id}`}
               className={cn(
-                'group grid grid-cols-[60px_1fr_120px_130px_140px_120px_90px_36px] gap-2 px-5 py-3.5 border-b border-zinc-50 dark:border-zinc-800 last:border-0 transition-all duration-200 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20',
-                overdue && 'bg-red-50/20 dark:bg-red-950/10',
-                idx % 2 === 1 && 'bg-zinc-50/30 dark:bg-zinc-800/30'
+                'group grid grid-cols-[60px_1fr_120px_130px_140px_120px_90px_36px] gap-2 px-5 py-3.5 border-b border-white/20 dark:border-white/[0.04] last:border-0 transition-all duration-200 hover:bg-white/30 dark:hover:bg-white/[0.04]',
+                overdue && 'bg-red-50/30 dark:bg-red-950/10',
+                idx % 2 === 1 && 'bg-white/20 dark:bg-white/[0.02]'
               )}
             >
               {/* Order number */}
@@ -398,12 +398,12 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
               key={order.id}
               href={`/orders/${order.id}`}
               className={cn(
-                'block rounded-2xl bg-white dark:bg-zinc-900 shadow-sm ring-1 ring-zinc-100 dark:ring-zinc-800 overflow-hidden transition-all duration-200 active:scale-[0.98]',
-                overdue && 'ring-red-200/60 dark:ring-red-900/60'
+                'block rounded-2xl glass-card overflow-hidden transition-all duration-200 active:scale-[0.98]',
+                overdue && '!border-red-300/40 dark:!border-red-500/20'
               )}
             >
               {/* Card header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-50 dark:border-zinc-800">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/20 dark:border-white/[0.04]">
                 <div className="flex items-center gap-2.5">
                   <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">#{order.order_number}</span>
                   <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
@@ -464,7 +464,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
 
               {/* Card footer — contact actions */}
               {(order.phone || order.client?.phone) && (
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border-t border-zinc-50 dark:border-zinc-800" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-white/20 dark:bg-white/[0.03] border-t border-white/20 dark:border-white/[0.04]" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
                   <span
                     onClick={() => { window.location.href = `tel:${order.phone || order.client?.phone}` }}
                     className="btn-press inline-flex items-center gap-1.5 rounded-lg bg-white border border-zinc-200 px-3 py-1.5 text-[11px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm cursor-pointer"
@@ -485,7 +485,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
                 </div>
               )}
               {!(order.phone || order.client?.phone) && (
-                <div className="flex items-center justify-end px-4 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border-t border-zinc-50 dark:border-zinc-800" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                <div className="flex items-center justify-end px-4 py-2.5 bg-white/20 dark:bg-white/[0.03] border-t border-white/20 dark:border-white/[0.04]" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
                   <RowActions order={order} userRole={userRole} />
                 </div>
               )}

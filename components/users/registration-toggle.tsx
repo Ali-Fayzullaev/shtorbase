@@ -19,7 +19,7 @@ export function RegistrationToggle({ allowed }: RegistrationToggleProps) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="glass-card rounded-xl p-4">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {allowed ? (

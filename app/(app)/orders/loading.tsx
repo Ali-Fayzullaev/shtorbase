@@ -18,7 +18,7 @@ export default function OrdersLoading() {
         </div>
 
         {/* Table skeleton */}
-        <div className="rounded-2xl bg-white ring-1 ring-zinc-100 overflow-hidden">
+        <div className="glass-card rounded-2xl overflow-hidden">
           {/* Table header */}
           <div className="skeleton h-12 rounded-none" />
           {/* Table rows */}

@@ -55,7 +55,7 @@ export default async function UsersPage() {
         <CreateUserForm />
 
         {/* Users table */}
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-xl glass-card">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">

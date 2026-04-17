@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Moon, Sun, Monitor, Palette } from 'lucide-react'
+import { Moon, Sun, Monitor, Palette, Sparkles } from 'lucide-react'
 import { useTheme, type Theme, type AccentColor } from './theme-provider'
 import { cn } from '@/lib/utils/format'
 
@@ -22,7 +22,7 @@ const accents: { value: AccentColor; label: string; color: string }[] = [
 
 export function ThemeSelector() {
   const [open, setOpen] = useState(false)
-  const { theme, accent, setTheme, setAccent } = useTheme()
+  const { theme, accent, glass, setTheme, setAccent, setGlass } = useTheme()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -44,26 +44,51 @@ export function ThemeSelector() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-3 shadow-xl shadow-zinc-200/50 dark:shadow-zinc-900/50 z-50 animate-scale-in">
+        <div className="absolute right-0 top-full mt-2 w-64 rounded-xl glass-dropdown p-3 z-50 animate-scale-in">
           {/* Theme toggle */}
           <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Тема</p>
-          <div className="flex gap-1 rounded-lg bg-zinc-100/80 dark:bg-zinc-700/50 p-1 mb-4">
+          <div className="space-y-0.5 mb-4">
             {themes.map((t) => (
               <button
                 key={t.value}
                 onClick={() => setTheme(t.value)}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[12px] font-medium transition-all',
+                  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all',
                   theme === t.value
-                    ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm'
-                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                 )}
               >
-                <t.icon size={13} />
+                <t.icon size={15} strokeWidth={theme === t.value ? 2.2 : 1.5} />
                 {t.label}
+                {theme === t.value && (
+                  <svg className="ml-auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
               </button>
             ))}
           </div>
+
+          {/* Glass toggle */}
+          <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Эффекты</p>
+          <button
+            onClick={() => setGlass(!glass)}
+            className={cn(
+              'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all mb-4',
+              glass
+                ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300'
+                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
+            )}
+          >
+            <Sparkles size={15} strokeWidth={glass ? 2.2 : 1.5} />
+            Стекло
+            {glass && (
+              <svg className="ml-auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </button>
 
           {/* Accent colors */}
           <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Акцент</p>

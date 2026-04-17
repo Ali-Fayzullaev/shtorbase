@@ -33,7 +33,7 @@ export default async function NewProductPage() {
       </Header>
 
       <div className="p-5 max-w-2xl">
-        <div className="rounded-xl border border-slate-200/80 bg-white p-5">
+        <div className="rounded-xl glass-card p-5">
           <ProductForm categories={categories} units={units} customFields={customFields} />
         </div>
       </div>

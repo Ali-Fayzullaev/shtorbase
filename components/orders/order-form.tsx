@@ -343,7 +343,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
 
         {/* Items table */}
         {items.length > 0 && (
-          <div className="rounded-xl border border-slate-200/80 overflow-hidden">
+          <div className="glass-card rounded-xl overflow-hidden">
             <div className="hidden sm:grid grid-cols-[1fr_100px_120px_120px_40px] gap-2 px-4 py-2 bg-slate-50/50 border-b border-slate-100 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
               <span>Товар</span>
               <span className="text-right">Кол-во</span>

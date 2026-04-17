@@ -55,7 +55,7 @@ export function CategoriesManager({ initial }: { initial: Category[] }) {
 
   return (
     <div className="max-w-lg space-y-4">
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5">
+      <div className="glass-card rounded-xl p-5">
         <h3 className="text-sm font-semibold text-slate-900 mb-1">Категории товаров</h3>
         <p className="text-xs text-slate-500 mb-4">
           Добавляйте и редактируйте. Удалить можно только неиспользуемые.

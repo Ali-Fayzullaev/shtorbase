@@ -10,7 +10,7 @@ export function CreateUserForm() {
   const [showPwd, setShowPwd] = useState(false)
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
+    <div className="glass-card rounded-xl p-5">
       <h2 className="text-[15px] font-semibold text-slate-800 mb-4">Создать пользователя</h2>
 
       <form action={formAction} className="space-y-3">

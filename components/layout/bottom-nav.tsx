@@ -23,7 +23,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 lg:hidden animate-slide-up">
-        <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-lg border-t border-zinc-200/60 dark:border-zinc-700/60 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-safe">
+        <div className="glass border-l-0 border-r-0 border-b-0 rounded-none shadow-[0_-4px_24px_rgba(0,0,0,0.06)] pb-safe">
         <div className="flex items-stretch">
           {mainTabs.map((tab) => {
             const isActive =

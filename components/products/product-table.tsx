@@ -27,7 +27,7 @@ export function ProductTable({ products }: ProductTableProps) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
+    <div className="glass-card rounded-xl overflow-hidden">
       <table className="w-full">
         <thead>
           <tr className="border-b border-slate-100">

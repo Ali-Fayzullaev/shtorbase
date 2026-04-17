@@ -21,7 +21,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const isMeter = product.unit === 'meter'
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
+    <div className="glass-card rounded-xl overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-start justify-between gap-3">

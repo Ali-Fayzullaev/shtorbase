@@ -190,7 +190,7 @@ export function CartPanel() {
       {/* Slide-over panel */}
       <div
         className={cn(
-          'fixed top-0 right-0 z-50 h-full w-full max-w-md bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col',
+          'fixed top-0 right-0 z-50 h-full w-full max-w-md glass shadow-2xl transition-transform duration-300 ease-out flex flex-col',
           open ? 'translate-x-0' : 'translate-x-full'
         )}
       >
@@ -241,7 +241,7 @@ export function CartPanel() {
             {items.map((item) => (
               <div
                 key={item.product_id}
-                className="rounded-xl border border-slate-200/80 bg-white p-4 transition-all hover:border-slate-300"
+                className="glass-card rounded-xl p-4 transition-all"
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">

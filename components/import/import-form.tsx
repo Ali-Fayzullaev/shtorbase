@@ -11,7 +11,7 @@ export function ImportForm() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5">
+      <div className="glass-card rounded-xl p-5">
         <h2 className="text-[15px] font-semibold text-slate-800 mb-1">Массовое обновление остатков</h2>
         <p className="text-[13px] text-slate-400 mb-4">
           Загрузите CSV-файл с колонками «Артикул» и «Остаток». Разделитель: запятая или точка с запятой.
@@ -67,7 +67,7 @@ export function ImportForm() {
       </div>
 
       {/* Template info */}
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5">
+      <div className="glass-card rounded-xl p-5">
         <h3 className="text-[13px] font-semibold text-slate-700 mb-2">Формат файла</h3>
         <div className="rounded-lg bg-slate-50 p-3 font-mono text-[12px] text-slate-600 leading-relaxed">
           <div className="text-slate-400 mb-1">Артикул,Остаток</div>
