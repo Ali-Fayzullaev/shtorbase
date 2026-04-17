@@ -56,8 +56,8 @@ export function CategoriesManager({ initial }: { initial: Category[] }) {
   return (
     <div className="max-w-lg space-y-4">
       <div className="glass-card rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-slate-900 mb-1">Категории товаров</h3>
-        <p className="text-xs text-slate-500 mb-4">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-1">Категории товаров</h3>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 mb-4">
           Добавляйте и редактируйте. Удалить можно только неиспользуемые.
         </p>
 
@@ -100,23 +100,23 @@ export function CategoriesManager({ initial }: { initial: Category[] }) {
                   <button onClick={() => handleUpdate(item.id)} disabled={isPending} className="p-1.5 rounded-md text-green-600 hover:bg-green-50">
                     <Check size={14} />
                   </button>
-                  <button onClick={() => setEditingId(null)} className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100">
+                  <button onClick={() => setEditingId(null)} className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800">
                     <X size={14} />
                   </button>
                 </>
               ) : (
                 <>
-                  <span className="flex-1 text-sm text-slate-800">{item.name}</span>
+                  <span className="flex-1 text-sm text-slate-800 dark:text-zinc-200">{item.name}</span>
                   <button
                     onClick={() => { setEditingId(item.id); setEditName(item.name) }}
-                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300"
                   >
                     <Pencil size={13} />
                   </button>
                   <button
                     onClick={() => handleDelete(item.id, item.name)}
                     disabled={isPending}
-                    className="p-1.5 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-500"
+                    className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-red-50 hover:text-red-500"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -125,7 +125,7 @@ export function CategoriesManager({ initial }: { initial: Category[] }) {
             </li>
           ))}
           {items.length === 0 && (
-            <li className="py-4 text-center text-xs text-slate-400">Нет категорий</li>
+            <li className="py-4 text-center text-xs text-slate-400 dark:text-zinc-500">Нет категорий</li>
           )}
         </ul>
       </div>

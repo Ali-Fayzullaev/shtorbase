@@ -23,12 +23,12 @@ export function InviteForm() {
 
   return (
     <div className="glass-card rounded-xl p-5">
-      <h2 className="text-[15px] font-semibold text-slate-800 mb-4">Пригласить пользователя</h2>
+      <h2 className="text-[15px] font-semibold text-slate-800 dark:text-zinc-200 mb-4">Пригласить пользователя</h2>
 
       <form action={formAction} className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-[11px] font-medium text-slate-400 mb-1 uppercase tracking-wider">
+            <label className="block text-[11px] font-medium text-slate-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">
               Email
             </label>
             <input
@@ -36,11 +36,11 @@ export function InviteForm() {
               type="email"
               required
               placeholder="user@example.com"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all"
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-[13px] text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all"
             />
           </div>
           <div>
-            <label className="block text-[11px] font-medium text-slate-400 mb-1 uppercase tracking-wider">
+            <label className="block text-[11px] font-medium text-slate-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">
               ФИО
             </label>
             <input
@@ -48,17 +48,17 @@ export function InviteForm() {
               type="text"
               required
               placeholder="Иван Иванов"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all"
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-[13px] text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all"
             />
           </div>
           <div>
-            <label className="block text-[11px] font-medium text-slate-400 mb-1 uppercase tracking-wider">
+            <label className="block text-[11px] font-medium text-slate-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">
               Роль
             </label>
             <select
               name="role"
               defaultValue="employee"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all"
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-[13px] text-slate-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all"
             >
               <option value="employee">Сотрудник</option>
               <option value="manager">Менеджер</option>
@@ -87,7 +87,7 @@ export function InviteForm() {
         <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
           <p className="text-[13px] font-medium text-emerald-700 mb-2">{state.success}</p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 rounded-md bg-white border border-emerald-200 px-3 py-1.5 text-[12px] text-slate-600 truncate">
+            <code className="flex-1 rounded-md bg-white border border-emerald-200 px-3 py-1.5 text-[12px] text-slate-600 dark:text-zinc-300 truncate">
               {inviteUrl}
             </code>
             <button

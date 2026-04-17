@@ -9,10 +9,10 @@ import { formatPhoneInput, isValidPhone } from '@/lib/utils/phone'
 import { Plus, Trash2, Search, Loader2, UserPlus, Package } from 'lucide-react'
 
 const inputCls =
-  'flex h-9 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors outline-none placeholder:text-slate-400 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50'
-const labelCls = 'text-sm font-medium text-slate-700'
+  'flex h-9 w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50'
+const labelCls = 'text-sm font-medium text-slate-700 dark:text-zinc-300'
 const selectCls =
-  'flex h-9 w-full rounded-lg border border-slate-200 bg-transparent px-2.5 py-1.5 text-sm shadow-sm transition-colors outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50'
+  'flex h-9 w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-transparent px-2.5 py-1.5 text-sm shadow-sm transition-colors outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50'
 
 interface OrderItem {
   product_id: string
@@ -145,11 +145,11 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
                   className={inputCls}
                 />
                 {clientSearch.trim() && (
-                  <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg">
                     <button
                       type="button"
                       onClick={() => { setClientId(''); setClientSearch(''); }}
-                      className="flex w-full px-3 py-2 text-[13px] text-slate-400 hover:bg-slate-50"
+                      className="flex w-full px-3 py-2 text-[13px] text-slate-400 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800"
                     >
                       Без клиента
                     </button>
@@ -163,30 +163,30 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
                           key={c.id}
                           type="button"
                           onClick={() => { setClientId(c.id); setClientSearch(c.name + (c.phone ? ` (${c.phone})` : '')); }}
-                          className={cn('flex w-full px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50', clientId === c.id && 'bg-primary/5 font-medium')}
+                          className={cn('flex w-full px-3 py-2 text-[13px] text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800', clientId === c.id && 'bg-primary/5 font-medium')}
                         >
-                          {c.name}{c.phone ? <span className="ml-1 text-slate-400">({c.phone})</span> : null}
+                          {c.name}{c.phone ? <span className="ml-1 text-slate-400 dark:text-zinc-500">({c.phone})</span> : null}
                         </button>
                       ))}
                   </div>
                 )}
                 {!clientSearch && clientId && (
                   <div className="absolute inset-0 flex items-center px-3 pointer-events-none">
-                    <span className="text-sm text-slate-700">{clients.find(c => c.id === clientId)?.name ?? ''}</span>
+                    <span className="text-sm text-slate-700 dark:text-zinc-300">{clients.find(c => c.id === clientId)?.name ?? ''}</span>
                   </div>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => setShowNewClient(true)}
-                className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-zinc-700 px-2.5 py-1.5 text-[12px] font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
                 title="Новый клиент"
               >
                 <UserPlus size={14} />
               </button>
             </div>
           ) : (
-            <div className="space-y-2 rounded-lg border border-slate-200 p-3 bg-slate-50/50">
+            <div className="space-y-2 rounded-lg border border-slate-200 dark:border-zinc-700 p-3 bg-slate-50/50 dark:bg-zinc-800/50">
               <input
                 type="text"
                 value={newClientName}
@@ -213,7 +213,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
                 <button
                   type="button"
                   onClick={() => setShowNewClient(false)}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-white transition-colors"
+                  className="rounded-lg border border-slate-200 dark:border-zinc-700 px-3 py-1.5 text-sm text-slate-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800 transition-colors"
                 >
                   Отмена
                 </button>
@@ -282,7 +282,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
       {/* Product search + add items */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Package size={16} className="text-slate-400" />
+          <Package size={16} className="text-slate-400 dark:text-zinc-500" />
           <span className={labelCls}>Позиции заказа</span>
         </div>
 
@@ -290,7 +290,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
         <div className="relative">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500" />
               <input
                 type="text"
                 value={productSearch}
@@ -309,7 +309,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
               type="button"
               onClick={handleProductSearch}
               disabled={searching || !productSearch.trim()}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50"
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
             >
               {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
               Найти
@@ -318,22 +318,22 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
 
           {/* Search results dropdown */}
           {searchResults.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
+            <div className="absolute z-10 mt-1 w-full rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
               {searchResults.map((product) => (
                 <button
                   key={product.id}
                   type="button"
                   onClick={() => addItem(product)}
                   disabled={items.some((i) => i.product_id === product.id)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-b border-slate-50 last:border-0"
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-b border-slate-50 dark:border-zinc-800 last:border-0"
                 >
                   <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-slate-800 truncate">{product.name}</p>
-                    <p className="text-[11px] text-slate-400 font-mono">{product.sku}</p>
+                    <p className="text-[13px] font-medium text-slate-800 dark:text-zinc-200 truncate">{product.name}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">{product.sku}</p>
                   </div>
                   <div className="text-right shrink-0 ml-3">
-                    <p className="text-[13px] font-semibold text-slate-700">{formatPrice(product.price)}</p>
-                    <p className="text-[11px] text-slate-400">Остаток: {product.stock}</p>
+                    <p className="text-[13px] font-semibold text-slate-700 dark:text-zinc-300">{formatPrice(product.price)}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-zinc-500">Остаток: {product.stock}</p>
                   </div>
                 </button>
               ))}
@@ -344,7 +344,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
         {/* Items table */}
         {items.length > 0 && (
           <div className="glass-card rounded-xl overflow-hidden">
-            <div className="hidden sm:grid grid-cols-[1fr_100px_120px_120px_40px] gap-2 px-4 py-2 bg-slate-50/50 border-b border-slate-100 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+            <div className="hidden sm:grid grid-cols-[1fr_100px_120px_120px_40px] gap-2 px-4 py-2 bg-slate-50/50 dark:bg-zinc-800/50 border-b border-slate-100 dark:border-zinc-800 text-[11px] font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
               <span>Товар</span>
               <span className="text-right">Кол-во</span>
               <span className="text-right">Цена</span>
@@ -353,10 +353,10 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
             </div>
 
             {items.map((item, i) => (
-              <div key={item.product_id} className="grid sm:grid-cols-[1fr_100px_120px_120px_40px] gap-2 px-4 py-2.5 border-b border-slate-50 last:border-0 items-center">
+              <div key={item.product_id} className="grid sm:grid-cols-[1fr_100px_120px_120px_40px] gap-2 px-4 py-2.5 border-b border-slate-50 dark:border-zinc-800 last:border-0 items-center">
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-slate-800 truncate">{item.product_name}</p>
-                  <p className="text-[11px] text-slate-400 font-mono">{item.product_sku}</p>
+                  <p className="text-[13px] font-medium text-slate-800 dark:text-zinc-200 truncate">{item.product_name}</p>
+                  <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">{item.product_sku}</p>
                 </div>
                 <input
                   type="number"
@@ -364,7 +364,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
                   min="0.1"
                   value={item.quantity}
                   onChange={(e) => updateItem(i, 'quantity', parseFloat(e.target.value) || 0)}
-                  className="h-8 rounded-md border border-slate-200 px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="h-8 rounded-md border border-slate-200 dark:border-zinc-700 px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary/30"
                 />
                 <input
                   type="number"
@@ -372,15 +372,15 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
                   min="0"
                   value={item.unit_price}
                   onChange={(e) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
-                  className="h-8 rounded-md border border-slate-200 px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="h-8 rounded-md border border-slate-200 dark:border-zinc-700 px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary/30"
                 />
-                <p className="text-[13px] font-semibold text-slate-800 text-right">
+                <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-200 text-right">
                   {formatPrice(item.quantity * item.unit_price)}
                 </p>
                 <button
                   type="button"
                   onClick={() => removeItem(i)}
-                  className="justify-self-center text-slate-400 hover:text-red-500 transition-colors"
+                  className="justify-self-center text-slate-400 dark:text-zinc-500 hover:text-red-500 transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -388,17 +388,17 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
             ))}
 
             {/* Total */}
-            <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
-              <span className="text-sm font-semibold text-slate-700">Итого:</span>
-              <span className="text-lg font-bold text-slate-900">{formatPrice(total)}</span>
+            <div className="px-4 py-3 bg-slate-50/50 dark:bg-zinc-800/50 border-t border-slate-100 dark:border-zinc-800 flex justify-between items-center">
+              <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">Итого:</span>
+              <span className="text-lg font-bold text-slate-900 dark:text-zinc-100">{formatPrice(total)}</span>
             </div>
           </div>
         )}
 
         {items.length === 0 && (
           <div className="rounded-xl border border-dashed border-slate-300 py-8 text-center">
-            <Package size={24} className="mx-auto text-slate-300 mb-2" />
-            <p className="text-sm text-slate-400">Найдите и добавьте товары в заказ</p>
+            <Package size={24} className="mx-auto text-slate-300 dark:text-zinc-600 mb-2" />
+            <p className="text-sm text-slate-400 dark:text-zinc-500">Найдите и добавьте товары в заказ</p>
           </div>
         )}
       </div>

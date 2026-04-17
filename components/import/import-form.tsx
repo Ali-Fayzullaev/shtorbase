@@ -12,18 +12,18 @@ export function ImportForm() {
   return (
     <div className="space-y-5">
       <div className="glass-card rounded-xl p-5">
-        <h2 className="text-[15px] font-semibold text-slate-800 mb-1">Массовое обновление остатков</h2>
-        <p className="text-[13px] text-slate-400 mb-4">
+        <h2 className="text-[15px] font-semibold text-slate-800 dark:text-zinc-200 mb-1">Массовое обновление остатков</h2>
+        <p className="text-[13px] text-slate-400 dark:text-zinc-500 mb-4">
           Загрузите CSV-файл с колонками «Артикул» и «Остаток». Разделитель: запятая или точка с запятой.
         </p>
 
         <form action={formAction} className="space-y-4">
-          <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-colors">
-            <Upload size={28} className="text-slate-300 mb-2" />
-            <span className="text-[13px] font-medium text-slate-500">
+          <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-zinc-700 bg-slate-50/50 dark:bg-zinc-800/50 p-8 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-colors">
+            <Upload size={28} className="text-slate-300 dark:text-zinc-600 mb-2" />
+            <span className="text-[13px] font-medium text-slate-500 dark:text-zinc-400">
               {fileName ?? 'Выберите CSV-файл'}
             </span>
-            <span className="text-[11px] text-slate-400 mt-1">Макс. 2MB</span>
+            <span className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Макс. 2MB</span>
             <input
               type="file"
               name="file"
@@ -68,14 +68,14 @@ export function ImportForm() {
 
       {/* Template info */}
       <div className="glass-card rounded-xl p-5">
-        <h3 className="text-[13px] font-semibold text-slate-700 mb-2">Формат файла</h3>
-        <div className="rounded-lg bg-slate-50 p-3 font-mono text-[12px] text-slate-600 leading-relaxed">
-          <div className="text-slate-400 mb-1">Артикул,Остаток</div>
+        <h3 className="text-[13px] font-semibold text-slate-700 dark:text-zinc-300 mb-2">Формат файла</h3>
+        <div className="rounded-lg bg-slate-50 dark:bg-zinc-800/50 p-3 font-mono text-[12px] text-slate-600 dark:text-zinc-300 leading-relaxed">
+          <div className="text-slate-400 dark:text-zinc-500 mb-1">Артикул,Остаток</div>
           <div>SHT-001,25</div>
           <div>TKN-002,0</div>
           <div>KRN-003,12.5</div>
         </div>
-        <p className="text-[11px] text-slate-400 mt-2">
+        <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-2">
           Поддерживаемые заголовки: Артикул/SKU/Код · Остаток/Stock/Количество/Кол-во
         </p>
       </div>

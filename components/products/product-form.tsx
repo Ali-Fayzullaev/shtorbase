@@ -195,11 +195,11 @@ export function ProductForm({ categories, units, customFields, product, initialC
       {/* Custom Fields */}
       {customFields.length > 0 && (
         <div className="space-y-3">
-          <span className={cn(labelCls, 'text-slate-600')}>Дополнительные поля</span>
+          <span className={cn(labelCls, 'text-slate-600 dark:text-zinc-300')}>Дополнительные поля</span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {customFields.map((field) => (
               <div key={field.id} className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700">
+                <label className="text-xs font-medium text-slate-700 dark:text-zinc-300">
                   {field.name}
                   {field.is_required && <span className="text-red-400 ml-0.5">*</span>}
                 </label>
@@ -259,11 +259,11 @@ export function ProductForm({ categories, units, customFields, product, initialC
             {imageFiles.length > 0 && (
               <ul className="space-y-1">
                 {imageFiles.map((file, i) => (
-                  <li key={i} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-xs">
-                    <ImageIcon size={12} className="text-slate-400 shrink-0" />
-                    <span className="flex-1 truncate text-slate-600">{file.name}</span>
-                    <span className="text-slate-400 shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
-                    <button type="button" onClick={() => removeFile(i)} className="text-slate-400 hover:text-red-500">
+                  <li key={i} className="flex items-center gap-2 rounded-lg bg-slate-50 dark:bg-zinc-800/50 px-3 py-1.5 text-xs">
+                    <ImageIcon size={12} className="text-slate-400 dark:text-zinc-500 shrink-0" />
+                    <span className="flex-1 truncate text-slate-600 dark:text-zinc-300">{file.name}</span>
+                    <span className="text-slate-400 dark:text-zinc-500 shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
+                    <button type="button" onClick={() => removeFile(i)} className="text-slate-400 dark:text-zinc-500 hover:text-red-500">
                       <Trash2 size={12} />
                     </button>
                   </li>
@@ -273,7 +273,7 @@ export function ProductForm({ categories, units, customFields, product, initialC
           </div>
 
           {/* URL inputs */}
-          <p className="text-xs text-slate-400">Или добавьте по ссылке:</p>
+          <p className="text-xs text-slate-400 dark:text-zinc-500">Или добавьте по ссылке:</p>
           <div className="space-y-2">
             {imageUrls.map((url, i) => (
               <div key={i} className="flex gap-2">

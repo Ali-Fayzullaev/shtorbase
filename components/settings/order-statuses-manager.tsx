@@ -119,8 +119,8 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Статусы заказов</h3>
-          <p className="text-xs text-slate-400 mt-0.5">Настройте статусы, их цвета и очерёдность.</p>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Статусы заказов</h3>
+          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">Настройте статусы, их цвета и очерёдность.</p>
         </div>
         <button
           onClick={() => setShowAdd(!showAdd)}
@@ -139,31 +139,31 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
 
       {/* Add form */}
       {showAdd && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
+        <div className="rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/50 dark:bg-zinc-800/50 p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-medium text-slate-500 mb-1">Slug (английский)</label>
+              <label className="block text-[11px] font-medium text-slate-500 dark:text-zinc-400 mb-1">Slug (английский)</label>
               <input
                 type="text"
                 value={newSlug}
                 onChange={(e) => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                 placeholder="paid"
-                className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                className="w-full rounded-lg border border-slate-200 dark:border-zinc-700 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-slate-500 mb-1">Название</label>
+              <label className="block text-[11px] font-medium text-slate-500 dark:text-zinc-400 mb-1">Название</label>
               <input
                 type="text"
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
                 placeholder="Оплачен"
-                className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                className="w-full rounded-lg border border-slate-200 dark:border-zinc-700 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>
           </div>
           <div>
-            <label className="block text-[11px] font-medium text-slate-500 mb-1.5">Цвет</label>
+            <label className="block text-[11px] font-medium text-slate-500 dark:text-zinc-400 mb-1.5">Цвет</label>
             <div className="flex flex-wrap gap-2">
               {colorPresets.map((preset, i) => (
                 <button
@@ -194,7 +194,7 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
             </button>
             <button
               onClick={() => { setShowAdd(false); setAddError(null) }}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-white transition-colors"
+              className="rounded-lg border border-slate-200 dark:border-zinc-700 px-3 py-1.5 text-sm text-slate-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800 transition-colors"
             >
               Отмена
             </button>
@@ -209,16 +209,16 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
             {editingId === s.id ? (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-500 mb-1">Название</label>
+                  <label className="block text-[11px] font-medium text-slate-500 dark:text-zinc-400 mb-1">Название</label>
                   <input
                     type="text"
                     value={editLabel}
                     onChange={(e) => setEditLabel(e.target.value)}
-                    className="w-full max-w-xs rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className="w-full max-w-xs rounded-lg border border-slate-200 dark:border-zinc-700 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-500 mb-1.5">Цвет</label>
+                  <label className="block text-[11px] font-medium text-slate-500 dark:text-zinc-400 mb-1.5">Цвет</label>
                   <div className="flex flex-wrap gap-2">
                     {colorPresets.map((preset, i) => (
                       <button
@@ -248,7 +248,7 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+                    className="rounded-lg border border-slate-200 dark:border-zinc-700 px-3 py-1.5 text-sm text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
                   >
                     Отмена
                   </button>
@@ -260,12 +260,12 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
                   <span className={cn('h-2 w-2 rounded-full', s.dot_color)} />
                   {s.label}
                 </span>
-                <span className="text-[11px] text-slate-400 font-mono">{s.slug}</span>
+                <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">{s.slug}</span>
                 <div className="ml-auto flex items-center gap-0.5">
                   <button
                     onClick={() => handleMove(i, 'up')}
                     disabled={i === 0 || reorderPending}
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-default"
+                    className="rounded-md p-1.5 text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors disabled:opacity-30 disabled:cursor-default"
                     title="Вверх"
                   >
                     <ArrowUp size={13} />
@@ -273,14 +273,14 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
                   <button
                     onClick={() => handleMove(i, 'down')}
                     disabled={i === statuses.length - 1 || reorderPending}
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-default"
+                    className="rounded-md p-1.5 text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors disabled:opacity-30 disabled:cursor-default"
                     title="Вниз"
                   >
                     <ArrowDown size={13} />
                   </button>
                   <button
                     onClick={() => startEdit(s)}
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                    className="rounded-md p-1.5 text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
                     title="Редактировать"
                   >
                     <Pencil size={13} />
@@ -288,7 +288,7 @@ export function OrderStatusesManager({ initial }: OrderStatusesManagerProps) {
                   <button
                     onClick={() => handleDelete(s.id)}
                     disabled={deletePending}
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50"
+                    className="rounded-md p-1.5 text-slate-400 dark:text-zinc-500 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50"
                     title="Удалить"
                   >
                     <Trash2 size={13} />

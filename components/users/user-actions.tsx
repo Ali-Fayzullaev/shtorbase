@@ -33,7 +33,7 @@ export function UserRoleSelect({ userId, currentRole, isSelf }: UserRoleSelectPr
       onChange={(e) => handleChange(e.target.value)}
       disabled={isSelf || pending}
       className={cn(
-        'rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[12px] text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all',
+        'rounded-md border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/50 px-2 py-1 text-[12px] text-slate-600 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-all',
         isSelf && 'opacity-50 cursor-not-allowed',
       )}
     >
@@ -110,7 +110,7 @@ export function DeleteUserButton({ userId, userName, isSelf }: DeleteUserButtonP
         'inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium transition-colors',
         confirming
           ? 'bg-red-500 text-white hover:bg-red-600'
-          : 'text-slate-400 hover:text-red-500 hover:bg-red-50',
+          : 'text-slate-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-50',
         pending && 'opacity-50',
       )}
       title="Удалить пользователя"

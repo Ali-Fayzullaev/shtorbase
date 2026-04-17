@@ -87,8 +87,8 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
   return (
     <div className="max-w-lg space-y-4">
       <div className="glass-card rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-slate-900 mb-1">Дополнительные поля товаров</h3>
-        <p className="text-xs text-slate-500 mb-4">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-1">Дополнительные поля товаров</h3>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 mb-4">
           Создавайте свои поля для товаров. Они будут показаны при создании/редактировании товара.
         </p>
 
@@ -100,7 +100,7 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
 
         {/* Add/Edit form */}
         {showForm ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 mb-4 space-y-3">
+          <div className="rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50/50 dark:bg-zinc-800/50 p-3 mb-4 space-y-3">
             <div className="flex gap-2">
               <input
                 value={name}
@@ -128,7 +128,7 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
               />
             )}
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-zinc-300 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isRequired}
@@ -138,7 +138,7 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
                 Обязательное
               </label>
               <div className="flex gap-2">
-                <button onClick={resetForm} className={cn(btnCls, 'border border-input bg-white hover:bg-slate-50')}>
+                <button onClick={resetForm} className={cn(btnCls, 'border border-input bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800')}>
                   Отмена
                 </button>
                 <button
@@ -167,9 +167,9 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
           {items.map((field) => (
             <li key={field.id} className="flex items-center gap-2 py-2.5">
               <div className="flex-1 min-w-0">
-                <span className="text-sm text-slate-800">{field.name}</span>
+                <span className="text-sm text-slate-800 dark:text-zinc-200">{field.name}</span>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[10px] bg-slate-100 text-slate-500 rounded px-1.5 py-px">
+                  <span className="text-[10px] bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 rounded px-1.5 py-px">
                     {typeLabels[field.field_type]}
                   </span>
                   {field.is_required && (
@@ -178,7 +178,7 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
                     </span>
                   )}
                   {field.options && field.options.length > 0 && (
-                    <span className="text-[10px] text-slate-400 truncate">
+                    <span className="text-[10px] text-slate-400 dark:text-zinc-500 truncate">
                       {field.options.join(', ')}
                     </span>
                   )}
@@ -186,21 +186,21 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
               </div>
               <button
                 onClick={() => startEdit(field)}
-                className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300"
               >
                 <Pencil size={13} />
               </button>
               <button
                 onClick={() => handleDelete(field.id, field.name)}
                 disabled={isPending}
-                className="p-1.5 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-500"
+                className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-red-50 hover:text-red-500"
               >
                 <Trash2 size={13} />
               </button>
             </li>
           ))}
           {items.length === 0 && (
-            <li className="py-4 text-center text-xs text-slate-400">Нет дополнительных полей</li>
+            <li className="py-4 text-center text-xs text-slate-400 dark:text-zinc-500">Нет дополнительных полей</li>
           )}
         </ul>
       </div>

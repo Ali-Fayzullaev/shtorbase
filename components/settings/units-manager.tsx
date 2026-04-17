@@ -59,8 +59,8 @@ export function UnitsManager({ initial }: { initial: Unit[] }) {
   return (
     <div className="max-w-lg space-y-4">
       <div className="glass-card rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-slate-900 mb-1">Единицы измерения</h3>
-        <p className="text-xs text-slate-500 mb-4">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-1">Единицы измерения</h3>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 mb-4">
           Единицы отображаются при создании товара. По умолчанию: Метр (м), Штука (шт).
         </p>
 
@@ -112,24 +112,24 @@ export function UnitsManager({ initial }: { initial: Unit[] }) {
                   <button onClick={() => handleUpdate(item.id)} disabled={isPending} className="p-1.5 rounded-md text-green-600 hover:bg-green-50">
                     <Check size={14} />
                   </button>
-                  <button onClick={() => setEditingId(null)} className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100">
+                  <button onClick={() => setEditingId(null)} className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800">
                     <X size={14} />
                   </button>
                 </>
               ) : (
                 <>
-                  <span className="flex-1 text-sm text-slate-800">{item.name}</span>
-                  <span className="text-xs text-slate-400 bg-slate-50 rounded px-1.5 py-0.5">{item.short_name}</span>
+                  <span className="flex-1 text-sm text-slate-800 dark:text-zinc-200">{item.name}</span>
+                  <span className="text-xs text-slate-400 dark:text-zinc-500 bg-slate-50 dark:bg-zinc-800/50 rounded px-1.5 py-0.5">{item.short_name}</span>
                   <button
                     onClick={() => { setEditingId(item.id); setEditName(item.name); setEditShort(item.short_name) }}
-                    className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300"
                   >
                     <Pencil size={13} />
                   </button>
                   <button
                     onClick={() => handleDelete(item.id, item.name)}
                     disabled={isPending}
-                    className="p-1.5 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-500"
+                    className="p-1.5 rounded-md text-slate-400 dark:text-zinc-500 hover:bg-red-50 hover:text-red-500"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -138,7 +138,7 @@ export function UnitsManager({ initial }: { initial: Unit[] }) {
             </li>
           ))}
           {items.length === 0 && (
-            <li className="py-4 text-center text-xs text-slate-400">Нет единиц измерения</li>
+            <li className="py-4 text-center text-xs text-slate-400 dark:text-zinc-500">Нет единиц измерения</li>
           )}
         </ul>
       </div>

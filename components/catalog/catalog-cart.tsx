@@ -165,7 +165,7 @@ export function CartPanel() {
           'fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full px-5 py-3.5 font-medium text-white shadow-xl transition-all hover:scale-105 active:scale-95',
           totalItems > 0
             ? 'bg-indigo-600 hover:bg-indigo-700'
-            : 'bg-slate-400 hover:bg-slate-500'
+            : 'bg-slate-400 dark:bg-zinc-500 hover:bg-slate-500 dark:hover:bg-zinc-400'
         )}
       >
         <ShoppingCart size={20} />
@@ -195,10 +195,10 @@ export function CartPanel() {
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 px-5 py-4">
           <div className="flex items-center gap-2.5">
             <ShoppingBag size={20} className="text-indigo-600" />
-            <h2 className="text-lg font-bold text-slate-800">Корзина</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-zinc-200">Корзина</h2>
             {totalItems > 0 && (
               <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-600">
                 {totalItems}
@@ -207,7 +207,7 @@ export function CartPanel() {
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            className="rounded-lg p-1.5 text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
           >
             <X size={18} />
           </button>
@@ -229,11 +229,11 @@ export function CartPanel() {
 
           {items.length === 0 && !success && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-full bg-slate-100 p-4 mb-3">
-                <ShoppingCart size={24} className="text-slate-400" />
+              <div className="rounded-full bg-slate-100 dark:bg-zinc-800 p-4 mb-3">
+                <ShoppingCart size={24} className="text-slate-400 dark:text-zinc-500" />
               </div>
-              <p className="text-sm font-medium text-slate-600">Корзина пуста</p>
-              <p className="text-xs text-slate-400 mt-1">Добавьте товары из каталога</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-zinc-300">Корзина пуста</p>
+              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">Добавьте товары из каталога</p>
             </div>
           )}
 
@@ -245,12 +245,12 @@ export function CartPanel() {
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 leading-tight">{item.name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5 font-mono">{item.sku}</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-zinc-200 leading-tight">{item.name}</p>
+                    <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5 font-mono">{item.sku}</p>
                   </div>
                   <button
                     onClick={() => removeItem(item.product_id)}
-                    className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    className="shrink-0 rounded-lg p-1.5 text-slate-400 dark:text-zinc-500 hover:bg-red-50 hover:text-red-500 transition-colors"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -260,7 +260,7 @@ export function CartPanel() {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
                     >
                       <Minus size={14} />
                     </button>
@@ -270,20 +270,20 @@ export function CartPanel() {
                       max={item.stock}
                       value={item.quantity}
                       onChange={(e) => updateQuantity(item.product_id, Number(e.target.value) || 1)}
-                      className="h-8 w-16 rounded-lg border border-slate-200 text-center text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300"
+                      className="h-8 w-16 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-center text-sm font-medium text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300"
                     />
                     <button
                       onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
                       disabled={item.quantity >= item.stock}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-40"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-40"
                     >
                       <Plus size={14} />
                     </button>
-                    <span className="text-xs text-slate-400 ml-1">
+                    <span className="text-xs text-slate-400 dark:text-zinc-500 ml-1">
                       {item.unit === 'meter' ? 'м' : 'шт'}
                     </span>
                   </div>
-                  <p className="text-sm font-bold text-slate-800 tabular-nums">
+                  <p className="text-sm font-bold text-slate-800 dark:text-zinc-200 tabular-nums">
                     {formatPrice(item.quantity * item.price)} ₸
                   </p>
                 </div>
@@ -294,34 +294,34 @@ export function CartPanel() {
 
         {/* Footer */}
         {items.length > 0 && (
-          <div className="border-t border-slate-100 px-5 py-4 space-y-3">
+          <div className="border-t border-slate-100 dark:border-zinc-800 px-5 py-4 space-y-3">
             {/* Client search */}
             <div className="relative">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500" />
                 <input
                   type="text"
                   placeholder="Клиент (поиск по имени или телефону)"
                   value={clientSearch}
                   onChange={(e) => { setClientSearch(e.target.value); setClientDropdown(true); if (!e.target.value) setClientId(null) }}
                   onFocus={() => setClientDropdown(true)}
-                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300"
+                  className="w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-9 pr-3 py-2 text-sm placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300"
                 />
               </div>
               {clientDropdown && filteredClients.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                <div className="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg">
                   {filteredClients.slice(0, 20).map((c) => (
                     <button
                       key={c.id}
                       type="button"
                       onClick={() => selectClient(c)}
                       className={cn(
-                        'w-full text-left px-3 py-2 text-sm hover:bg-slate-50',
+                        'w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-zinc-800',
                         clientId === c.id && 'bg-indigo-50 text-indigo-700'
                       )}
                     >
                       <span className="font-medium">{c.name}</span>
-                      {c.phone && <span className="text-slate-400 ml-2">{c.phone}</span>}
+                      {c.phone && <span className="text-slate-400 dark:text-zinc-500 ml-2">{c.phone}</span>}
                     </button>
                   ))}
                 </div>
@@ -333,7 +333,7 @@ export function CartPanel() {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 resize-none"
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 resize-none"
             />
 
             <div className="space-y-1">
@@ -344,7 +344,7 @@ export function CartPanel() {
                 onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
                 required
                 className={cn(
-                  'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300',
+                  'w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300',
                   phone && !isValidPhone(phone) && 'border-amber-400 focus:border-amber-400 focus:ring-amber-400/20'
                 )}
               />
@@ -356,12 +356,12 @@ export function CartPanel() {
             <div className="flex items-center justify-between">
               <button
                 onClick={clearCart}
-                className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+                className="text-xs text-slate-400 dark:text-zinc-500 hover:text-red-500 transition-colors"
               >
                 Очистить
               </button>
-              <p className="text-lg font-bold text-slate-800 tabular-nums">
-                {formatPrice(totalAmount)} <span className="text-sm text-slate-400">₸</span>
+              <p className="text-lg font-bold text-slate-800 dark:text-zinc-200 tabular-nums">
+                {formatPrice(totalAmount)} <span className="text-sm text-slate-400 dark:text-zinc-500">₸</span>
               </p>
             </div>
 
