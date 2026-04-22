@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition, useMemo, useEffect } from 'react'
 import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
 import { updateOrderStatus, deleteOrder } from '@/lib/actions/orders'
 import { cn } from '@/lib/utils/format'
-import { ClipboardList, User, Calendar, ChevronDown, Loader2, Check, Phone, Trash2, MoreHorizontal, ExternalLink, Clock, AlertTriangle } from 'lucide-react'
+import { ClipboardList, User, Calendar, ChevronDown, Loader2, Check, Phone, Trash2, MoreHorizontal, ExternalLink, Clock, AlertTriangle, LayoutList, PanelsTopLeft } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 const defaultBadge = { label: '???', color: 'bg-zinc-50 text-zinc-500 border-zinc-200', dot: 'bg-zinc-400' }
@@ -224,6 +224,19 @@ interface OrdersTableProps {
 
 export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
   const canChangeStatus = userRole === 'admin' || userRole === 'manager'
+  const [view, setView] = useState<'list' | 'board'>('list')
+
+  useEffect(() => {
+    const saved = localStorage.getItem('orders-view')
+    if (saved === 'list' || saved === 'board') {
+      setView(saved)
+    }
+  }, [])
+
+  function handleViewChange(nextView: 'list' | 'board') {
+    setView(nextView)
+    localStorage.setItem('orders-view', nextView)
+  }
 
   const statusMap = useMemo(() => {
     const map: Record<string, { label: string; color: string; dot: string }> = {}
@@ -232,6 +245,21 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
     }
     return map
   }, [statuses])
+
+  const boardColumns = useMemo(() => {
+    const columns = statuses.map((status) => ({
+      status,
+      orders: orders.filter((order) => order.status === status.slug),
+    }))
+    const remaining = orders.filter((order) => !statuses.some((status) => status.slug === order.status))
+    if (remaining.length > 0) {
+      columns.push({
+        status: { id: 'other', slug: 'other', label: 'Прочее', sort_order: 999, is_default: false, color: 'bg-zinc-50 text-zinc-600 border-zinc-200', dot_color: 'bg-zinc-400' },
+        orders: remaining,
+      })
+    }
+    return columns
+  }, [orders, statuses])
 
   if (orders.length === 0) {
     return (
@@ -246,7 +274,149 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-2xl border border-zinc-200/70 bg-white/90 px-4 py-3 shadow-sm backdrop-blur dark:border-white/[0.06] dark:bg-zinc-950/70 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">
+            Просмотр заказов
+          </div>
+          <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+            {view === 'list' ? 'Таблица для точной работы с деталями' : 'Доска для быстрого контроля этапов'}
+          </div>
+        </div>
+        <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-50 p-1 dark:border-white/[0.08] dark:bg-white/[0.04]">
+          <button
+            type="button"
+            onClick={() => handleViewChange('list')}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all',
+              view === 'list'
+                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-100'
+                : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+            )}
+          >
+            <LayoutList size={13} />
+            Список
+          </button>
+          <button
+            type="button"
+            onClick={() => handleViewChange('board')}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all',
+              view === 'board'
+                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-100'
+                : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+            )}
+          >
+            <PanelsTopLeft size={13} />
+            Доска
+          </button>
+        </div>
+      </div>
+
+      {view === 'board' ? (
+        <div className="overflow-x-auto pb-1">
+          <div className="grid min-w-[980px] grid-flow-col auto-cols-[280px] gap-4">
+            {boardColumns.map(({ status, orders: statusOrders }) => {
+              const badge = statusMap[status.slug] ?? defaultBadge
+              return (
+                <div key={status.slug} className="flex min-h-[520px] flex-col rounded-2xl border border-zinc-200/70 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/[0.06] dark:bg-zinc-950/65">
+                  <div className="mb-3 flex items-center gap-2 rounded-xl border border-zinc-200/70 bg-zinc-50/80 px-3 py-2 dark:border-white/[0.05] dark:bg-white/[0.03]">
+                    <span className={cn('h-2 w-2 rounded-full', badge.dot)} />
+                    <span className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">{badge.label}</span>
+                    <span className="ml-auto rounded-full bg-zinc-200/70 px-2 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-white/[0.06] dark:text-zinc-300">
+                      {statusOrders.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {statusOrders.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-[12px] text-zinc-400 dark:border-white/[0.08] dark:text-zinc-500">
+                        Пусто
+                      </div>
+                    ) : (
+                      statusOrders.map((order) => {
+                        const overdue = isOverdue(order.deadline, order.status)
+                        return (
+                          <Link
+                            key={order.id}
+                            href={`/orders/${order.id}`}
+                            className={cn(
+                              'block rounded-2xl border border-zinc-200/70 bg-white px-4 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-white/[0.06] dark:bg-zinc-900/80',
+                              overdue && 'border-red-200 bg-red-50/60 dark:border-red-500/20 dark:bg-red-950/10'
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="text-[12px] font-semibold text-zinc-800 dark:text-zinc-100">#{order.order_number}</div>
+                                <div className="mt-0.5 text-[11px] text-zinc-400">{formatDate(order.created_at)}</div>
+                              </div>
+                              <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                                <RowActions order={order} userRole={userRole} />
+                              </div>
+                            </div>
+
+                            <div className="mt-3 text-[14px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">
+                              {order.client?.name || 'Без клиента'}
+                            </div>
+
+                            {order.note && (
+                              <div className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400 line-clamp-2">
+                                {order.note}
+                              </div>
+                            )}
+
+                            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                              {order.assigned_user && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-1 dark:bg-white/[0.05]">
+                                  <User size={11} />
+                                  {order.assigned_user.full_name}
+                                </span>
+                              )}
+                              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-1 dark:bg-white/[0.05]">
+                                <Calendar size={11} />
+                                {formatDate(order.created_at)}
+                              </span>
+                              {order.deadline && (
+                                <span className={cn(
+                                  'inline-flex items-center gap-1 rounded-full px-2 py-1',
+                                  overdue
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-300'
+                                    : 'bg-zinc-100 text-zinc-500 dark:bg-white/[0.05] dark:text-zinc-400'
+                                )}>
+                                  {overdue ? <AlertTriangle size={11} /> : <Clock size={11} />}
+                                  {formatDate(order.deadline)}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="mt-3 flex items-center justify-between gap-3">
+                              <div className="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
+                                {formatPrice(order.total_amount)}
+                              </div>
+                              <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                                {canChangeStatus ? (
+                                  <StatusDropdown order={order} statuses={statuses} statusMap={statusMap} />
+                                ) : (
+                                  <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border', badge.color)}>
+                                    <span className={cn('h-1.5 w-1.5 rounded-full', badge.dot)} />
+                                    {badge.label}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </Link>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Desktop table */}
       <div className="hidden md:block relative">
         <div className="overflow-x-auto rounded-2xl">
@@ -497,6 +667,8 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
           )
         })}
       </div>
+      </>
+      )}
     </div>
   )
 }

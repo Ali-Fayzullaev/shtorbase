@@ -18,6 +18,9 @@ import {
   Activity,
   Clock,
   Inbox,
+  ShieldCheck,
+  Filter,
+  Eye,
 } from 'lucide-react'
 
 const fieldConfig: Record<string, { label: string; icon: typeof Pencil; tint: string }> = {
@@ -119,29 +122,97 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
       <Header title="Журнал изменений" description={`Всего записей: ${total.toLocaleString('ru-RU')}`} />
 
       <div className="p-5 space-y-5">
-        {/* Summary pills */}
+        <div className="rounded-2xl border border-zinc-200/70 bg-gradient-to-br from-white to-zinc-50 p-5 shadow-sm dark:border-white/[0.06] dark:from-zinc-950 dark:to-zinc-900">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-500">Понятный аудит</div>
+              <h2 className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">Кто и что изменил в каталоге</h2>
+              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Здесь фиксируются создания, изменения и удаления. Экран нужен не только для контроля, но и для ответа на обычные вопросы: кто поменял цену, когда закончился остаток и почему карточка товара выглядит иначе.
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[12px] font-medium text-zinc-600 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-zinc-300">
+                  <ShieldCheck size={13} className="text-indigo-500" />
+                  История хранится автоматически
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[12px] font-medium text-zinc-600 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-zinc-300">
+                  <Filter size={13} className="text-amber-500" />
+                  Можно сузить по действию и полю
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[12px] font-medium text-zinc-600 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-zinc-300">
+                  <Eye size={13} className="text-emerald-500" />
+                  Открывайте товар прямо из записи
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-zinc-200/70 bg-white/80 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Что видно на странице</div>
+                <div className="mt-1 text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{logs.length}</div>
+                <div className="text-[12px] text-zinc-500 dark:text-zinc-400">записей в текущей выборке</div>
+              </div>
+              <div className="rounded-xl border border-zinc-200/70 bg-zinc-50/80 px-3 py-2.5 dark:border-white/[0.06] dark:bg-zinc-900/50">
+                <div className="text-[11px] text-zinc-400 dark:text-zinc-500">Фильтры</div>
+                <div className="mt-1 text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
+                  {hasFilters ? 'Показана суженная выборка' : 'Показаны все последние изменения'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {logs.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 rounded-full glass-card px-3.5 py-1.5">
-              <Activity size={13} className="text-indigo-500" />
-              <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300">На странице: {logs.length}</span>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-zinc-200/70 bg-white/90 p-4 shadow-sm dark:border-white/[0.06] dark:bg-zinc-950/70">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+                  <Activity size={18} />
+                </div>
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">На странице</div>
+                  <div className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{logs.length}</div>
+                </div>
+              </div>
             </div>
             {createCount > 0 && (
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 ring-1 ring-emerald-200/60 dark:ring-emerald-900/60">
-                <Plus size={12} className="text-emerald-600 dark:text-emerald-400" />
-                <span className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-300">{createCount}</span>
+              <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-4 shadow-sm dark:border-emerald-500/20 dark:bg-emerald-950/20">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
+                    <Plus size={18} />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-600/70 dark:text-emerald-300/70">Создания</div>
+                    <div className="text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{createCount}</div>
+                  </div>
+                </div>
               </div>
             )}
             {updateCount > 0 && (
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 dark:bg-sky-950/40 px-3 py-1.5 ring-1 ring-sky-200/60 dark:ring-sky-900/60">
-                <Pencil size={12} className="text-sky-600 dark:text-sky-400" />
-                <span className="text-[12px] font-semibold text-sky-700 dark:text-sky-300">{updateCount}</span>
+              <div className="rounded-2xl border border-sky-200/70 bg-sky-50/80 p-4 shadow-sm dark:border-sky-500/20 dark:bg-sky-950/20">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300">
+                    <Pencil size={18} />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-600/70 dark:text-sky-300/70">Изменения</div>
+                    <div className="text-2xl font-bold tabular-nums text-sky-700 dark:text-sky-300">{updateCount}</div>
+                  </div>
+                </div>
               </div>
             )}
             {deleteCount > 0 && (
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-950/40 px-3 py-1.5 ring-1 ring-red-200/60 dark:ring-red-900/60">
-                <Trash2 size={12} className="text-red-600 dark:text-red-400" />
-                <span className="text-[12px] font-semibold text-red-700 dark:text-red-300">{deleteCount}</span>
+              <div className="rounded-2xl border border-red-200/70 bg-red-50/80 p-4 shadow-sm dark:border-red-500/20 dark:bg-red-950/20">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80 text-red-600 dark:bg-red-500/10 dark:text-red-300">
+                    <Trash2 size={18} />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-red-600/70 dark:text-red-300/70">Удаления</div>
+                    <div className="text-2xl font-bold tabular-nums text-red-700 dark:text-red-300">{deleteCount}</div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
