@@ -272,6 +272,60 @@ export async function getOrderStats(userId?: string, userRole?: string) {
 }
 
 // ============================================
+// Данные для графиков дашборда
+// ============================================
+export async function getOrderChartData(userId?: string, userRole?: string) {
+  const admin = createAdminClient()
+
+  const since = new Date()
+  since.setDate(since.getDate() - 6)
+  since.setHours(0, 0, 0, 0)
+
+  let query = admin
+    .from('orders')
+    .select('created_at, status')
+    .gte('created_at', since.toISOString())
+
+  if (userRole === 'employee' && userId) {
+    query = query.or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
+  }
+
+  const { data: rows } = await query
+
+  // Daily counts for last 7 days
+  const daily: { day: string; date: string; count: number }[] = []
+  const weekdayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    d.setHours(0, 0, 0, 0)
+    const key = d.toISOString().slice(0, 10)
+    daily.push({ day: weekdayNames[d.getDay()], date: key, count: 0 })
+  }
+
+  // Status breakdown
+  const statusCounts: Record<string, number> = { new: 0, in_progress: 0, ready: 0, delivered: 0, cancelled: 0 }
+
+  for (const row of rows ?? []) {
+    const key = (row.created_at as string).slice(0, 10)
+    const bucket = daily.find((b) => b.date === key)
+    if (bucket) bucket.count += 1
+    const st = row.status as string
+    if (st in statusCounts) statusCounts[st] += 1
+    else statusCounts[st] = 1
+  }
+
+  const statusBreakdown = [
+    { name: 'Новые', value: statusCounts.new ?? 0, key: 'new' },
+    { name: 'В работе', value: statusCounts.in_progress ?? 0, key: 'in_progress' },
+    { name: 'Готовы', value: statusCounts.ready ?? 0, key: 'ready' },
+    { name: 'Доставлены', value: statusCounts.delivered ?? 0, key: 'delivered' },
+  ].filter((s) => s.value > 0)
+
+  return { daily, statusBreakdown }
+}
+
+// ============================================
 // Создание заказа
 // ============================================
 const OrderItemSchema = z.object({

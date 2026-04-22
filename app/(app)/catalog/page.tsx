@@ -54,7 +54,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           currentUnit={params.unit}
           currentStock={params.stock}
         />
-        <CatalogGrid products={products} />
+        <CatalogGrid products={products} total={total} />
         {totalPages > 1 && (
           <Pagination currentPage={page} totalPages={totalPages} />
         )}

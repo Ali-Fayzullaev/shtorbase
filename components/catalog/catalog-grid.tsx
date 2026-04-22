@@ -3,8 +3,8 @@
 import { type Product } from '@/lib/types/database'
 import { formatPrice, formatStock, unitLabel, cn } from '@/lib/utils/format'
 import { useCart } from '@/components/catalog/catalog-cart'
-import { ShoppingCart, Plus, Minus, Check, ImageIcon, AlertTriangle, Trash2 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { ShoppingCart, Plus, Minus, Check, ImageIcon, AlertTriangle, Trash2, LayoutGrid, Rows3, PanelsTopLeft } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 interface ProductWithThumb extends Product {
@@ -12,11 +12,34 @@ interface ProductWithThumb extends Product {
   images?: string[]
 }
 
+type CatalogDensity = 'compact' | 'comfortable' | 'showcase'
+
 interface CatalogGridProps {
   products: ProductWithThumb[]
+  total?: number
 }
 
-export function CatalogGrid({ products }: CatalogGridProps) {
+const densityOptions: Array<{ value: CatalogDensity; label: string; short: string; icon: typeof Rows3 }> = [
+  { value: 'compact', label: 'Компактно', short: 'S', icon: Rows3 },
+  { value: 'comfortable', label: 'Стандарт', short: 'M', icon: LayoutGrid },
+  { value: 'showcase', label: 'Крупно', short: 'L', icon: PanelsTopLeft },
+]
+
+export function CatalogGrid({ products, total }: CatalogGridProps) {
+  const [density, setDensity] = useState<CatalogDensity>('comfortable')
+
+  useEffect(() => {
+    const saved = localStorage.getItem('catalog-density') as CatalogDensity | null
+    if (saved === 'compact' || saved === 'comfortable' || saved === 'showcase') {
+      setDensity(saved)
+    }
+  }, [])
+
+  function handleDensityChange(nextDensity: CatalogDensity) {
+    setDensity(nextDensity)
+    localStorage.setItem('catalog-density', nextDensity)
+  }
+
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -29,22 +52,80 @@ export function CatalogGrid({ products }: CatalogGridProps) {
     )
   }
 
+  const gridClassName = cn(
+    'grid gap-5 stagger-children',
+    density === 'compact' && 'grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4',
+    density === 'comfortable' && 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+    density === 'showcase' && 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
+  )
+
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 stagger-children">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-2xl border border-zinc-200/70 bg-white/90 px-4 py-3 shadow-sm backdrop-blur dark:border-white/[0.06] dark:bg-zinc-950/75 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+            Каталог
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+              {total ?? products.length} товаров
+            </span>
+            <span className="text-[12px] text-zinc-400 dark:text-zinc-500">
+              Сейчас показано {products.length}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+            Размер карточек
+          </span>
+          <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-50 p-1 dark:border-white/[0.08] dark:bg-white/[0.04]">
+            {densityOptions.map((option) => {
+              const Icon = option.icon
+              const active = density === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleDensityChange(option.value)}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all',
+                    active
+                      ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-100'
+                      : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+                  )}
+                  aria-pressed={active}
+                  title={option.label}
+                >
+                  <Icon size={13} />
+                  <span className="hidden sm:inline">{option.label}</span>
+                  <span className="sm:hidden">{option.short}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className={gridClassName}>
       {products.map((product) => (
-        <CatalogCard key={product.id} product={product} />
+        <CatalogCard key={product.id} product={product} density={density} />
       ))}
+      </div>
     </div>
   )
 }
 
-function CatalogCard({ product }: { product: ProductWithThumb }) {
+function CatalogCard({ product, density }: { product: ProductWithThumb; density: CatalogDensity }) {
   const { addItem, items, updateQuantity, removeItem } = useCart()
   const [justAdded, setJustAdded] = useState(false)
 
   const isLow = product.stock < 10 && product.stock > 0
   const isOut = product.stock === 0
   const inCart = items.find((i) => i.product_id === product.id)
+  const isCompact = density === 'compact'
+  const isShowcase = density === 'showcase'
 
   function handleAdd() {
     if (isOut) return
@@ -62,45 +143,62 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
   }
 
   return (
-    <div className="group relative flex flex-col rounded-2xl glass-card overflow-hidden hover:-translate-y-1 transition-transform duration-300">
+    <div
+      className={cn(
+        'group relative flex flex-col overflow-hidden rounded-2xl glass-card transition-transform duration-300 hover:-translate-y-1',
+        isCompact && 'rounded-xl',
+        isShowcase && 'rounded-[1.35rem]'
+      )}
+    >
       {/* Image / placeholder with hover gallery */}
-      <ProductImage product={product} />
+      <ProductImage product={product} density={density} />
 
       {/* Content */}
-      <div className="flex flex-col flex-1 p-4">
+      <div className={cn('flex flex-1 flex-col', isCompact ? 'p-3.5' : isShowcase ? 'p-5' : 'p-4')}>
         {/* Category + SKU */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className={cn('flex items-center gap-2', isCompact ? 'mb-1.5 flex-wrap' : 'mb-2')}>
           {product.category && (
-            <span className="rounded-md bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+            <span className={cn(
+              'rounded-md bg-zinc-100 px-2 py-0.5 font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
+              isCompact ? 'text-[10px]' : 'text-[11px]'
+            )}>
               {product.category.name}
             </span>
           )}
-          <span className="font-mono text-[11px] text-zinc-400">{product.sku}</span>
+          <span className={cn('font-mono text-zinc-400', isCompact ? 'text-[10px]' : 'text-[11px]')}>{product.sku}</span>
         </div>
 
         {/* Name */}
         <Link
           href={`/catalog/${product.id}`}
-          className="text-[15px] font-semibold text-zinc-800 dark:text-zinc-200 leading-snug hover:text-indigo-600 transition-colors line-clamp-2 mb-auto"
+          className={cn(
+            'mb-auto font-semibold leading-snug text-zinc-800 transition-colors hover:text-indigo-600 dark:text-zinc-200',
+            isCompact ? 'line-clamp-2 text-[14px]' : isShowcase ? 'line-clamp-3 text-[17px]' : 'line-clamp-2 text-[15px]'
+          )}
         >
           {product.name}
         </Link>
 
         {/* Price + Stock row */}
-        <div className="flex items-end justify-between mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+        <div className={cn('mt-3 flex items-end justify-between border-t border-zinc-100 pt-3 dark:border-zinc-800', isCompact && 'mt-2.5 pt-2.5')}>
           <div>
-            <div className="inline-flex items-baseline gap-1 rounded-lg bg-white/40 dark:bg-white/[0.06] backdrop-blur-sm border border-white/30 dark:border-white/[0.06] px-2.5 py-1">
-              <span className="text-lg font-bold text-indigo-700 dark:text-indigo-300 tabular-nums">{formatPrice(product.price)}</span>
+            <div className={cn(
+              'inline-flex items-baseline gap-1 rounded-lg border border-white/30 bg-white/40 px-2.5 py-1 backdrop-blur-sm dark:border-white/[0.06] dark:bg-white/[0.06]',
+              isCompact && 'px-2 py-0.5',
+              isShowcase && 'px-3 py-1.5'
+            )}>
+              <span className={cn('font-bold tabular-nums text-indigo-700 dark:text-indigo-300', isCompact ? 'text-base' : isShowcase ? 'text-xl' : 'text-lg')}>{formatPrice(product.price)}</span>
               <span className="text-xs font-semibold text-indigo-400">₸</span>
             </div>
-            <p className="text-[11px] text-zinc-400 mt-1">
+            <p className={cn('mt-1 text-zinc-400', isCompact ? 'text-[10px]' : 'text-[11px]')}>
               {unitLabel(product.unit)} · {product.vat_included ? 'НДС' : 'без НДС'}
             </p>
           </div>
           <div className="text-right">
             <p
               className={cn(
-                'text-sm font-bold tabular-nums',
+                'font-bold tabular-nums',
+                isCompact ? 'text-[13px]' : 'text-sm',
                 isOut && 'text-red-500',
                 isLow && 'text-amber-600',
                 !isOut && !isLow && 'text-zinc-700 dark:text-zinc-300'
@@ -108,19 +206,22 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
             >
               {isOut ? '0' : formatStock(product.stock, product.unit)}
             </p>
-            <p className="text-[11px] text-zinc-400">в наличии</p>
+            <p className={cn('text-zinc-400', isCompact ? 'text-[10px]' : 'text-[11px]')}>в наличии</p>
           </div>
         </div>
 
         {/* Add to cart / quantity controls */}
         {inCart && !justAdded ? (
-          <div className="mt-3 flex items-center gap-1.5">
+          <div className={cn('mt-3 flex items-center gap-1.5', isCompact && 'gap-1')}>
             <button
               onClick={() => {
                 if (inCart.quantity <= 1) removeItem(product.id)
                 else updateQuantity(product.id, inCart.quantity - 1)
               }}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+              className={cn(
+                'flex shrink-0 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200',
+                isCompact ? 'h-8 w-8' : 'h-9 w-9'
+              )}
             >
               {inCart.quantity <= 1 ? <Trash2 size={14} /> : <Minus size={14} />}
             </button>
@@ -133,16 +234,22 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
                 const v = Number(e.target.value)
                 if (v > 0) updateQuantity(product.id, Math.min(v, product.stock))
               }}
-              className="h-9 flex-1 min-w-0 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/50 text-center text-sm font-semibold text-zinc-800 dark:text-zinc-200 tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className={cn(
+                'flex-1 min-w-0 rounded-lg border border-zinc-200 bg-white text-center font-semibold text-zinc-800 tabular-nums focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 [appearance:textfield] dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-200 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+                isCompact ? 'h-8 text-[13px]' : 'h-9 text-sm'
+              )}
             />
             <button
               onClick={() => updateQuantity(product.id, inCart.quantity + 1)}
               disabled={inCart.quantity >= product.stock}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors disabled:opacity-40"
+              className={cn(
+                'flex shrink-0 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-700 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200',
+                isCompact ? 'h-8 w-8' : 'h-9 w-9'
+              )}
             >
               <Plus size={14} />
             </button>
-            <span className="text-[11px] text-zinc-400 shrink-0">
+            <span className={cn('shrink-0 text-zinc-400', isCompact ? 'text-[10px]' : 'text-[11px]')}>
               {product.unit === 'meter' ? 'м' : 'шт'}
             </span>
           </div>
@@ -151,7 +258,8 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
             onClick={handleAdd}
             disabled={isOut}
             className={cn(
-              'mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.97]',
+              'mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 font-semibold transition-all duration-200 active:scale-[0.97]',
+              isCompact ? 'py-2 text-[13px]' : isShowcase ? 'py-3 text-sm' : 'py-2.5 text-sm',
               isOut
                 ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed'
                 : justAdded
@@ -180,7 +288,7 @@ function CatalogCard({ product }: { product: ProductWithThumb }) {
 // ============================================
 // Product image with hover gallery
 // ============================================
-function ProductImage({ product }: { product: ProductWithThumb }) {
+function ProductImage({ product, density }: { product: ProductWithThumb; density: CatalogDensity }) {
   const images = product.images && product.images.length > 0
     ? product.images
     : product.thumbnail ? [product.thumbnail] : []
@@ -208,7 +316,12 @@ function ProductImage({ product }: { product: ProductWithThumb }) {
       ref={ref}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
-      className="relative aspect-[4/3] bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-900 overflow-hidden"
+      className={cn(
+        'relative overflow-hidden bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-900',
+        density === 'compact' && 'aspect-[4/3]',
+        density === 'comfortable' && 'aspect-[4/3]',
+        density === 'showcase' && 'aspect-[5/4]'
+      )}
     >
       {images.length > 0 ? (
         <>

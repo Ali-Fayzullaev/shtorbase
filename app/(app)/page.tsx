@@ -2,13 +2,16 @@ import { Header } from '@/components/layout/header'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { LowStockWidget } from '@/components/dashboard/low-stock-widget'
 import { RecentChangesWidget } from '@/components/dashboard/recent-changes-widget'
+import { OrdersTrendChart } from '@/components/dashboard/orders-trend-chart'
+import { StatusDonutChart } from '@/components/dashboard/status-donut-chart'
 import { LowStockAlert } from '@/components/ui/low-stock-alert'
 import { getDashboardStats, getLowStockProducts, getRecentAuditLogs } from '@/lib/actions/products'
-import { getOrderStats } from '@/lib/actions/orders'
+import { getOrderStats, getOrderChartData } from '@/lib/actions/orders'
 import { createClient } from '@/lib/supabase/server'
 import { type UserRole } from '@/lib/types/database'
-import { Package, PackageCheck, PackageX, AlertTriangle, ClipboardList, Clock, CheckCircle, Inbox, Sparkles } from 'lucide-react'
+import { Package, PackageX, AlertTriangle, ClipboardList, Clock, CheckCircle, Inbox, Plus } from 'lucide-react'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 
 const roleLabels: Record<UserRole, string> = {
   employee: 'Сотрудник',
@@ -30,6 +33,15 @@ function getDisplayName(name: string) {
   return first || name
 }
 
+function getDateParts() {
+  const now = new Date()
+  return {
+    day: now.getDate(),
+    month: now.toLocaleDateString('ru', { month: 'long' }),
+    weekday: now.toLocaleDateString('ru', { weekday: 'long' }),
+  }
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -42,12 +54,15 @@ export default async function DashboardPage() {
   const userRole = (profile?.role ?? 'employee') as UserRole
   const userName = profile?.full_name ?? user.email ?? ''
 
-  const [stats, lowStockProducts, logs, orderStats] = await Promise.all([
+  const [stats, lowStockProducts, logs, orderStats, chartData] = await Promise.all([
     getDashboardStats(),
     getLowStockProducts(),
     getRecentAuditLogs(),
     getOrderStats(user.id, userRole),
+    getOrderChartData(user.id, userRole),
   ])
+
+  const date = getDateParts()
 
   return (
     <>
@@ -55,68 +70,140 @@ export default async function DashboardPage() {
 
       <LowStockAlert count={stats.lowStock + stats.outOfStock} />
 
-      <div className="p-4 sm:p-6 space-y-6 page-enter">
-        {/* Welcome banner */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 p-6 text-white shadow-lg shadow-indigo-500/20">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
-          <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-white/5 rounded-full translate-y-1/2" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles size={16} className="text-indigo-200" />
-              <span className="text-xs font-medium text-indigo-200 uppercase tracking-wider">{roleLabels[userRole]}</span>
+      <div className="p-4 sm:p-6 space-y-5 page-enter">
+
+        {/* ── Welcome banner — editorial, adapts to theme ── */}
+        <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white px-6 py-5 text-zinc-900 dark:border-white/[0.06] dark:bg-zinc-950 dark:text-white">
+          {/* Dot grid texture */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.05] dark:opacity-[0.04]"
+            style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+          />
+          {/* Left accent rule */}
+          <div className="absolute left-0 top-5 bottom-5 w-[3px] rounded-r-full bg-gradient-to-b from-indigo-500 via-violet-500 to-transparent" />
+
+          <div className="relative flex items-start justify-between gap-4">
+            {/* Left content */}
+            <div className="min-w-0 flex-1 pl-3">
+              <span className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-zinc-500 dark:border-white/10 dark:bg-white/[0.06] dark:text-zinc-400">
+                {roleLabels[userRole]}
+              </span>
+              <h2 className="font-display mt-3 text-3xl sm:text-4xl font-normal leading-tight text-zinc-900 dark:text-white">
+                {getGreeting()},<br />{getDisplayName(userName)}
+              </h2>
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                {orderStats.new > 0
+                  ? `${orderStats.new} ${orderStats.new === 1 ? 'новый заказ ждёт обработки' : 'новых заказов ждут обработки'}`
+                  : 'Все заказы обработаны — отличная работа.'}
+              </p>
+              <div className="mt-4 flex items-center gap-2.5 flex-wrap">
+                <Link
+                  href="/orders/new"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 px-3 py-1.5 text-xs font-medium text-white transition-colors"
+                >
+                  <Plus size={12} />
+                  Новый заказ
+                </Link>
+                <Link
+                  href="/catalog"
+                  className="inline-flex items-center rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors dark:border-white/10 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] dark:text-zinc-300"
+                >
+                  Каталог
+                </Link>
+                {(userRole === 'manager' || userRole === 'admin') && (
+                  <Link
+                    href="/products/new"
+                    className="inline-flex items-center rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors dark:border-white/10 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] dark:text-zinc-300"
+                  >
+                    + Товар
+                  </Link>
+                )}
+              </div>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold">
-              {getGreeting()}, {getDisplayName(userName)}!
-            </h2>
-            <p className="text-sm text-indigo-100 mt-1.5">
-              {orderStats.new > 0
-                ? `У вас ${orderStats.new} ${orderStats.new === 1 ? 'новый заказ' : 'новых заказов'} сегодня`
-                : 'Все заказы обработаны. Отличная работа!'}
-            </p>
+
+            {/* Right: date display */}
+            <div className="shrink-0 text-right hidden sm:block select-none">
+              <div className="font-display text-6xl font-normal text-zinc-800/90 dark:text-white/80 leading-none tabular-nums">
+                {date.day}
+              </div>
+              <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-zinc-400 dark:text-zinc-500">{date.month}</div>
+              <div className="mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-600 capitalize">{date.weekday}</div>
+            </div>
           </div>
         </div>
 
-        {/* Order stats */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-5 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
-            <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-              {userRole === 'employee' ? 'Мои заказы' : 'Заказы'}
-            </h2>
+        {/* ── Bento grid ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 stagger-children">
+
+          {/* Orders — large card (3 of 6 cols desktop, full width mobile) */}
+          <div className="col-span-2 lg:col-span-3">
+            <StatCard
+              label={userRole === 'employee' ? 'Мои заказы' : 'Все заказы'}
+              value={orderStats.total}
+              icon={ClipboardList}
+              color="indigo"
+              size="lg"
+              breakdown={[
+                { label: 'Новые', value: orderStats.new, color: 'indigo' },
+                { label: 'В работе', value: orderStats.inProgress, color: 'amber' },
+                { label: 'Готовы', value: orderStats.ready, color: 'emerald' },
+              ]}
+            />
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
-            <StatCard label="Всего" value={orderStats.total} icon={ClipboardList} color="indigo" />
+
+          {/* Small order cards — desktop only */}
+          <div className="hidden lg:block">
             <StatCard label="Новые" value={orderStats.new} icon={Inbox} color="indigo" />
+          </div>
+          <div className="hidden lg:block">
             <StatCard label="В работе" value={orderStats.inProgress} icon={Clock} color="amber" />
+          </div>
+          <div className="hidden lg:block">
             <StatCard label="Готовы" value={orderStats.ready} icon={CheckCircle} color="emerald" />
           </div>
-        </section>
 
-        {/* Product stats */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-5 w-1 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500" />
-            <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Склад</h2>
+          {/* Stock — large card (4 of 6 cols desktop, full width mobile) */}
+          <div className="col-span-2 lg:col-span-4">
+            <StatCard
+              label="Склад"
+              value={stats.total}
+              icon={Package}
+              color="indigo"
+              size="lg"
+              breakdown={[
+                { label: 'Активных', value: stats.active, color: 'emerald' },
+                { label: 'Нет в наличии', value: stats.outOfStock, color: 'red' },
+                { label: 'Заканчиваются', value: stats.lowStock, color: 'amber' },
+              ]}
+            />
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
-            <StatCard label="Всего товаров" value={stats.total} icon={Package} color="indigo" />
-            <StatCard label="Активных" value={stats.active} icon={PackageCheck} color="emerald" />
+
+          {/* Small stock cards — desktop only */}
+          <div className="hidden lg:block">
             <StatCard label="Нет в наличии" value={stats.outOfStock} icon={PackageX} color="red" />
+          </div>
+          <div className="hidden lg:block">
             <StatCard label="Заканчиваются" value={stats.lowStock} icon={AlertTriangle} color="amber" />
           </div>
-        </section>
 
-        {/* Widgets */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-5 w-1 rounded-full bg-gradient-to-b from-amber-500 to-orange-500" />
-            <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Детали</h2>
+        </div>
+
+        {/* ── Charts ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <div className="lg:col-span-3">
+            <OrdersTrendChart data={chartData.daily} />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <LowStockWidget products={lowStockProducts} />
-            <RecentChangesWidget logs={logs} />
+          <div className="lg:col-span-2">
+            <StatusDonutChart data={chartData.statusBreakdown} />
           </div>
-        </section>
+        </div>
+
+        {/* ── Detail widgets ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <LowStockWidget products={lowStockProducts} />
+          <RecentChangesWidget logs={logs} />
+        </div>
+
       </div>
     </>
   )

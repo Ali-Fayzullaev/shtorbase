@@ -734,3 +734,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-float { animation: none; }
 }
+
+/* ── Display / Serif font utility ── */
+.font-display {
+  font-family: var(--font-serif), Georgia, serif;
+}
