@@ -3,10 +3,9 @@ import { Header } from '@/components/layout/header'
 import { AuditFilters } from '@/components/audit/audit-filters'
 import { AuditPagination } from '@/components/audit/audit-pagination'
 import { getAuditLogs } from '@/lib/actions/products'
-import { formatPrice } from '@/lib/utils/format'
+import { formatPrice, cn } from '@/lib/utils/format'
 import {
   ArrowRight,
-  User,
   Plus,
   Pencil,
   Trash2,
@@ -37,6 +36,13 @@ const actionConfig: Record<string, { label: string; icon: typeof Plus; tint: str
   create: { label: 'создал', icon: Plus, tint: 'text-emerald-600 dark:text-emerald-400' },
   update: { label: 'изменил', icon: Pencil, tint: 'text-sky-600 dark:text-sky-400' },
   delete: { label: 'удалил', icon: Trash2, tint: 'text-red-600 dark:text-red-400' },
+}
+
+function getInitials(name: string): string {
+  const clean = name.includes('@') ? name.split('@')[0] : name
+  const parts = clean.split(/[\s._-]+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return clean.slice(0, 2).toUpperCase()
 }
 
 function formatValue(field: string, value: string | null) {
@@ -265,41 +271,61 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
                         tint: 'text-zinc-500',
                       }
                       const FieldIcon = field.icon
-                      const ActionIcon = actionCfg.icon
+                      const userName = log.user?.full_name ?? 'Система'
+                      const initials = getInitials(userName)
 
                       return (
-                        <li key={log.id} className="group px-4 py-3.5 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors">
-                          <div className="flex items-start gap-3">
-                            {/* Action indicator */}
-                            <div className="relative mt-0.5 shrink-0">
-                              <div className={`inline-flex h-8 w-8 items-center justify-center rounded-xl ${field.tint}`}>
-                                <FieldIcon size={14} strokeWidth={2.2} />
-                              </div>
-                              <div className="absolute -bottom-0.5 -right-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white dark:bg-zinc-900 ring-2 ring-white dark:ring-zinc-900">
-                                <ActionIcon size={9} strokeWidth={2.8} className={actionCfg.tint} />
-                              </div>
+                        <li
+                          key={log.id}
+                          className={cn(
+                            'group border-l-[3px] px-5 py-4 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors',
+                            log.action === 'create' && 'border-l-emerald-400 dark:border-l-emerald-500',
+                            log.action === 'update' && 'border-l-sky-400 dark:border-l-sky-500',
+                            log.action === 'delete' && 'border-l-red-400 dark:border-l-red-500',
+                            !['create','update','delete'].includes(log.action) && 'border-l-zinc-300 dark:border-l-zinc-700',
+                          )}
+                        >
+                          <div className="flex items-start gap-4">
+                            {/* Field icon */}
+                            <div className={cn('mt-0.5 shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-xl', field.tint)}>
+                              <FieldIcon size={15} strokeWidth={2.2} />
                             </div>
 
                             {/* Body */}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-baseline gap-1.5 flex-wrap">
-                                <span className="inline-flex items-center gap-1 text-[13px] font-medium text-zinc-800 dark:text-zinc-200">
-                                  <User size={11} className="text-zinc-400 dark:text-zinc-500" />
-                                  {log.user?.full_name ?? 'Система'}
+                              {/* Human-readable sentence */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {/* User pill */}
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-1 text-[12px] font-medium text-zinc-700 dark:text-zinc-300 ring-1 ring-zinc-200 dark:ring-white/[0.06]">
+                                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-[8px] font-bold text-white">
+                                    {initials}
+                                  </span>
+                                  <span className="max-w-[140px] truncate" title={userName}>{userName}</span>
                                 </span>
-                                <span className={`text-[12px] font-medium ${actionCfg.tint}`}>{actionCfg.label}</span>
-                                <span className="text-[12px] text-zinc-500 dark:text-zinc-400">«{field.label.toLowerCase()}»</span>
+
+                                {/* Action verb */}
+                                <span className={cn('text-[12px] font-semibold', actionCfg.tint)}>{actionCfg.label}</span>
+
+                                {/* Field badge */}
+                                <span className={cn('inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold', field.tint)}>
+                                  <FieldIcon size={10} strokeWidth={2.5} />
+                                  {field.label}
+                                </span>
+
+                                {/* Product */}
                                 {log.product && (
                                   <>
                                     <span className="text-[12px] text-zinc-400 dark:text-zinc-500">у товара</span>
                                     <Link
                                       href={`/catalog/${log.product.id}`}
-                                      className="inline-flex items-center gap-1 text-[12px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline underline-offset-2"
+                                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-0.5 text-[12px] font-medium text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
                                     >
-                                      {log.product.name}
+                                      <Package size={10} className="shrink-0" />
+                                      <span className="max-w-[180px] truncate">{log.product.name}</span>
                                     </Link>
                                     {log.product.sku && (
-                                      <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
+                                      <span className="inline-flex items-center gap-1 font-mono text-[10px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+                                        <span className="text-[9px] font-sans font-semibold uppercase tracking-wide text-zinc-400">Арт.</span>
                                         {log.product.sku}
                                       </span>
                                     )}
@@ -307,23 +333,26 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
                                 )}
                               </div>
 
-                              {/* Diff */}
+                              {/* Diff — update */}
                               {log.action === 'update' && (
-                                <div className="mt-2 flex items-center flex-wrap gap-2 text-[12.5px] tabular-nums">
-                                  <span className="inline-flex items-center max-w-[200px] truncate rounded-md bg-red-50 dark:bg-red-950/30 px-2 py-0.5 text-red-700 dark:text-red-300 line-through decoration-red-300/70 dark:decoration-red-600/70">
-                                    {formatValue(log.field_name, log.old_value)}
-                                  </span>
-                                  <ArrowRight size={12} className="text-zinc-300 dark:text-zinc-600 shrink-0" />
-                                  <span className="inline-flex items-center max-w-[200px] truncate rounded-md bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 font-semibold text-emerald-700 dark:text-emerald-300">
-                                    {formatValue(log.field_name, log.new_value)}
-                                  </span>
+                                <div className="mt-2.5 flex items-center flex-wrap gap-2 tabular-nums">
+                                  <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 px-3 py-1.5 text-[12.5px] text-red-700 dark:text-red-300">
+                                    <span className="text-[9px] font-bold uppercase tracking-wide text-red-400 dark:text-red-500">Было</span>
+                                    <span className="font-medium line-through decoration-red-400/60 max-w-[160px] truncate">{formatValue(log.field_name, log.old_value)}</span>
+                                  </div>
+                                  <ArrowRight size={13} className="text-zinc-300 dark:text-zinc-600 shrink-0" />
+                                  <div className="flex items-center gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 text-[12.5px] text-emerald-700 dark:text-emerald-300">
+                                    <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-500">Стало</span>
+                                    <span className="font-semibold max-w-[160px] truncate">{formatValue(log.field_name, log.new_value)}</span>
+                                  </div>
                                 </div>
                               )}
+
+                              {/* Value — create */}
                               {log.action === 'create' && log.new_value && (
-                                <div className="mt-1.5 text-[12.5px] text-zinc-600 dark:text-zinc-400">
-                                  <span className="inline-flex rounded-md bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 text-emerald-700 dark:text-emerald-300">
-                                    {formatValue(log.field_name, log.new_value)}
-                                  </span>
+                                <div className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 text-[12.5px] text-emerald-700 dark:text-emerald-300 w-fit">
+                                  <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-500">Значение</span>
+                                  <span className="font-medium max-w-[200px] truncate">{formatValue(log.field_name, log.new_value)}</span>
                                 </div>
                               )}
                             </div>
@@ -332,7 +361,7 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
                             <time
                               dateTime={log.created_at}
                               title={formatExact(log.created_at)}
-                              className="shrink-0 text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500 whitespace-nowrap pt-1"
+                              className="shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800/60 px-2.5 py-1 text-[10px] tabular-nums font-medium text-zinc-400 dark:text-zinc-500 whitespace-nowrap"
                             >
                               {formatRelative(log.created_at)}
                             </time>

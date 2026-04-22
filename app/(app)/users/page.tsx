@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation'
 import { formatDate } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/format'
 import { type UserRole } from '@/lib/types/database'
-import { Users as UsersIcon, UserCheck, UserX, ShieldCheck, Briefcase, User as UserIcon } from 'lucide-react'
+import { Users as UsersIcon, UserCheck, ShieldCheck, Briefcase, User as UserIcon, Lock, Eye, Settings2 } from 'lucide-react'
 
 const roleColors: Record<UserRole, string> = {
   employee: 'bg-sky-50 text-sky-600 ring-1 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-900/60',
@@ -58,13 +58,82 @@ export default async function UsersPage() {
       <Header title="Пользователи" description={`Всего ${users.length}`} />
 
       <div className="p-4 sm:p-6 max-w-6xl mx-auto w-full space-y-5">
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <StatCard icon={UsersIcon} label="Всего" value={stats.total} tone="indigo" />
-          <StatCard icon={UserCheck} label="Активных" value={stats.active} tone="emerald" />
-          <StatCard icon={ShieldCheck} label="Админы" value={stats.admins} tone="violet" />
-          <StatCard icon={Briefcase} label="Менеджеры" value={stats.managers} tone="amber" />
-          <StatCard icon={UserIcon} label="Сотрудники" value={stats.employees} tone="sky" />
+        {/* Hero */}
+        <div className="rounded-2xl border border-zinc-200/70 bg-gradient-to-br from-white to-zinc-50 p-5 shadow-sm dark:border-white/[0.06] dark:from-zinc-950 dark:to-zinc-900">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-500">Доступ и роли</div>
+              <h2 className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">Кто работает в системе</h2>
+              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Здесь вы управляете доступом сотрудников: можете создать аккаунт, сменить роль, заблокировать или удалить. Роль определяет, что человек может делать в приложении.
+              </p>
+
+              {/* Role legend */}
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <div className="flex items-start gap-2.5 rounded-xl border border-violet-200/60 bg-violet-50/60 p-3 dark:border-violet-500/20 dark:bg-violet-950/20">
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-500/10">
+                    <Lock size={13} className="text-violet-600 dark:text-violet-300" />
+                  </div>
+                  <div>
+                    <div className="text-[12px] font-semibold text-violet-700 dark:text-violet-300">Администратор</div>
+                    <div className="text-[11px] text-violet-600/70 dark:text-violet-400/70">Полный доступ: пользователи, настройки, аудит</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5 rounded-xl border border-amber-200/60 bg-amber-50/60 p-3 dark:border-amber-500/20 dark:bg-amber-950/20">
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-500/10">
+                    <Settings2 size={13} className="text-amber-600 dark:text-amber-300" />
+                  </div>
+                  <div>
+                    <div className="text-[12px] font-semibold text-amber-700 dark:text-amber-300">Менеджер</div>
+                    <div className="text-[11px] text-amber-600/70 dark:text-amber-400/70">Каталог, заказы, импорт; без управления пользователями</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5 rounded-xl border border-sky-200/60 bg-sky-50/60 p-3 dark:border-sky-500/20 dark:bg-sky-950/20">
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 dark:bg-sky-500/10">
+                    <Eye size={13} className="text-sky-600 dark:text-sky-300" />
+                  </div>
+                  <div>
+                    <div className="text-[12px] font-semibold text-sky-700 dark:text-sky-300">Сотрудник</div>
+                    <div className="text-[11px] text-sky-600/70 dark:text-sky-400/70">Только каталог и заказы, без редактирования</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Live stats sidebar */}
+            <div className="space-y-2.5 rounded-2xl border border-zinc-200/70 bg-white/80 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Состав сейчас</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-zinc-50 dark:bg-zinc-900 px-3 py-2.5">
+                  <div className="text-[20px] font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{stats.total}</div>
+                  <div className="text-[11px] text-zinc-400">всего</div>
+                </div>
+                <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5">
+                  <div className="text-[20px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{stats.active}</div>
+                  <div className="text-[11px] text-emerald-600/70">активных</div>
+                </div>
+              </div>
+              {stats.inactive > 0 && (
+                <div className="flex items-center justify-between rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50/60 dark:bg-red-950/20 px-3 py-2">
+                  <span className="text-[12px] text-red-600 dark:text-red-400">Заблокировано</span>
+                  <span className="text-[14px] font-bold tabular-nums text-red-600 dark:text-red-400">{stats.inactive}</span>
+                </div>
+              )}
+              <div className="space-y-1.5 pt-1">
+                {[
+                  { label: 'Администраторы', value: stats.admins, color: 'bg-violet-400' },
+                  { label: 'Менеджеры', value: stats.managers, color: 'bg-amber-400' },
+                  { label: 'Сотрудники', value: stats.employees, color: 'bg-sky-400' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${color}`} />
+                    <span className="flex-1 text-[12px] text-zinc-500 dark:text-zinc-400">{label}</span>
+                    <span className="text-[12px] font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Two-column: form + registration */}
@@ -77,8 +146,9 @@ export default async function UsersPage() {
 
         {/* Users table */}
         <div className="glass-card rounded-2xl overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-white/30 dark:border-white/[0.05]">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/30 dark:border-white/[0.05]">
             <h2 className="text-sm font-semibold text-slate-800 dark:text-zinc-200">Список пользователей</h2>
+            <span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">{users.length}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[640px]">
