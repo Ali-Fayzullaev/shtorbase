@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition, useState, useMemo } from 'react'
+import { useTransition, useState, useMemo, useEffect } from 'react'
 import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
 import { updateOrderStatus, assignOrder, deleteOrder } from '@/lib/actions/orders'
 import { cn } from '@/lib/utils/format'
@@ -53,6 +53,8 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
   const [changingTo, setChangingTo] = useState<string | null>(null)
 
   const isManager = userRole === 'manager' || userRole === 'admin'
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   const statusMap = useMemo(() => {
     const map: Record<string, { label: string; color: string; bg: string; dot_color: string }> = {}
@@ -284,20 +286,21 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
               <Calendar size={12} />
               Обновлён: {formatDate(order.updated_at)}
             </p>
-            {order.deadline && (
-              <p className={cn(
-                'flex items-center gap-1.5 text-[12px]',
-                new Date(order.deadline) < new Date() && !['delivered', 'cancelled'].includes(order.status)
-                  ? 'text-red-500 font-medium'
-                  : 'text-slate-500 dark:text-zinc-400'
-              )}>
-                <Clock size={12} />
-                Срок: {formatDate(order.deadline)}
-                {new Date(order.deadline) < new Date() && !['delivered', 'cancelled'].includes(order.status) && (
-                  <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded-full font-semibold">Просрочен</span>
-                )}
-              </p>
-            )}
+            {order.deadline && (() => {
+              const overdue = mounted && new Date(order.deadline) < new Date() && !['delivered', 'cancelled'].includes(order.status)
+              return (
+                <p className={cn(
+                  'flex items-center gap-1.5 text-[12px]',
+                  overdue ? 'text-red-500 font-medium' : 'text-slate-500 dark:text-zinc-400'
+                )}>
+                  <Clock size={12} />
+                  Срок: {formatDate(order.deadline)}
+                  {overdue && (
+                    <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded-full font-semibold">Просрочен</span>
+                  )}
+                </p>
+              )
+            })()}
             {order.created_user && (
               <p className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-zinc-400">
                 <User size={12} />

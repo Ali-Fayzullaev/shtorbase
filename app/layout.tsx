@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, DM_Serif_Display } from "next/font/google";
-import { headers } from "next/headers";
+import Script from "next/script";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ResponsiveToaster } from "@/components/ui/responsive-toaster";
 import { OfflineBanner } from "@/components/ui/offline-banner";
@@ -28,26 +28,20 @@ export const metadata: Metadata = {
   description: "Внутренняя платформа для управления ценами, остатками и каталогом товаров для штор",
 };
 
-const themeScript = `try{var t=localStorage.getItem('theme'),a=localStorage.getItem('accent'),g=localStorage.getItem('glass');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark');if(a&&a!=='indigo')document.documentElement.setAttribute('data-accent',a);if(g!=='0')document.documentElement.setAttribute('data-glass','')}catch(e){}`;
-
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // CSP nonce генерируется в middleware и приходит через request-headers.
-  const nonce = (await headers()).get('x-nonce') ?? undefined;
-
   return (
     <html
       lang="ru"
       className={`${geistSans.variable} ${geistMono.variable} ${dmSerif.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+      <head />
       <body className="h-full bg-background text-foreground" suppressHydrationWarning>
+        <Script src="/theme-init.js" strategy="beforeInteractive" />
         <ThemeProvider>
           {children}
           <KeyboardShortcuts />

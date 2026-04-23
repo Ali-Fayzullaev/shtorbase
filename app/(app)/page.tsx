@@ -5,7 +5,6 @@ import { RecentChangesWidget } from '@/components/dashboard/recent-changes-widge
 import { OrdersTrendChart } from '@/components/dashboard/orders-trend-chart'
 import { StatusDonutChart } from '@/components/dashboard/status-donut-chart'
 import { LowStockAlert } from '@/components/ui/low-stock-alert'
-import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist'
 import { getDashboardStats, getLowStockProducts, getRecentAuditLogs } from '@/lib/actions/products'
 import { getOrderStats, getOrderChartData } from '@/lib/actions/orders'
 import { createClient } from '@/lib/supabase/server'
@@ -132,13 +131,6 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
-
-        {/* ── Onboarding checklist ── */}
-        <OnboardingChecklist
-          role={userRole}
-          productCount={stats.total}
-          orderCount={orderStats.total}
-        />
 
         {/* ── Bento grid ── */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 stagger-children">

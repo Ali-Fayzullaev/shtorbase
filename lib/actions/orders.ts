@@ -26,7 +26,8 @@ async function requireAuth() {
 /** Reduce stock for each item in an order */
 async function deductStock(
   admin: ReturnType<typeof createAdminClient>,
-  items: { product_id: string; quantity: number }[]
+  items: { product_id: string; quantity: number }[],
+  userId: string
 ) {
   for (const item of items) {
     const { data: product } = await admin
@@ -36,7 +37,7 @@ async function deductStock(
       .single()
     if (product) {
       const newStock = Math.max(0, product.stock - item.quantity)
-      await admin.from('products').update({ stock: newStock }).eq('id', item.product_id)
+      await admin.from('products').update({ stock: newStock, updated_by: userId }).eq('id', item.product_id)
     }
   }
 }
@@ -44,7 +45,8 @@ async function deductStock(
 /** Restore stock for each item in an order */
 async function restoreStock(
   admin: ReturnType<typeof createAdminClient>,
-  orderId: string
+  orderId: string,
+  userId: string
 ) {
   const { data: items } = await admin
     .from('order_items')
@@ -58,7 +60,7 @@ async function restoreStock(
       .eq('id', item.product_id)
       .single()
     if (product) {
-      await admin.from('products').update({ stock: product.stock + item.quantity }).eq('id', item.product_id)
+      await admin.from('products').update({ stock: product.stock + item.quantity, updated_by: userId }).eq('id', item.product_id)
     }
   }
 }
@@ -412,7 +414,7 @@ export async function createOrderAction(
     }
 
     // Deduct stock
-    await deductStock(admin, items)
+    await deductStock(admin, items, user.id)
 
     // Log history
     await logOrderHistory(admin, order.id, user.id, 'created', null, 'new')
@@ -487,7 +489,7 @@ export async function createQuickOrder(
     }
 
     // Deduct stock
-    await deductStock(admin, validated)
+    await deductStock(admin, validated, user.id)
 
     // Log history
     await logOrderHistory(admin, order.id, user.id, 'created', null, 'new')
@@ -529,11 +531,11 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
   if (!wasCancelled && nowCancelled) {
     // Order is being cancelled → restore stock
-    await restoreStock(admin, orderId)
+    await restoreStock(admin, orderId, user.id)
   } else if (wasCancelled && !nowCancelled) {
     // Order is being un-cancelled → deduct stock again
     const { data: items } = await admin.from('order_items').select('product_id, quantity').eq('order_id', orderId)
-    if (items?.length) await deductStock(admin, items)
+    if (items?.length) await deductStock(admin, items, user.id)
   }
 
   const { error } = await admin
@@ -603,7 +605,7 @@ export async function getEmployees() {
 // Удаление заказа
 // ============================================
 export async function deleteOrder(orderId: string) {
-  const { role } = await requireAuth()
+  const { user, role } = await requireAuth()
   if (role !== 'admin') return { error: 'Только администратор может удалять заказы' }
 
   const admin = createAdminClient()
@@ -611,7 +613,7 @@ export async function deleteOrder(orderId: string) {
   // Check if order was not cancelled — if so, restore stock
   const { data: order } = await admin.from('orders').select('status').eq('id', orderId).single()
   if (order && order.status !== 'cancelled') {
-    await restoreStock(admin, orderId)
+    await restoreStock(admin, orderId, user.id)
   }
 
   const { error } = await admin.from('orders').delete().eq('id', orderId)

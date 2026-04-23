@@ -32,6 +32,7 @@ interface NavItem {
   href: string
   icon: typeof LayoutDashboard
   roles: string[]
+  tourId?: string
 }
 
 interface NavGroup {
@@ -43,16 +44,16 @@ const navGroups: NavGroup[] = [
   {
     label: 'Основные',
     items: [
-      { name: 'Главная', href: '/', icon: LayoutDashboard, roles: ['employee', 'manager', 'admin'] },
-      { name: 'Каталог', href: '/catalog', icon: Package, roles: ['employee', 'manager', 'admin'] },
-      { name: 'Заказы', href: '/orders', icon: ShoppingCart, roles: ['employee', 'manager', 'admin'] },
+      { name: 'Главная', href: '/', icon: LayoutDashboard, roles: ['employee', 'manager', 'admin'], tourId: 'nav-home' },
+      { name: 'Каталог', href: '/catalog', icon: Package, roles: ['employee', 'manager', 'admin'], tourId: 'nav-catalog' },
+      { name: 'Заказы', href: '/orders', icon: ShoppingCart, roles: ['employee', 'manager', 'admin'], tourId: 'nav-orders' },
     ],
   },
   {
     label: 'Управление',
     items: [
-      { name: 'Добавить товар', href: '/products/new', icon: Plus, roles: ['manager', 'admin'] },
-      { name: 'Импорт остатков', href: '/import', icon: Upload, roles: ['manager', 'admin'] },
+      { name: 'Добавить товар', href: '/products/new', icon: Plus, roles: ['manager', 'admin'], tourId: 'nav-new-product' },
+      { name: 'Импорт остатков', href: '/import', icon: Upload, roles: ['manager', 'admin'], tourId: 'nav-import' },
       { name: 'Логи изменений', href: '/audit', icon: ClipboardList, roles: ['manager', 'admin'] },
     ],
   },
@@ -149,6 +150,7 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
                     <Link
                       href={item.href}
                       onClick={close}
+                      data-tour={item.tourId}
                       className={cn(
                         'group relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40',
                         isActive
@@ -176,6 +178,18 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
           </div>
         ))}
       </nav>
+
+      {/* Help / Tour trigger */}
+      <div className="px-3 pb-1">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event('shtorbase:start-tour'))}
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[12px] font-medium text-zinc-500 dark:text-zinc-400 hover:bg-white/40 dark:hover:bg-white/[0.05] hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+        >
+          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 text-[10px] font-bold">?</span>
+          Показать обучение
+        </button>
+      </div>
 
       {/* User card */}
       <div className="p-3">

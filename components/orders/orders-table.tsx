@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState, useTransition, useMemo, useEffect } from 'react'
 import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
 import { updateOrderStatus, deleteOrder } from '@/lib/actions/orders'
@@ -117,6 +118,7 @@ function StatusDropdown({ order, statuses, statusMap }: { order: Order; statuses
 // Row actions menu
 // ============================================
 function RowActions({ order, userRole }: { order: Order; userRole: UserRole }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -146,14 +148,14 @@ function RowActions({ order, userRole }: { order: Order; userRole: UserRole }) {
         <>
           <div className="fixed inset-0 z-30" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false) }} />
           <div className="absolute top-full right-0 mt-1 z-40 w-48 rounded-xl glass-dropdown p-1.5">
-            <Link
-              href={`/orders/${order.id}`}
+            <button
+              type="button"
               className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/orders/${order.id}`) }}
             >
               <ExternalLink size={13} />
               Открыть заказ
-            </Link>
+            </button>
 
             {(order.phone || order.client?.phone) && (
               <>
@@ -225,12 +227,14 @@ interface OrdersTableProps {
 export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
   const canChangeStatus = userRole === 'admin' || userRole === 'manager'
   const [view, setView] = useState<'list' | 'board'>('list')
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('orders-view')
     if (saved === 'list' || saved === 'board') {
       setView(saved)
     }
+    setMounted(true)
   }, [])
 
   function handleViewChange(nextView: 'list' | 'board') {
@@ -336,7 +340,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
                       </div>
                     ) : (
                       statusOrders.map((order) => {
-                        const overdue = isOverdue(order.deadline, order.status)
+                        const overdue = mounted && isOverdue(order.deadline, order.status)
                         return (
                           <Link
                             key={order.id}
@@ -435,7 +439,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
 
         {orders.map((order, idx) => {
           const status = statusMap[order.status] ?? defaultBadge
-          const overdue = isOverdue(order.deadline, order.status)
+          const overdue = mounted && isOverdue(order.deadline, order.status)
 
           return (
             <Link
@@ -565,7 +569,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
       <div className="md:hidden space-y-3 stagger-children">
         {orders.map((order) => {
           const status = statusMap[order.status] ?? defaultBadge
-          const overdue = isOverdue(order.deadline, order.status)
+          const overdue = mounted && isOverdue(order.deadline, order.status)
 
           return (
             <Link

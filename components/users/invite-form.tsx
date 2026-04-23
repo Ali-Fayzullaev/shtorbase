@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useEffect } from 'react'
 import { inviteUserAction, type InviteState } from '@/lib/actions/invite'
 import { UserPlus, Copy, Check } from 'lucide-react'
 import { cn } from '@/lib/utils/format'
@@ -8,10 +8,13 @@ import { cn } from '@/lib/utils/format'
 export function InviteForm() {
   const [state, formAction, pending] = useActionState<InviteState, FormData>(inviteUserAction, null)
   const [copied, setCopied] = useState(false)
+  const [origin, setOrigin] = useState('')
 
-  const inviteUrl = state?.token
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${state.token}`
-    : null
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
+
+  const inviteUrl = state?.token ? `${origin}/invite/${state.token}` : null
 
   const handleCopy = () => {
     if (inviteUrl) {

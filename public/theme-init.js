@@ -1,0 +1,1 @@
+try{var t=localStorage.getItem('theme'),a=localStorage.getItem('accent'),g=localStorage.getItem('glass');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark');if(a&&a!=='indigo')document.documentElement.setAttribute('data-accent',a);if(g!=='0')document.documentElement.setAttribute('data-glass','')}catch(e){}

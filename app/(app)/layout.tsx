@@ -1,6 +1,7 @@
 import { Sidebar } from '@/components/layout/sidebar'
 import { MobileMenuProvider } from '@/components/layout/mobile-menu-context'
 import { BottomNav } from '@/components/layout/bottom-nav'
+import { ProductTour } from '@/components/onboarding/product-tour'
 import { getProfile } from '@/lib/actions/profile'
 import { getCompanyBranding } from '@/lib/actions/branding'
 import { demoProfile } from '@/lib/demo-data'
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
       <BottomNav />
+      <ProductTour role={profile.role} />
     </MobileMenuProvider>
   )
 }
