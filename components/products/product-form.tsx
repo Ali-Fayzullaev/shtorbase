@@ -14,7 +14,7 @@ const inputCls =
   'flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50'
 const labelCls = 'text-sm font-medium leading-none'
 const selectCls =
-  'flex h-9 w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm shadow-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50'
+  'flex h-9 w-full rounded-lg border border-input bg-background text-foreground px-2.5 py-1.5 text-sm shadow-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50'
 const btnPrimaryCls =
   'inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50'
 const btnOutlineCls =
@@ -199,7 +199,7 @@ export function ProductForm({ categories, units, customFields, product, initialC
           <div className="space-y-2">
             <label htmlFor="unit" className={labelCls}>Единица измерения</label>
             <select
-              id="unit" value={unit}
+              id="unit" name="unit" value={unit}
               onChange={(e) => setUnit(e.target.value)}
               disabled={isEdit}
               className={cn(selectCls, state?.fieldErrors?.unit && errCls, isEdit && 'opacity-50 cursor-not-allowed')}

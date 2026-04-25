@@ -1,5 +1,14 @@
 import { type ProductUnit } from '@/lib/types/database'
 
+/** Нормализует legacy-значения 'meter'/'piece' к коротким обозначениям */
+function normalizeUnit(unit: ProductUnit): string {
+  if (unit === 'meter') return 'м'
+  if (unit === 'piece') return 'шт'
+  return unit
+}
+
+export { normalizeUnit }
+
 export function formatPrice(price: number): string {
   return new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 0,
@@ -13,15 +22,15 @@ export function formatStock(stock: number, unit: ProductUnit): string {
     maximumFractionDigits: 1,
   }).format(stock)
 
-  return `${formatted} ${unit === 'meter' ? 'м' : 'шт'}`
+  return `${formatted} ${normalizeUnit(unit)}`
 }
 
 export function unitLabel(unit: ProductUnit): string {
-  return unit === 'meter' ? 'за метр' : 'за штуку'
+  return `за ${normalizeUnit(unit)}`
 }
 
 export function unitLabelShort(unit: ProductUnit): string {
-  return unit === 'meter' ? 'МЕТР' : 'ШТУКА'
+  return normalizeUnit(unit).toUpperCase()
 }
 
 export function formatDate(date: string): string {

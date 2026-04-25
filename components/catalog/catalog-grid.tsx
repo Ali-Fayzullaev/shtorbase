@@ -1,7 +1,7 @@
 'use client'
 
 import { type Product } from '@/lib/types/database'
-import { formatPrice, formatStock, unitLabel, cn } from '@/lib/utils/format'
+import { formatPrice, formatStock, unitLabel, normalizeUnit, cn } from '@/lib/utils/format'
 import { useCart } from '@/components/catalog/catalog-cart'
 import { ShoppingCart, Plus, Minus, Check, ImageIcon, AlertTriangle, Trash2, LayoutGrid, Rows3, PanelsTopLeft } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -250,7 +250,7 @@ function CatalogCard({ product, density }: { product: ProductWithThumb; density:
               <Plus size={14} />
             </button>
             <span className={cn('shrink-0 text-zinc-400', isCompact ? 'text-[10px]' : 'text-[11px]')}>
-              {product.unit === 'meter' ? 'м' : 'шт'}
+              {normalizeUnit(product.unit)}
             </span>
           </div>
         ) : (
@@ -382,14 +382,9 @@ function ProductImage({ product, density }: { product: ProductWithThumb; density
 
       {/* Unit badge */}
       <div
-        className={cn(
-          'absolute top-3 right-3 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider backdrop-blur-sm',
-          product.unit === 'meter'
-            ? 'bg-blue-500/90 text-white'
-            : 'bg-emerald-500/90 text-white'
-        )}
+        className="absolute top-3 right-3 rounded-lg bg-zinc-900/70 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-sm"
       >
-        {product.unit === 'meter' ? 'Метр' : 'Штука'}
+        {normalizeUnit(product.unit)}
       </div>
     </div>
   )
