@@ -154,7 +154,10 @@ export async function deleteUser(userId: string) {
   // Удаляем из auth (каскадно удалит профиль)
   const { error } = await admin.auth.admin.deleteUser(userId)
 
-  if (error) return { error: 'Не удалось удалить пользователя' }
+  if (error) {
+    console.error('[deleteUser] Supabase error:', error)
+    return { error: `Не удалось удалить пользователя: ${error.message}` }
+  }
 
   revalidatePath('/users')
   return { success: true }

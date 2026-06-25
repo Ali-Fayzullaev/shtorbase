@@ -94,12 +94,12 @@ export function DeleteUserButton({ userId, userName, isSelf }: DeleteUserButtonP
 
   const handleDelete = () => {
     startTransition(async () => {
-      try {
-        await deleteUser(userId)
+      const result = await deleteUser(userId)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
         toast.success(`Пользователь «${userName}» удалён`)
         setOpen(false)
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Не удалось удалить пользователя')
       }
     })
   }
