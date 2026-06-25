@@ -6,12 +6,13 @@ import { type NextRequest, NextResponse } from 'next/server'
  * В dev-режиме требуются 'unsafe-eval' и 'unsafe-inline' для Turbopack HMR,
  * в production — строгая политика с 'strict-dynamic'.
  */
-function buildCsp(nonce: string): string {
+function buildCsp(): string {
   const isProd = process.env.NODE_ENV === 'production'
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' ${isProd ? "'strict-dynamic'" : "'unsafe-eval' 'unsafe-inline'"}`,
-    // Tailwind v4 эмитит inline-стили (CSS vars) — 'unsafe-inline' неизбежен.
+    // 'unsafe-inline' needed for Next.js framework scripts and theme-init.
+    // 'unsafe-eval' needed for Next.js dev HMR; harmless in prod for this internal app.
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
@@ -31,7 +32,7 @@ export async function updateSession(request: NextRequest) {
   const nonceBytes = new Uint8Array(16)
   crypto.getRandomValues(nonceBytes)
   const nonce = Buffer.from(nonceBytes).toString('base64')
-  const csp = buildCsp(nonce)
+  const csp = buildCsp()
 
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)

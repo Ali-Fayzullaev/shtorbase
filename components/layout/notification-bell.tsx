@@ -15,9 +15,13 @@ export function NotificationBell() {
 
   const load = useCallback(() => {
     startTransition(async () => {
-      const [notifs, count] = await Promise.all([getNotifications(), getUnreadCount()])
-      setNotifications(notifs)
-      setUnread(count)
+      try {
+        const [notifs, count] = await Promise.all([getNotifications(), getUnreadCount()])
+        setNotifications(notifs)
+        setUnread(count)
+      } catch {
+        // silently ignore — bell stays empty if server is unavailable
+      }
     })
   }, [])
 
