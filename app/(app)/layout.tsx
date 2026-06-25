@@ -59,7 +59,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-      <BottomNav />
+      <Suspense fallback={null}>
+        <BottomNav />
+      </Suspense>
       <Suspense fallback={null}>
         <ProductTourLoader />
       </Suspense>

@@ -13,7 +13,6 @@ import {
   Settings,
   Plus,
   LogOut,
-  Upload,
   X,
   ShoppingCart,
   UserCircle,
@@ -54,7 +53,6 @@ const navGroups: NavGroup[] = [
     label: 'Управление',
     items: [
       { name: 'Добавить товар', href: '/products/new', icon: Plus, roles: ['manager', 'admin'], tourId: 'nav-new-product' },
-      { name: 'Импорт остатков', href: '/import', icon: Upload, roles: ['manager', 'admin'], tourId: 'nav-import' },
       { name: 'Логи изменений', href: '/audit', icon: ClipboardList, roles: ['manager', 'admin'] },
     ],
   },

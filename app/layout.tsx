@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono, DM_Serif_Display } from "next/font/google";
 import Script from "next/script";
 import { ThemeProvider } from "@/components/theme/theme-provider";
@@ -42,12 +43,14 @@ export default async function RootLayout({
       <head />
       <body className="h-full bg-background text-foreground" suppressHydrationWarning>
         <Script src="/theme-init.js" strategy="beforeInteractive" />
-        <ThemeProvider>
-          {children}
-          <KeyboardShortcuts />
-          <OfflineBanner />
-        </ThemeProvider>
-        <ResponsiveToaster />
+        <Suspense>
+          <ThemeProvider>
+            {children}
+            <KeyboardShortcuts />
+            <OfflineBanner />
+          </ThemeProvider>
+          <ResponsiveToaster />
+        </Suspense>
       </body>
     </html>
   );

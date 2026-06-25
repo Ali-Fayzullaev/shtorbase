@@ -3,13 +3,8 @@
 import { useActionState, useState } from 'react'
 import { Eye, EyeOff, LogIn, Mail, Lock, AlertCircle } from 'lucide-react'
 import { loginAction, type AuthState } from '@/lib/actions/auth'
-import Link from 'next/link'
 
-interface LoginFormProps {
-  showRegister: boolean
-}
-
-export function LoginForm({ showRegister }: LoginFormProps) {
+export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [state, formAction, isPending] = useActionState<AuthState, FormData>(loginAction, null)
 
@@ -77,25 +72,6 @@ export function LoginForm({ showRegister }: LoginFormProps) {
           </>
         )}
       </button>
-
-      {showRegister && (
-        <>
-          <div className="relative py-1">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-zinc-200 dark:border-zinc-800" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase tracking-wider">
-              <span className="bg-zinc-50 dark:bg-zinc-950 px-3 text-zinc-400">или</span>
-            </div>
-          </div>
-          <Link
-            href="/register"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-          >
-            Создать аккаунт
-          </Link>
-        </>
-      )}
 
       <p className="pt-2 text-center text-xs text-zinc-400">
         Нет доступа? Обратитесь к администратору

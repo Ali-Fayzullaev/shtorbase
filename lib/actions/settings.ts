@@ -36,7 +36,6 @@ export async function updateAppSetting(key: string, value: boolean) {
   if (error) return { error: 'Не удалось обновить настройку: ' + error.message }
 
   revalidatePath('/users')
-  revalidatePath('/register')
   revalidatePath('/login')
   return { success: true }
 }

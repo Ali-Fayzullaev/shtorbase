@@ -108,7 +108,7 @@ export async function AuthShell({ children, title, subtitle, footer, illustratio
 
         {/* Bottom: footer */}
         <div className="relative z-10 text-[11px] text-white/40">
-          © {new Date().getFullYear()} {displayName}
+          © 2026 {displayName}
         </div>
       </aside>
 
