@@ -10,6 +10,7 @@ export interface Profile {
   phone: string | null
   role: UserRole
   is_active: boolean
+  telegram_chat_id: string | null
   created_at: string
   updated_at: string
 }

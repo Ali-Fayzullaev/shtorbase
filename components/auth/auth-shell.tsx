@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getCompanyBranding } from '@/lib/actions/branding'
+import { getCompanyBranding } from '@/lib/data/branding'
 import { Boxes, LineChart, ShieldCheck } from 'lucide-react'
 
 interface AuthShellProps {

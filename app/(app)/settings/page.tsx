@@ -3,7 +3,7 @@ import { requireProfile } from '@/lib/actions/profile'
 import { redirect } from 'next/navigation'
 import { getCategories, getUnits, getCustomFields, getOrderStatuses } from '@/lib/actions/settings-data'
 import { isRegistrationAllowed } from '@/lib/actions/settings'
-import { getCompanyBranding } from '@/lib/actions/branding'
+import { getCompanyBranding } from '@/lib/data/branding'
 import { SettingsTabs } from '@/components/settings/settings-tabs'
 import { Settings2, Tags, Ruler, ListChecks, CircleDot, Shield, Palette } from 'lucide-react'
 

@@ -18,6 +18,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  cacheComponents: true,
   poweredByHeader: false,
   reactStrictMode: true,
   compress: true,
@@ -43,6 +44,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react', '@base-ui/react'],
+    instantNavigationDevToolsToggle: true,
   },
   async headers() {
     return [

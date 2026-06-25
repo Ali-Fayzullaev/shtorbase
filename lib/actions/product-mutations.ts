@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 
 const ProductSchema = z.object({
@@ -130,6 +131,7 @@ export async function createProductAction(
     return { error: `Ошибка: ${message}` }
   }
 
+  revalidateTag('products', 'minutes')
   redirect('/catalog')
 }
 
@@ -203,6 +205,7 @@ export async function updateProductAction(
   const { saveProductCustomValues } = await import('./settings-data')
   await saveProductCustomValues(productId, cfEntries)
 
+  revalidateTag('products', 'minutes')
   redirect(`/catalog/${productId}`)
 }
 
@@ -234,5 +237,6 @@ export async function deleteProductAction(productId: string): Promise<ProductFor
     return { error: 'Не удалось удалить товар' }
   }
 
+  revalidateTag('products', 'minutes')
   redirect('/catalog')
 }

@@ -1,35 +1,17 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { revalidatePath } from 'next/cache'
+import { createClient } from '@/lib/supabase/server'
+import { getCompanyBranding } from '@/lib/data/branding'
 
-export interface CompanyBranding {
-  logo_url: string | null
-  logo_path: string | null
-  company_name: string | null
-}
-
-export async function getCompanyBranding(): Promise<CompanyBranding> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('app_settings')
-    .select('key, value')
-    .in('key', ['company_logo', 'company_logo_path', 'company_name'])
-
-  const map: Record<string, unknown> = {}
-  for (const row of data ?? []) map[row.key] = row.value
-
-  return {
-    logo_url: typeof map.company_logo === 'string' ? map.company_logo : null,
-    logo_path: typeof map.company_logo_path === 'string' ? map.company_logo_path : null,
-    company_name: typeof map.company_name === 'string' ? map.company_name : null,
-  }
-}
+export type { CompanyBranding } from '@/lib/data/branding'
 
 async function requireAdmin() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return null
   const { data: profile } = await supabase
     .from('profiles')
@@ -48,7 +30,14 @@ async function upsertSetting(key: string, value: unknown) {
   if (error) throw new Error(error.message)
 }
 
-export async function uploadCompanyLogo(formData: FormData): Promise<{ error?: string; success?: boolean }> {
+function invalidateBranding() {
+  revalidateTag('branding', 'max')
+  revalidatePath('/', 'layout')
+}
+
+export async function uploadCompanyLogo(
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> {
   const user = await requireAdmin()
   if (!user) return { error: 'Нет прав' }
 
@@ -63,7 +52,6 @@ export async function uploadCompanyLogo(formData: FormData): Promise<{ error?: s
   const path = `branding/logo-${Date.now()}.${ext}`
   const admin = createAdminClient()
 
-  // Remove old logo if exists
   const current = await getCompanyBranding()
   if (current.logo_path) {
     await admin.storage.from('product-images').remove([current.logo_path])
@@ -83,7 +71,7 @@ export async function uploadCompanyLogo(formData: FormData): Promise<{ error?: s
     return { error: err instanceof Error ? err.message : 'Не удалось сохранить настройки' }
   }
 
-  revalidatePath('/', 'layout')
+  invalidateBranding()
   return { success: true }
 }
 
@@ -105,11 +93,13 @@ export async function removeCompanyLogo(): Promise<{ error?: string; success?: b
     return { error: err instanceof Error ? err.message : 'Не удалось обновить настройки' }
   }
 
-  revalidatePath('/', 'layout')
+  invalidateBranding()
   return { success: true }
 }
 
-export async function updateCompanyName(name: string): Promise<{ error?: string; success?: boolean }> {
+export async function updateCompanyName(
+  name: string,
+): Promise<{ error?: string; success?: boolean }> {
   const user = await requireAdmin()
   if (!user) return { error: 'Нет прав' }
 
@@ -121,6 +111,6 @@ export async function updateCompanyName(name: string): Promise<{ error?: string;
     return { error: err instanceof Error ? err.message : 'Не удалось обновить настройки' }
   }
 
-  revalidatePath('/', 'layout')
+  invalidateBranding()
   return { success: true }
 }

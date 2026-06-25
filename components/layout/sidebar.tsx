@@ -16,6 +16,7 @@ import {
   Upload,
   X,
   ShoppingCart,
+  UserCircle,
 } from 'lucide-react'
 import { type UserRole } from '@/lib/types/database'
 import { logoutAction } from '@/lib/actions/auth'
@@ -62,6 +63,7 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'Пользователи', href: '/users', icon: Users, roles: ['admin'] },
       { name: 'Настройки', href: '/settings', icon: Settings, roles: ['admin'] },
+      { name: 'Профиль', href: '/account', icon: UserCircle, roles: ['employee', 'manager', 'admin'] },
     ],
   },
 ]

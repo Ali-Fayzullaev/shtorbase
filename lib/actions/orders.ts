@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { type Order, type OrderStatus } from '@/lib/types/database'
 import { createNotification } from './notifications'
+import { broadcastTelegram, tgNewOrder, tgStatusChanged } from '@/lib/telegram'
 
 // ============================================
 // Helpers
@@ -424,6 +425,35 @@ export async function createOrderAction(
       await createNotification(finalAssignedTo, 'Новый заказ', `Вам назначен новый заказ #${order.id.slice(0, 8)}`, `/orders/${order.id}`)
     }
 
+    // Telegram notification
+    const total = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+    // Fetch profiles and client for notification — failures must not block order creation
+    const [creatorRes, assignedRes, clientRes] = await Promise.allSettled([
+      admin.from('profiles').select('*').eq('id', user.id).single(),
+      finalAssignedTo && finalAssignedTo !== user.id
+        ? admin.from('profiles').select('*').eq('id', finalAssignedTo).single()
+        : Promise.resolve({ data: null, error: null }),
+      clientId
+        ? admin.from('clients').select('name').eq('id', clientId).single()
+        : Promise.resolve({ data: null, error: null }),
+    ])
+    const creatorProfile = creatorRes.status === 'fulfilled' ? creatorRes.value.data : null
+    const assignedProfile = assignedRes.status === 'fulfilled' ? assignedRes.value.data : null
+    const clientRow = clientRes.status === 'fulfilled' ? clientRes.value.data : null
+    await broadcastTelegram(
+      tgNewOrder({
+        orderNumber: order.id.slice(0, 8).toUpperCase(),
+        clientName: (clientRow as { name?: string } | null)?.name ?? phone ?? 'Клиент',
+        createdBy: (creatorProfile as { full_name?: string } | null)?.full_name ?? 'Неизвестно',
+        itemCount: items.length,
+        total,
+      }),
+      [
+        (creatorProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id,
+        (assignedProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id,
+      ],
+    )
+
     revalidatePath('/orders')
     revalidatePath('/catalog')
   } catch (err) {
@@ -494,6 +524,27 @@ export async function createQuickOrder(
     // Log history
     await logOrderHistory(admin, order.id, user.id, 'created', null, 'new')
 
+    // Telegram notification (quick order)
+    const total = validated.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+    const [creatorRes, clientRes] = await Promise.allSettled([
+      admin.from('profiles').select('*').eq('id', user.id).single(),
+      clientId
+        ? admin.from('clients').select('name').eq('id', clientId).single()
+        : Promise.resolve({ data: null, error: null }),
+    ])
+    const creatorProfile = creatorRes.status === 'fulfilled' ? creatorRes.value.data : null
+    const clientRow = clientRes.status === 'fulfilled' ? clientRes.value.data : null
+    await broadcastTelegram(
+      tgNewOrder({
+        orderNumber: order.id.slice(0, 8).toUpperCase(),
+        clientName: (clientRow as { name?: string } | null)?.name ?? phone ?? 'Клиент',
+        createdBy: (creatorProfile as { full_name?: string } | null)?.full_name ?? 'Неизвестно',
+        itemCount: validated.length,
+        total,
+      }),
+      [(creatorProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id],
+    )
+
     revalidatePath('/orders')
     revalidatePath('/catalog')
     return { success: true }
@@ -547,11 +598,30 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
   await logOrderHistory(admin, orderId, user.id, 'status_change', order.status, newStatus)
 
-  // Notify assigned employee about status change
-  const { data: fullOrder } = await admin.from('orders').select('assigned_to').eq('id', orderId).single()
+  // Notify assigned employee about status change + Telegram
+  const [{ data: fullOrder }, { data: changerProfile }] = await Promise.all([
+    admin.from('orders').select('assigned_to, client:clients(name)').eq('id', orderId).single(),
+    admin.from('profiles').select('full_name').eq('id', user.id).single(),
+  ])
   if (fullOrder?.assigned_to && fullOrder.assigned_to !== user.id) {
     await createNotification(fullOrder.assigned_to, 'Статус заказа изменён', `Заказ #${orderId.slice(0, 8)} — ${newStatus}`, `/orders/${orderId}`)
   }
+  // Also notify the assigned employee personally (graceful — column may not exist yet)
+  let assignedTgId: string | null = null
+  if (fullOrder?.assigned_to) {
+    const res = await admin.from('profiles').select('*').eq('id', fullOrder.assigned_to).single()
+    assignedTgId = (res.data as { telegram_chat_id?: string | null } | null)?.telegram_chat_id ?? null
+  }
+  await broadcastTelegram(
+    tgStatusChanged({
+      orderNumber: orderId.slice(0, 8).toUpperCase(),
+      clientName: (fullOrder?.client as { name?: string } | null)?.name ?? 'Клиент',
+      oldStatus: order.status,
+      newStatus,
+      changedBy: changerProfile?.full_name ?? 'Неизвестно',
+    }),
+    [assignedTgId],
+  )
 
   revalidatePath('/orders')
   revalidatePath(`/orders/${orderId}`)
