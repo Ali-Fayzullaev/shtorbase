@@ -33,13 +33,13 @@ function getIsDark(theme: Theme): boolean {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('system')
+  const [theme, setThemeState] = useState<Theme>('light')
   const [accent, setAccentState] = useState<AccentColor>('indigo')
   const [glass, setGlassState] = useState(true)
   const [isDark, setIsDark] = useState(false)
 
   useEffect(() => {
-    const savedTheme = (localStorage.getItem('theme') as Theme) || 'system'
+    const savedTheme = (localStorage.getItem('theme') as Theme) || 'light'
     const savedAccent = (localStorage.getItem('accent') as AccentColor) || 'indigo'
     const savedGlass = localStorage.getItem('glass')
     const glassOn = savedGlass === null ? true : savedGlass === '1'
