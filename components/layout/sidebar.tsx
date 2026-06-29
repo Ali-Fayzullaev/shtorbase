@@ -75,9 +75,9 @@ const roleLabels: Record<UserRole, string> = {
 }
 
 const roleColors: Record<UserRole, string> = {
-  employee: 'bg-sky-100/80 text-sky-700',
-  manager: 'bg-amber-100/80 text-amber-700',
-  admin: 'bg-violet-100/80 text-violet-700',
+  employee: 'bg-sky-100 text-sky-700',
+  manager: 'bg-amber-100 text-amber-700',
+  admin: 'bg-violet-100 text-violet-700',
 }
 
 function getInitials(name: string) {
@@ -97,7 +97,11 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-collapsed')
-    if (saved === 'true') setCollapsed(true)
+    if (saved !== null) {
+      setCollapsed(saved === 'true')
+    } else {
+      setCollapsed(window.innerWidth < 1280)
+    }
     setMounted(true)
   }, [])
 
@@ -119,21 +123,21 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
   const displayName = companyName && companyName.length > 0 ? companyName : 'ШторБаза'
 
   const sidebarContent = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white dark:bg-zinc-950">
       {/* Header / Logo */}
       <div className={cn(
-        'flex h-16 shrink-0 items-center gap-3 transition-all duration-300',
-        collapsed ? 'justify-center px-0' : 'px-5'
+        'flex h-16 shrink-0 items-center gap-3 border-b border-zinc-100 dark:border-zinc-800/80',
+        collapsed ? 'justify-center px-0' : 'px-4'
       )}>
         <div className={cn(
-          'shrink-0 flex items-center justify-center rounded-xl shadow-lg overflow-hidden transition-all duration-300',
+          'shrink-0 flex items-center justify-center rounded-xl overflow-hidden',
           logoUrl
-            ? 'h-9 w-9 bg-white/80 dark:bg-zinc-800/80 border border-white/40 dark:border-white/[0.05] shadow-sm'
-            : 'h-9 w-9 bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/30'
+            ? 'h-8 w-8 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700'
+            : 'h-8 w-8 bg-gradient-to-br from-indigo-500 to-violet-600 shadow-md shadow-indigo-500/20'
         )}>
           {logoUrl ? (
             <div className="relative w-full h-full">
-              <Image src={logoUrl} alt={displayName} fill className="object-contain p-1" sizes="36px" unoptimized />
+              <Image src={logoUrl} alt={displayName} fill className="object-contain p-1" sizes="32px" unoptimized />
             </div>
           ) : (
             <span className="text-white font-bold text-sm">{displayName.slice(0, 1).toUpperCase()}</span>
@@ -144,38 +148,34 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
           'flex-1 min-w-0 transition-all duration-200',
           collapsed ? 'opacity-0 w-0 overflow-hidden pointer-events-none' : 'opacity-100'
         )}>
-          <h1 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 tracking-tight truncate leading-tight">
+          <h1 className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight truncate">
             {displayName}
           </h1>
-          <p className="text-[10px] text-zinc-400 leading-none mt-0.5 whitespace-nowrap">Управление товарами</p>
+          <p className="text-[10px] text-zinc-400 whitespace-nowrap">Управление товарами</p>
         </div>
 
         <button
           onClick={close}
-          className={cn(
-            'lg:hidden rounded-md p-1 text-zinc-400 hover:bg-white/60 dark:hover:bg-zinc-800/60 hover:text-zinc-600 transition-colors',
-            collapsed && 'hidden'
-          )}
+          className={cn('lg:hidden rounded-md p-1 text-zinc-400 hover:bg-zinc-100 transition-colors', collapsed && 'hidden')}
         >
           <X size={16} />
         </button>
       </div>
 
-      {/* Divider */}
-      <div className="h-px mx-3 bg-gradient-to-r from-transparent via-zinc-200 dark:via-white/[0.06] to-transparent" />
-
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2">
         {filteredGroups.map((group, gi) => (
           <div key={group.label} className={cn(gi > 0 && 'mt-5')}>
+            {/* Group label */}
             <div className={cn(
               'transition-all duration-200 overflow-hidden',
-              collapsed ? 'h-0 opacity-0 mb-0' : 'h-5 opacity-100 mb-1.5'
+              collapsed ? 'h-0 opacity-0 mb-0' : 'h-5 opacity-100 mb-1'
             )}>
-              <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 whitespace-nowrap">
+              <p className="px-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 whitespace-nowrap">
                 {group.label}
               </p>
             </div>
+
             <ul className="space-y-0.5">
               {group.items.map((item) => {
                 const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
@@ -187,12 +187,10 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
                       title={collapsed ? item.name : undefined}
                       className={cn(
                         'group relative flex items-center gap-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40',
-                        collapsed
-                          ? 'justify-center w-10 h-10 mx-auto'
-                          : 'px-3 py-2.5',
+                        collapsed ? 'justify-center w-10 h-10 mx-auto' : 'px-3 py-2.5',
                         isActive
-                          ? 'bg-white/60 dark:bg-white/[0.08] text-indigo-700 dark:text-indigo-300 shadow-sm shadow-indigo-500/10 border border-white/50 dark:border-white/[0.08]'
-                          : 'text-zinc-500 dark:text-zinc-400 hover:bg-white/40 dark:hover:bg-white/[0.05] hover:text-zinc-800 dark:hover:text-zinc-200'
+                          ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'
+                          : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-zinc-200'
                       )}
                     >
                       {isActive && !collapsed && (
@@ -203,9 +201,7 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
                         strokeWidth={isActive ? 2 : 1.5}
                         className={cn(
                           'shrink-0 transition-colors duration-200',
-                          isActive
-                            ? 'text-indigo-600 dark:text-indigo-400'
-                            : 'text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300'
+                          isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300'
                         )}
                       />
                       <span className={cn(
@@ -224,7 +220,7 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
       </nav>
 
       {/* Divider */}
-      <div className="h-px mx-3 bg-gradient-to-r from-transparent via-zinc-200 dark:via-white/[0.06] to-transparent" />
+      <div className="h-px mx-3 bg-zinc-100 dark:bg-zinc-800/80" />
 
       {/* Collapse toggle */}
       <div className={cn('px-2 py-2', collapsed ? 'flex justify-center' : '')}>
@@ -232,52 +228,51 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
           onClick={toggleCollapsed}
           title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
           className={cn(
-            'flex items-center gap-2 rounded-xl text-[12px] font-medium text-zinc-400 hover:bg-white/40 dark:hover:bg-white/[0.06] hover:text-zinc-700 dark:hover:text-zinc-200 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40',
+            'flex items-center gap-2 rounded-xl text-[12px] font-medium text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all duration-200',
             collapsed ? 'w-10 h-10 justify-center' : 'w-full px-3 py-2'
           )}
         >
-          {collapsed ? <PanelLeft size={16} /> : (
-            <>
-              <PanelLeftClose size={16} />
-              <span>Свернуть</span>
-            </>
-          )}
+          {collapsed ? <PanelLeft size={16} /> : <><PanelLeftClose size={16} /><span>Свернуть</span></>}
         </button>
       </div>
 
       {/* User card */}
-      <div className={cn('p-3', collapsed && 'px-2')}>
-        <div className={cn(
-          'flex items-center gap-2.5 rounded-xl glass-card py-2.5 transition-all duration-300',
-          collapsed ? 'justify-center px-2' : 'px-3'
-        )}>
-          <div
-            title={collapsed ? getDisplayName(userName) : undefined}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white font-semibold text-[11px] shadow-sm shadow-indigo-500/20 cursor-default"
-          >
-            {getInitials(userName)}
-          </div>
-          <div className={cn(
-            'min-w-0 flex-1 transition-all duration-200',
-            collapsed ? 'w-0 opacity-0 overflow-hidden pointer-events-none' : 'opacity-100'
-          )}>
-            <p className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-200 truncate leading-tight">
-              {getDisplayName(userName)}
-            </p>
-            <span className={cn('inline-block rounded-md px-1.5 py-px text-[10px] font-medium mt-0.5', roleColors[role])}>
-              {roleLabels[role]}
-            </span>
-          </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              title="Выйти"
-              className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-500 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+      <div className="p-2 border-t border-zinc-100 dark:border-zinc-800/80">
+        {collapsed ? (
+          /* Collapsed: just avatar centered, logout hidden (expand to log out) */
+          <div className="flex flex-col items-center gap-1.5 py-2">
+            <div
+              title={getDisplayName(userName)}
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white font-semibold text-[11px] shadow-sm"
             >
-              <LogOut size={15} />
-            </button>
-          </form>
-        </div>
+              {getInitials(userName)}
+            </div>
+          </div>
+        ) : (
+          /* Expanded: full user card */
+          <div className="flex items-center gap-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 px-3 py-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white font-semibold text-[11px] shadow-sm">
+              {getInitials(userName)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-200 truncate leading-tight">
+                {getDisplayName(userName)}
+              </p>
+              <span className={cn('inline-block rounded-md px-1.5 py-px text-[10px] font-medium mt-0.5', roleColors[role])}>
+                {roleLabels[role]}
+              </span>
+            </div>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                title="Выйти"
+                className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-500 transition-all duration-200"
+              >
+                <LogOut size={15} />
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -287,11 +282,9 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'hidden lg:block shrink-0 glass border-r border-white/20 dark:border-white/5 h-full overflow-hidden',
+          'hidden lg:block shrink-0 h-full border-r border-zinc-200 dark:border-zinc-800/80 overflow-hidden',
           'transition-[width] duration-300 ease-in-out',
-          mounted
-            ? collapsed ? 'w-[72px]' : 'w-64'
-            : 'w-64'
+          mounted ? (collapsed ? 'w-[72px]' : 'w-60') : 'w-60'
         )}
       >
         {sidebarContent}
@@ -300,11 +293,8 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
       {/* Mobile sidebar (always expanded) */}
       {isOpen && (
         <>
-          <div
-            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden animate-fade-in"
-            onClick={close}
-          />
-          <aside className="fixed inset-y-0 left-0 z-50 w-64 glass shadow-2xl lg:hidden animate-slide-in-left overflow-hidden">
+          <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden animate-fade-in" onClick={close} />
+          <aside className="fixed inset-y-0 left-0 z-50 w-60 shadow-2xl lg:hidden animate-slide-in-left overflow-hidden">
             {sidebarContent}
           </aside>
         </>

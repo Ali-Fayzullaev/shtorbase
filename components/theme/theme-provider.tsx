@@ -35,18 +35,15 @@ function getIsDark(theme: Theme): boolean {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light')
   const [accent, setAccentState] = useState<AccentColor>('indigo')
-  const [glass, setGlassState] = useState(true)
+  const [glass, setGlassState] = useState(false)
   const [isDark, setIsDark] = useState(false)
 
   useEffect(() => {
     const savedTheme = (localStorage.getItem('theme') as Theme) || 'light'
     const savedAccent = (localStorage.getItem('accent') as AccentColor) || 'indigo'
-    const savedGlass = localStorage.getItem('glass')
-    const glassOn = savedGlass === null ? true : savedGlass === '1'
-
     setThemeState(savedTheme)
     setAccentState(savedAccent)
-    setGlassState(glassOn)
+    setGlassState(false)
 
     const dark = getIsDark(savedTheme)
     setIsDark(dark)
@@ -58,11 +55,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.removeAttribute('data-accent')
     }
 
-    if (glassOn) {
-      document.documentElement.setAttribute('data-glass', '')
-    } else {
-      document.documentElement.removeAttribute('data-glass')
-    }
+    document.documentElement.removeAttribute('data-glass')
 
     // Listen for system theme changes
     const mq = window.matchMedia('(prefers-color-scheme: dark)')

@@ -2,7 +2,6 @@ import { Suspense } from 'react'
 import { Header } from '@/components/layout/header'
 import { CatalogFilters } from '@/components/search/catalog-filters'
 import { CatalogGrid } from '@/components/catalog/catalog-grid'
-import { CartProvider, CartPanel } from '@/components/catalog/catalog-cart'
 import { Pagination } from '@/components/ui/pagination'
 import { PrintButton } from '@/components/ui/print-button'
 import { getCatalogProducts, getCategories } from '@/lib/actions/products'
@@ -21,9 +20,8 @@ interface CatalogPageProps {
 }
 
 export default function CatalogPage({ searchParams }: CatalogPageProps) {
-  // Don't await here — let sub-components pull what they need inside Suspense
   return (
-    <CartProvider>
+    <>
       <Header title="Каталог" description="Товары со склада">
         <div className="flex items-center gap-2 no-print">
           <PrintButton />
@@ -34,19 +32,15 @@ export default function CatalogPage({ searchParams }: CatalogPageProps) {
       </Header>
 
       <div className="p-5 space-y-4">
-        {/* Filters: categories are cached, render fast */}
         <Suspense fallback={<FiltersSkeleton />}>
           <FiltersSection searchParams={searchParams} />
         </Suspense>
 
-        {/* Grid: heavy (images), streams in */}
         <Suspense fallback={<GridSkeleton />}>
           <GridSection searchParams={searchParams} />
         </Suspense>
       </div>
-
-      <CartPanel />
-    </CartProvider>
+    </>
   )
 }
 
@@ -70,10 +64,7 @@ async function ExportLink({ searchParams }: { searchParams: Promise<SearchParams
 }
 
 async function FiltersSection({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const [params, categories] = await Promise.all([
-    searchParams,
-    getCategories(), // cached with 'use cache'
-  ])
+  const [params, categories] = await Promise.all([searchParams, getCategories()])
   return (
     <CatalogFilters
       categories={categories}
@@ -97,9 +88,7 @@ async function GridSection({ searchParams }: { searchParams: Promise<SearchParam
   return (
     <>
       <CatalogGrid products={products} total={total} />
-      {totalPages > 1 && (
-        <Pagination currentPage={page} totalPages={totalPages} />
-      )}
+      {totalPages > 1 && <Pagination currentPage={page} totalPages={totalPages} />}
     </>
   )
 }
