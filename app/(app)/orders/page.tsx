@@ -2,8 +2,9 @@ import { Suspense } from 'react'
 import { Header } from '@/components/layout/header'
 import { OrdersTable } from '@/components/orders/orders-table'
 import { OrdersFilters } from '@/components/orders/orders-filters'
+import { EmployeeOrderBoard } from '@/components/orders/employee-order-board'
 import { Pagination } from '@/components/ui/pagination'
-import { getOrders, getOrderStats, getEmployees } from '@/lib/actions/orders'
+import { getOrders, getOrderStats, getEmployees, getOrderQueue, getMyActiveOrders, getMyRecentDoneOrders } from '@/lib/actions/orders'
 import { getOrderStatuses } from '@/lib/actions/settings-data'
 import { requireProfile } from '@/lib/actions/profile'
 import { type UserRole } from '@/lib/types/database'
@@ -49,17 +50,35 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
           <OrderStatsSection userId={userId} userRole={userRole} />
         </Suspense>
 
-        {/* Filters + table */}
-        <Suspense fallback={<TableSkeleton />}>
-          <OrdersContent
-            searchParams={searchParams}
-            userId={userId}
-            userRole={userRole}
-          />
-        </Suspense>
+        {/* Сотрудник: очередь + свои заказы в работе. Менеджер/админ: таблица со всеми заказами */}
+        {userRole === 'employee' ? (
+          <Suspense fallback={<TableSkeleton />}>
+            <EmployeeOrdersSection userId={userId} />
+          </Suspense>
+        ) : (
+          <Suspense fallback={<TableSkeleton />}>
+            <OrdersContent
+              searchParams={searchParams}
+              userId={userId}
+              userRole={userRole}
+            />
+          </Suspense>
+        )}
 
       </div>
     </>
+  )
+}
+
+async function EmployeeOrdersSection({ userId }: { userId: string }) {
+  const [queueOrders, activeOrders, doneOrders] = await Promise.all([
+    getOrderQueue(),
+    getMyActiveOrders(userId),
+    getMyRecentDoneOrders(userId),
+  ])
+
+  return (
+    <EmployeeOrderBoard queueOrders={queueOrders} activeOrders={activeOrders} doneOrders={doneOrders} />
   )
 }
 

@@ -242,6 +242,60 @@ export async function getOrder(id: string) {
 }
 
 // ============================================
+// Общая очередь новых заказов (для производства)
+// ============================================
+export async function getOrderQueue() {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('orders')
+    .select('*, client:clients(*)')
+    .eq('status', 'new')
+    .is('assigned_to', null)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('getOrderQueue error:', error)
+    return []
+  }
+  return (data ?? []) as Order[]
+}
+
+/** Заказы, назначенные сотруднику и находящиеся в работе — без пагинации, все сразу */
+export async function getMyActiveOrders(userId: string) {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('orders')
+    .select('*, client:clients(*)')
+    .eq('status', 'in_progress')
+    .eq('assigned_to', userId)
+    .order('deadline', { ascending: true, nullsFirst: false })
+
+  if (error) {
+    console.error('getMyActiveOrders error:', error)
+    return []
+  }
+  return (data ?? []) as Order[]
+}
+
+/** Последние завершённые заказы сотрудника (готов/выдан/отменён) — для истории */
+export async function getMyRecentDoneOrders(userId: string, limit = 10) {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('orders')
+    .select('*, client:clients(*)')
+    .in('status', ['ready', 'delivered', 'cancelled'])
+    .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
+    .order('updated_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('getMyRecentDoneOrders error:', error)
+    return []
+  }
+  return (data ?? []) as Order[]
+}
+
+// ============================================
 // Dashboard stats
 // ============================================
 export async function getOrderStats(userId?: string, userRole?: string) {
@@ -624,6 +678,117 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
       changedBy: changerProfile?.full_name ?? 'Неизвестно',
     }),
     [assignedTgId],
+  )
+
+  revalidatePath('/orders')
+  revalidatePath(`/orders/${orderId}`)
+  return { success: true }
+}
+
+/** Notify the order's creator about an accept/complete action performed by someone else */
+async function notifyCreator(
+  admin: ReturnType<typeof createAdminClient>,
+  orderId: string,
+  createdBy: string | null,
+  actorId: string,
+  title: string,
+  message: string,
+  oldStatus: string,
+  newStatus: string,
+) {
+  if (!createdBy || createdBy === actorId) return
+
+  const [{ data: actorProfile }, { data: fullOrder }] = await Promise.all([
+    admin.from('profiles').select('*').eq('id', actorId).single(),
+    admin.from('orders').select('client:clients(name)').eq('id', orderId).single(),
+  ])
+
+  await createNotification(createdBy, title, message, `/orders/${orderId}`)
+
+  const { data: creatorProfile } = await admin.from('profiles').select('*').eq('id', createdBy).single()
+  await broadcastTelegram(
+    tgStatusChanged({
+      orderNumber: orderId.slice(0, 8).toUpperCase(),
+      clientName: (fullOrder?.client as { name?: string } | null)?.name ?? 'Клиент',
+      oldStatus,
+      newStatus,
+      changedBy: (actorProfile as { full_name?: string } | null)?.full_name ?? 'Сотрудник',
+    }),
+    [(creatorProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id],
+  )
+}
+
+// ============================================
+// Приём заказа сотрудником (общая очередь → «В работе»)
+// ============================================
+export async function acceptOrder(orderId: string) {
+  const { user, role } = await requireAuth()
+
+  const admin = createAdminClient()
+  const { data: order } = await admin
+    .from('orders')
+    .select('status, assigned_to, created_by')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) return { error: 'Заказ не найден' }
+  if (order.status !== 'new') return { error: 'Заказ уже в работе или завершён' }
+  if (role === 'employee' && order.assigned_to) {
+    return { error: 'Заказ уже принят другим сотрудником' }
+  }
+
+  const { error } = await admin
+    .from('orders')
+    .update({ assigned_to: user.id, status: 'in_progress', updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+
+  if (error) return { error: `Не удалось принять заказ: ${error.message}` }
+
+  await logOrderHistory(admin, orderId, user.id, 'accepted', order.status, 'in_progress')
+  await notifyCreator(
+    admin, orderId, order.created_by, user.id,
+    'Заказ принят в работу',
+    `Заказ #${orderId.slice(0, 8)} принят в работу`,
+    'new', 'in_progress',
+  )
+
+  revalidatePath('/orders')
+  revalidatePath(`/orders/${orderId}`)
+  return { success: true }
+}
+
+// ============================================
+// Завершение заказа сотрудником («В работе» → «Готов»)
+// ============================================
+export async function completeOrder(orderId: string) {
+  const { user, role } = await requireAuth()
+
+  const admin = createAdminClient()
+  const { data: order } = await admin
+    .from('orders')
+    .select('status, assigned_to, created_by')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) return { error: 'Заказ не найден' }
+  if (order.status !== 'in_progress') return { error: 'Заказ не находится в работе' }
+  if (role === 'employee' && order.assigned_to !== user.id) {
+    return { error: 'Вы не назначены исполнителем этого заказа' }
+  }
+
+  const { error } = await admin
+    .from('orders')
+    .update({ status: 'ready', updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+
+  if (error) return { error: `Не удалось завершить заказ: ${error.message}` }
+
+  await logOrderHistory(admin, orderId, user.id, 'status_change', 'in_progress', 'ready')
+  await notifyCreator(
+    admin, orderId, order.created_by, user.id,
+    'Заказ готов',
+    `Заказ #${orderId.slice(0, 8)} готов к выдаче`,
+    'in_progress', 'ready',
   )
 
   revalidatePath('/orders')

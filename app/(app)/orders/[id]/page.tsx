@@ -35,8 +35,14 @@ export default async function OrderPage({ params }: OrderPageProps) {
 
   if (!order) notFound()
 
-  // Employees can only view orders assigned to them or created by them
-  if (userRole === 'employee' && order.assigned_to !== user.id && order.created_by !== user.id) {
+  // Сотрудники видят: свои заказы (назначенные/созданные) + общую очередь новых заказов
+  const isUnassignedQueueOrder = order.status === 'new' && !order.assigned_to
+  if (
+    userRole === 'employee' &&
+    order.assigned_to !== user.id &&
+    order.created_by !== user.id &&
+    !isUnassignedQueueOrder
+  ) {
     notFound()
   }
 
@@ -60,7 +66,7 @@ export default async function OrderPage({ params }: OrderPageProps) {
       </Header>
 
       <div className="p-5">
-        <OrderDetail order={order} employees={employees} userRole={userRole} statuses={orderStatuses} />
+        <OrderDetail order={order} employees={employees} userRole={userRole} statuses={orderStatuses} currentUserId={user.id} />
       </div>
     </>
   )

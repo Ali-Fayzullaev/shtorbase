@@ -2,7 +2,7 @@
 
 import { useTransition, useState, useMemo, useEffect } from 'react'
 import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
-import { updateOrderStatus, assignOrder, deleteOrder, updateOrderPayment } from '@/lib/actions/orders'
+import { updateOrderStatus, assignOrder, deleteOrder, updateOrderPayment, acceptOrder, completeOrder } from '@/lib/actions/orders'
 import { cn } from '@/lib/utils/format'
 import { PaymentBadge } from './payment-badge'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -45,13 +45,15 @@ interface OrderDetailProps {
   employees: { id: string; full_name: string; role: string }[]
   userRole: UserRole
   statuses: OrderStatusConfig[]
+  currentUserId: string
 }
 
-export function OrderDetail({ order, employees, userRole, statuses }: OrderDetailProps) {
+export function OrderDetail({ order, employees, userRole, statuses, currentUserId }: OrderDetailProps) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const [showDelete, setShowDelete] = useState(false)
+  const [selfActionPending, startSelfActionTransition] = useTransition()
 
   const [changingTo, setChangingTo] = useState<string | null>(null)
   const [deliverConfirmStatus, setDeliverConfirmStatus] = useState<string | null>(null)
@@ -111,6 +113,18 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
     })
   }
 
+  const canAccept = userRole === 'employee' && order.status === 'new' && !order.assigned_to
+  const canComplete = userRole === 'employee' && order.status === 'in_progress' && order.assigned_to === currentUserId
+
+  function handleSelfAction(action: 'accept' | 'complete') {
+    setError('')
+    startSelfActionTransition(async () => {
+      const result = action === 'accept' ? await acceptOrder(order.id) : await completeOrder(order.id)
+      if (result?.error) setError(result.error)
+      else router.refresh()
+    })
+  }
+
   function handleAssign(userId: string) {
     startTransition(async () => {
       const result = await assignOrder(order.id, userId || null)
@@ -133,6 +147,21 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
+      )}
+
+      {/* Крупное действие для сотрудника — принять/завершить заказ */}
+      {(canAccept || canComplete) && (
+        <button
+          onClick={() => handleSelfAction(canAccept ? 'accept' : 'complete')}
+          disabled={selfActionPending}
+          className={cn(
+            'btn-press flex w-full items-center justify-center gap-2 rounded-xl h-14 text-[15px] font-semibold text-white shadow-sm transition-colors disabled:opacity-60',
+            canAccept ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-emerald-600 hover:bg-emerald-500'
+          )}
+        >
+          {selfActionPending && <Loader2 size={16} className="animate-spin" />}
+          {canAccept ? '✅ Принять заказ' : '✔️ Готово'}
+        </button>
       )}
 
       {/* Status + Actions */}
