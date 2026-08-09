@@ -2,7 +2,8 @@ import { Header } from '@/components/layout/header'
 import { ProductCard } from '@/components/products/product-card'
 import { ProductAuditLog } from '@/components/products/product-audit-log'
 import { ProductImages } from '@/components/products/product-images'
-import { getProductById, getProductAuditLogs } from '@/lib/actions/products'
+import { ProductVariants } from '@/components/products/product-variants'
+import { getProductById, getProductAuditLogs, getProductVariants } from '@/lib/actions/products'
 import { getProductImages } from '@/lib/actions/images'
 import { getProfile } from '@/lib/actions/profile'
 import { notFound } from 'next/navigation'
@@ -23,6 +24,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   }
 
   const canEdit = profile?.role === 'admin' || profile?.role === 'manager'
+  const variants = product.variant_group_id ? await getProductVariants(product.variant_group_id, product.id) : []
 
   return (
     <>
@@ -48,6 +50,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <div className="p-5 max-w-3xl space-y-5">
         <ProductCard product={product} />
         <ProductImages productId={id} images={images} canEdit={canEdit} />
+        <ProductVariants variants={variants} sourceProductId={product.id} canEdit={canEdit} />
         {canEdit && logs.length > 0 && (
           <ProductAuditLog logs={logs} />
         )}

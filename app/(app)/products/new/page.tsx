@@ -1,28 +1,48 @@
 import { Header } from '@/components/layout/header'
 import { ProductForm } from '@/components/products/product-form'
-import { getCategories } from '@/lib/actions/products'
+import { getCategories, getProductById } from '@/lib/actions/products'
 import { getUnits, getCustomFields } from '@/lib/actions/settings-data'
 import { requireProfile } from '@/lib/actions/profile'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, PackagePlus, Info, Sparkles, Keyboard } from 'lucide-react'
 
-export default async function NewProductPage() {
+interface NewProductPageProps {
+  searchParams: Promise<{ variant_of?: string }>
+}
+
+export default async function NewProductPage({ searchParams }: NewProductPageProps) {
   const profile = await requireProfile()
 
   if (profile.role !== 'admin' && profile.role !== 'manager') {
     redirect('/')
   }
 
-  const [categories, units, customFields] = await Promise.all([
+  const { variant_of } = await searchParams
+
+  const [categories, units, customFields, variantOfProduct] = await Promise.all([
     getCategories(),
     getUnits(),
     getCustomFields(),
+    variant_of ? getProductById(variant_of) : Promise.resolve(null),
   ])
+
+  const variantOf = variantOfProduct
+    ? {
+        id: variantOfProduct.id,
+        name: variantOfProduct.name,
+        category_id: variantOfProduct.category_id,
+        unit: variantOfProduct.unit,
+        variant_group_id: variantOfProduct.variant_group_id,
+      }
+    : undefined
 
   return (
     <>
-      <Header title="Новый товар" description="Добавление позиции в каталог">
+      <Header
+        title={variantOf ? `Новая вариация «${variantOf.name}»` : 'Новый товар'}
+        description={variantOf ? 'Категория и единица измерения предзаполнены из исходного товара' : 'Добавление позиции в каталог'}
+      >
         <Link
           href="/catalog"
           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/60 px-3 py-1.5 text-[13px] font-medium text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
@@ -47,7 +67,7 @@ export default async function NewProductPage() {
                 </p>
               </div>
             </div>
-            <ProductForm categories={categories} units={units} customFields={customFields} />
+            <ProductForm categories={categories} units={units} customFields={customFields} variantOf={variantOf} />
           </div>
 
           {/* Help sidebar */}

@@ -35,6 +35,7 @@ export interface Product {
   vat_included: boolean
   note: string | null
   status: ProductStatus
+  variant_group_id: string | null
   created_at: string
   updated_at: string
   created_by: string

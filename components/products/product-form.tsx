@@ -29,6 +29,7 @@ interface ProductFormProps {
   customFields: CustomField[]
   product?: Product
   initialCustomValues?: Record<string, string>
+  variantOf?: { id: string; name: string; category_id: string; unit: string; variant_group_id: string | null }
 }
 
 function StepSection({
@@ -61,7 +62,7 @@ function StepSection({
   )
 }
 
-export function ProductForm({ categories, units, customFields, product, initialCustomValues }: ProductFormProps) {
+export function ProductForm({ categories, units, customFields, product, initialCustomValues, variantOf }: ProductFormProps) {
   const isEdit = !!product
   const action = isEdit ? updateProductAction : createProductAction
   const [state, formAction, isPending] = useActionState<ProductFormState, FormData>(action, null)
@@ -74,8 +75,9 @@ export function ProductForm({ categories, units, customFields, product, initialC
   const [imageUrls, setImageUrls] = useState<string[]>([''])
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [vatIncluded, setVatIncluded] = useState(product?.vat_included ?? true)
-  const [categoryId, setCategoryId] = useState(product?.category_id ?? '')
-  const [unit, setUnit] = useState(product?.unit ?? '')
+  const [categoryId, setCategoryId] = useState(product?.category_id ?? variantOf?.category_id ?? '')
+  const [unit, setUnit] = useState(product?.unit ?? variantOf?.unit ?? '')
+  const variantGroupId = product?.variant_group_id ?? (variantOf ? (variantOf.variant_group_id ?? variantOf.id) : '')
   const [customValues, setCustomValues] = useState<Record<string, string>>(initialCustomValues ?? {})
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -108,6 +110,7 @@ export function ProductForm({ categories, units, customFields, product, initialC
       <input type="hidden" name="vat_included" value={vatIncluded ? 'on' : ''} />
       <input type="hidden" name="category_id" value={categoryId} />
       <input type="hidden" name="unit" value={unit} />
+      <input type="hidden" name="variant_group_id" value={variantGroupId} />
       {/* Hidden custom field values — только поля, применимые к выбранной категории */}
       {visibleCustomFields.map((field) => (
         <input key={field.id} type="hidden" name={`cf_${field.id}`} value={customValues[field.id] ?? ''} />
@@ -116,6 +119,12 @@ export function ProductForm({ categories, units, customFields, product, initialC
       {state?.error && (
         <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
           {state.error}
+        </div>
+      )}
+
+      {variantOf && (
+        <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/60 dark:border-indigo-500/20 dark:bg-indigo-500/10 px-4 py-3 text-sm text-indigo-700 dark:text-indigo-300">
+          Вы создаёте вариацию товара «{variantOf.name}» — категория и единица измерения уже подставлены, измените только то, что отличается (цвет, размер и т.д.).
         </div>
       )}
 

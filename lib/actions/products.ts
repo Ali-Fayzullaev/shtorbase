@@ -197,6 +197,22 @@ export async function getProductById(id: string) {
 }
 
 // ============================================
+// Вариации товара (та же группа variant_group_id)
+// ============================================
+export async function getProductVariants(groupId: string, excludeId: string) {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('products')
+    .select('id, sku, name, price, unit, stock, status')
+    .eq('variant_group_id', groupId)
+    .neq('id', excludeId)
+    .order('name')
+
+  return (data ?? []) as Pick<Product, 'id' | 'sku' | 'name' | 'price' | 'unit' | 'stock' | 'status'>[]
+}
+
+// ============================================
 // Логи товара
 // ============================================
 export async function getProductAuditLogs(productId: string) {

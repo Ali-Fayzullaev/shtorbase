@@ -16,6 +16,7 @@ const ProductSchema = z.object({
   stock: z.coerce.number().min(0, 'Остаток ≥ 0'),
   vat_included: z.coerce.boolean(),
   note: z.string().max(500).nullable(),
+  variant_group_id: z.string().uuid().nullable(),
 })
 
 export type ProductFormState = {
@@ -38,6 +39,7 @@ export async function createProductAction(
       stock: formData.get('stock'),
       vat_included: formData.get('vat_included') === 'on',
       note: formData.get('note') || null,
+      variant_group_id: (formData.get('variant_group_id') as string) || null,
     }
 
     const parsed = ProductSchema.safeParse(raw)
@@ -152,6 +154,7 @@ export async function updateProductAction(
     stock: formData.get('stock'),
     vat_included: formData.get('vat_included') === 'on',
     note: formData.get('note') || null,
+    variant_group_id: (formData.get('variant_group_id') as string) || null,
   }
 
   const parsed = ProductSchema.safeParse(raw)
