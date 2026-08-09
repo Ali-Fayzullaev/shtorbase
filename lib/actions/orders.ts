@@ -360,6 +360,8 @@ export async function createOrderAction(
     const finalAssignedTo = role === 'employee' ? user.id : (assignedTo || null)
     const note = formData.get('note') as string
     const deadline = formData.get('deadline') as string
+    const paidAmountRaw = formData.get('paid_amount') as string
+    const paidAmount = paidAmountRaw ? Math.max(0, parseFloat(paidAmountRaw) || 0) : 0
 
     // Parse items from form
     const itemsJson = formData.get('items') as string
@@ -392,6 +394,7 @@ export async function createOrderAction(
         note: note?.trim() || null,
         phone: phone?.trim() || null,
         deadline: deadline || null,
+        paid_amount: paidAmount,
         created_by: user.id,
       })
       .select('id')
@@ -622,6 +625,44 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
     }),
     [assignedTgId],
   )
+
+  revalidatePath('/orders')
+  revalidatePath(`/orders/${orderId}`)
+  return { success: true }
+}
+
+// ============================================
+// Обновление оплаты
+// ============================================
+export async function updateOrderPayment(orderId: string, paidAmount: number) {
+  const { user, role } = await requireAuth()
+  if (role === 'employee') return { error: 'Нет прав' }
+
+  if (!Number.isFinite(paidAmount) || paidAmount < 0) {
+    return { error: 'Некорректная сумма' }
+  }
+
+  const admin = createAdminClient()
+  const { data: order } = await admin
+    .from('orders')
+    .select('total_amount, paid_amount')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) return { error: 'Заказ не найден' }
+  if (paidAmount > order.total_amount) {
+    return { error: 'Сумма оплаты не может превышать сумму заказа' }
+  }
+  if (paidAmount === order.paid_amount) return { success: true }
+
+  const { error } = await admin
+    .from('orders')
+    .update({ paid_amount: paidAmount, updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+
+  if (error) return { error: `Не удалось обновить оплату: ${error.message}` }
+
+  await logOrderHistory(admin, orderId, user.id, 'payment_update', String(order.paid_amount), String(paidAmount))
 
   revalidatePath('/orders')
   revalidatePath(`/orders/${orderId}`)

@@ -9,6 +9,7 @@ import { updateOrderStatus, deleteOrder } from '@/lib/actions/orders'
 import { cn } from '@/lib/utils/format'
 import { ClipboardList, User, Calendar, ChevronDown, Loader2, Check, Phone, Trash2, MoreHorizontal, ExternalLink, Clock, AlertTriangle, LayoutList, PanelsTopLeft } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { PaymentBadge } from './payment-badge'
 
 const defaultBadge = { label: '???', color: 'bg-zinc-50 text-zinc-500 border-zinc-200', dot: 'bg-zinc-400' }
 
@@ -426,6 +427,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
                             )}
 
                             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                              <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={order.total_amount} />
                               {order.assigned_user && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-1 dark:bg-white/[0.05]">
                                   <User size={11} />
@@ -479,9 +481,9 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
       {/* Desktop table */}
       <div className="hidden md:block relative">
         <div className="overflow-x-auto rounded-2xl">
-        <div className="rounded-2xl glass-card !p-0 overflow-hidden min-w-[820px]">
+        <div className="rounded-2xl glass-card !p-0 overflow-hidden min-w-215">
         {/* Header */}
-        <div className="grid grid-cols-[60px_1fr_120px_130px_140px_120px_90px_36px] gap-2 px-5 py-3 bg-white/30 dark:bg-white/[0.03] text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-white/30 dark:border-white/[0.05] rounded-t-2xl">
+        <div className="grid grid-cols-[60px_1fr_120px_130px_140px_120px_130px_36px] gap-2 px-5 py-3 bg-white/30 dark:bg-white/[0.03] text-[11px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-white/30 dark:border-white/[0.05] rounded-t-2xl">
           <span className="sticky left-0">№</span>
           <span>Клиент</span>
           <span>Телефон</span>
@@ -501,7 +503,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
               key={order.id}
               href={`/orders/${order.id}`}
               className={cn(
-                'group grid grid-cols-[60px_1fr_120px_130px_140px_120px_90px_36px] gap-2 px-5 py-3.5 border-b border-white/20 dark:border-white/[0.04] last:border-0 transition-all duration-200 hover:bg-white/30 dark:hover:bg-white/[0.04]',
+                'group grid grid-cols-[60px_1fr_120px_130px_140px_120px_130px_36px] gap-2 px-5 py-3.5 border-b border-white/20 dark:border-white/[0.04] last:border-0 transition-all duration-200 hover:bg-white/30 dark:hover:bg-white/[0.04]',
                 overdue && 'bg-red-50/30 dark:bg-red-950/10',
                 idx % 2 === 1 && 'bg-white/20 dark:bg-white/[0.02]'
               )}
@@ -603,8 +605,9 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
               </div>
 
               {/* Amount */}
-              <div className="flex items-center justify-end">
+              <div className="flex flex-col items-end justify-center gap-1">
                 <span className="text-sm font-bold text-zinc-800 tabular-nums">{formatPrice(order.total_amount)}</span>
+                <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={order.total_amount} />
               </div>
 
               {/* Actions */}
@@ -656,7 +659,10 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
                     </span>
                   )}
                 </div>
-                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">{formatPrice(order.total_amount)}</span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">{formatPrice(order.total_amount)}</span>
+                  <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={order.total_amount} />
+                </div>
               </div>
 
               {/* Card body */}

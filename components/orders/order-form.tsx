@@ -37,6 +37,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
   const [note, setNote] = useState('')
   const [phone, setPhone] = useState('')
   const [deadline, setDeadline] = useState('')
+  const [paidAmount, setPaidAmount] = useState('')
   const [items, setItems] = useState<OrderItem[]>([])
   const [clientSearch, setClientSearch] = useState('')
 
@@ -116,6 +117,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
     formData.set('note', note)
     formData.set('phone', phone)
     formData.set('deadline', deadline)
+    formData.set('paid_amount', paidAmount)
     formAction(formData)
   }
 
@@ -278,6 +280,23 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
           />
         </div>
       </div>
+
+      {/* Payment — только для менеджеров и админов */}
+      {userRole !== 'employee' && (
+        <div className="space-y-2">
+          <label className={labelCls}>Оплачено сейчас (₸)</label>
+          <input
+            type="number"
+            step="1"
+            min="0"
+            value={paidAmount}
+            onChange={(e) => setPaidAmount(e.target.value)}
+            placeholder="0"
+            className={cn(inputCls, 'sm:max-w-55')}
+          />
+          <p className="text-[12px] text-slate-400 dark:text-zinc-500">Необязательно — можно указать позже, в карточке заказа.</p>
+        </div>
+      )}
 
       {/* Product search + add items */}
       <div className="space-y-3">

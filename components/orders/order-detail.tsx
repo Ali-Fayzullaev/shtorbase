@@ -2,8 +2,10 @@
 
 import { useTransition, useState, useMemo, useEffect } from 'react'
 import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
-import { updateOrderStatus, assignOrder, deleteOrder } from '@/lib/actions/orders'
+import { updateOrderStatus, assignOrder, deleteOrder, updateOrderPayment } from '@/lib/actions/orders'
 import { cn } from '@/lib/utils/format'
+import { PaymentBadge } from './payment-badge'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   User,
   Calendar,
@@ -17,6 +19,7 @@ import {
   MessageCircle,
   History,
   Clock,
+  Wallet,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -51,6 +54,11 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
   const [showDelete, setShowDelete] = useState(false)
 
   const [changingTo, setChangingTo] = useState<string | null>(null)
+  const [deliverConfirmStatus, setDeliverConfirmStatus] = useState<string | null>(null)
+
+  const [editingPayment, setEditingPayment] = useState(false)
+  const [paymentInput, setPaymentInput] = useState('')
+  const [paymentPending, startPaymentTransition] = useTransition()
 
   const isManager = userRole === 'manager' || userRole === 'admin'
   const [mounted, setMounted] = useState(false)
@@ -68,6 +76,14 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
 
   function handleStatusChange(newStatus: OrderStatus) {
     if (newStatus === order.status) return
+    if (newStatus === 'delivered' && order.payment_status !== 'paid') {
+      setDeliverConfirmStatus(newStatus)
+      return
+    }
+    performStatusChange(newStatus)
+  }
+
+  function performStatusChange(newStatus: OrderStatus) {
     setError('')
     setChangingTo(newStatus)
     startTransition(async () => {
@@ -75,6 +91,23 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
       if (result?.error) setError(result.error)
       else router.refresh()
       setChangingTo(null)
+    })
+  }
+
+  function handleSavePayment() {
+    const amount = parseFloat(paymentInput)
+    if (!Number.isFinite(amount) || amount < 0) {
+      setError('Некорректная сумма оплаты')
+      return
+    }
+    setError('')
+    startPaymentTransition(async () => {
+      const result = await updateOrderPayment(order.id, amount)
+      if (result?.error) setError(result.error)
+      else {
+        setEditingPayment(false)
+        router.refresh()
+      }
     })
   }
 
@@ -275,6 +308,56 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
             )}
           </div>
 
+          {/* Payment */}
+          <div className="glass-card rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-zinc-100">
+                <Wallet size={14} /> Оплата
+              </h3>
+              <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={order.total_amount} />
+            </div>
+            <p className="text-[13px] text-slate-600 dark:text-zinc-300">
+              {formatPrice(order.paid_amount)} из {formatPrice(order.total_amount)}
+            </p>
+            {isManager && (
+              editingPayment ? (
+                <div className="flex items-center gap-2 mt-3">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={paymentInput}
+                    onChange={(e) => setPaymentInput(e.target.value)}
+                    autoFocus
+                    className="h-8 w-28 rounded-md border border-slate-200 dark:border-zinc-700 bg-transparent px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  />
+                  <button
+                    onClick={handleSavePayment}
+                    disabled={paymentPending}
+                    className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[12px] font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  >
+                    {paymentPending && <Loader2 size={12} className="animate-spin" />}
+                    Сохранить
+                  </button>
+                  <button
+                    onClick={() => setEditingPayment(false)}
+                    disabled={paymentPending}
+                    className="rounded-lg border border-slate-200 dark:border-zinc-700 px-2.5 py-1.5 text-[12px] text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setPaymentInput(String(order.paid_amount)); setEditingPayment(true) }}
+                  className="mt-2 text-[12px] font-medium text-primary hover:underline"
+                >
+                  Изменить сумму
+                </button>
+              )
+            )}
+          </div>
+
           {/* Meta info */}
           <div className="glass-card rounded-xl p-5 space-y-2">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-3">Информация</h3>
@@ -326,6 +409,7 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
                         {h.action === 'created' && 'создал заказ'}
                         {h.action === 'status_change' && `изменил статус: ${h.old_value} → ${h.new_value}`}
                         {h.action === 'assigned' && (h.new_value ? `назначил исполнителя` : 'снял исполнителя')}
+                        {h.action === 'payment_update' && `изменил оплату: ${formatPrice(Number(h.old_value ?? 0))} → ${formatPrice(Number(h.new_value ?? 0))}`}
                       </span>
                       <p className="text-[11px] text-slate-400 dark:text-zinc-500">{formatDate(h.created_at)}</p>
                     </div>
@@ -373,6 +457,21 @@ export function OrderDetail({ order, employees, userRole, statuses }: OrderDetai
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!deliverConfirmStatus}
+        title="Заказ оплачен не полностью"
+        description={`Оплачено ${formatPrice(order.paid_amount)} из ${formatPrice(order.total_amount)}. Всё равно выдать заказ?`}
+        confirmLabel="Всё равно выдать"
+        tone="danger"
+        loading={pending}
+        onConfirm={() => {
+          const status = deliverConfirmStatus
+          setDeliverConfirmStatus(null)
+          if (status) performStatusChange(status)
+        }}
+        onCancel={() => setDeliverConfirmStatus(null)}
+      />
     </div>
   )
 }

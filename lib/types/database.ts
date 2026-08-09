@@ -98,6 +98,7 @@ export interface ProductCustomValue {
 // Заказы и клиенты
 // ============================================
 export type OrderStatus = string
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid'
 
 export interface OrderStatusConfig {
   id: string
@@ -130,6 +131,8 @@ export interface Order {
   phone: string | null
   deadline: string | null
   total_amount: number
+  payment_status: PaymentStatus
+  paid_amount: number
   created_at: string
   updated_at: string
   created_by: string
