@@ -8,7 +8,7 @@ import {
   type ProductFormState,
 } from '@/lib/actions/product-mutations'
 import { cn } from '@/lib/utils'
-import { Plus, Trash2, ImageIcon, Loader2, Upload, CheckCircle2, Circle, Package, ReceiptText, SlidersHorizontal, Images } from 'lucide-react'
+import { Plus, Trash2, ImageIcon, Loader2, Upload, CheckCircle2, Circle, Package, ReceiptText, SlidersHorizontal, Images, Layers, X } from 'lucide-react'
 
 const inputCls =
   'flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50'
@@ -79,10 +79,10 @@ export function ProductForm({ categories, units, customFields, product, initialC
   const [unit, setUnit] = useState(product?.unit ?? variantOf?.unit ?? '')
   const variantGroupId = product?.variant_group_id ?? (variantOf ? (variantOf.variant_group_id ?? variantOf.id) : '')
   const [customValues, setCustomValues] = useState<Record<string, string>>(initialCustomValues ?? {})
+  const [variantOptions, setVariantOptions] = useState<{ name: string; values: string }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const completion = [
-    { label: 'Артикул', done: sku.trim().length > 0 },
     { label: 'Название', done: name.trim().length > 0 },
     { label: 'Категория', done: categoryId.length > 0 },
     { label: 'Единица', done: unit.length > 0 },
@@ -104,6 +104,24 @@ export function ProductForm({ categories, units, customFields, product, initialC
     setImageFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
+  function addVariantOption() {
+    setVariantOptions([...variantOptions, { name: '', values: '' }])
+  }
+
+  function updateVariantOption(index: number, field: 'name' | 'values', value: string) {
+    setVariantOptions(variantOptions.map((o, i) => i === index ? { ...o, [field]: value } : o))
+  }
+
+  function removeVariantOption(index: number) {
+    setVariantOptions(variantOptions.filter((_, i) => i !== index))
+  }
+
+  const parsedVariantOptions = variantOptions
+    .map((o) => ({ name: o.name.trim(), values: o.values.split(',').map((v) => v.trim()).filter(Boolean) }))
+    .filter((o) => o.name.length > 0 && o.values.length > 0)
+  const variantComboCount = parsedVariantOptions.reduce((acc, o) => acc * o.values.length, 1)
+  const hasVariantOptions = parsedVariantOptions.length > 0
+
   return (
     <form action={formAction} className="space-y-6">
       {product && <input type="hidden" name="product_id" value={product.id} />}
@@ -111,6 +129,9 @@ export function ProductForm({ categories, units, customFields, product, initialC
       <input type="hidden" name="category_id" value={categoryId} />
       <input type="hidden" name="unit" value={unit} />
       <input type="hidden" name="variant_group_id" value={variantGroupId} />
+      {!isEdit && !variantOf && hasVariantOptions && (
+        <input type="hidden" name="variant_options" value={JSON.stringify(parsedVariantOptions)} />
+      )}
       {/* Hidden custom field values — только поля, применимые к выбранной категории */}
       {visibleCustomFields.map((field) => (
         <input key={field.id} type="hidden" name={`cf_${field.id}`} value={customValues[field.id] ?? ''} />
@@ -170,14 +191,14 @@ export function ProductForm({ categories, units, customFields, product, initialC
       >
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label htmlFor="sku" className={labelCls}>Артикул</label>
+            <label htmlFor="sku" className={labelCls}>Артикул <span className="text-muted-foreground font-normal">(необязательно)</span></label>
             <input
               id="sku" name="sku" type="text"
               value={sku} onChange={(e) => setSku(e.target.value)}
-              placeholder="SH-0001"
+              placeholder="Оставьте пустым — создадим сами"
               className={cn(inputCls, 'font-mono', state?.fieldErrors?.sku && errCls)}
             />
-            <p className="text-[11px] text-muted-foreground">Короткий уникальный код для поиска и импорта.</p>
+            <p className="text-[11px] text-muted-foreground">Нужен только для поиска/импорта. Не укажете — сгенерируем автоматически.</p>
             {state?.fieldErrors?.sku && <p className="text-xs text-destructive">{state.fieldErrors.sku}</p>}
           </div>
           <div className="sm:col-span-2 space-y-2">
@@ -334,10 +355,59 @@ export function ProductForm({ categories, units, customFields, product, initialC
         </div>
       </StepSection>
 
+      {/* Вариации — создаём сразу несколько товаров по значениям (например, по цвету) */}
+      {!isEdit && !variantOf && (
+        <StepSection
+          step="4"
+          title="Вариации"
+          description="Если товар бывает в разных цветах/размерах — укажите параметр и значения через запятую. Мы создадим отдельную карточку на каждое значение, с общими остальными полями."
+          icon={Layers}
+        >
+          <div className="space-y-3">
+            {variantOptions.map((opt, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <input
+                  type="text"
+                  value={opt.name}
+                  onChange={(e) => updateVariantOption(i, 'name', e.target.value)}
+                  placeholder="Параметр: Цвет"
+                  className={cn(inputCls, 'sm:w-40')}
+                />
+                <input
+                  type="text"
+                  value={opt.values}
+                  onChange={(e) => updateVariantOption(i, 'values', e.target.value)}
+                  placeholder="Значения: Красный, Синий, Зелёный"
+                  className={cn(inputCls, 'flex-1')}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeVariantOption(i)}
+                  className="mt-1.5 shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ))}
+
+            <button type="button" onClick={addVariantOption} className={cn(btnOutlineCls, 'h-8 gap-1.5 px-3 text-xs')}>
+              <Plus size={13} />
+              Добавить параметр
+            </button>
+
+            {hasVariantOptions && (
+              <div className="rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200/70 dark:border-indigo-500/20 px-3 py-2 text-[13px] text-indigo-700 dark:text-indigo-300">
+                Будет создано отдельных карточек: <strong>{variantComboCount}</strong> — по одной на каждую комбинацию значений. Артикул, цену и остаток можно будет скорректировать у каждой отдельно.
+              </div>
+            )}
+          </div>
+        </StepSection>
+      )}
+
       {/* Images (only for creation) */}
       {!isEdit && (
         <StepSection
-          step="4"
+          step="5"
           title="Изображения"
           description="Фотографии можно загрузить с устройства или указать ссылками. Это улучшит карточку в каталоге и корзине."
           icon={Images}

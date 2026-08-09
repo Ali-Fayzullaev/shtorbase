@@ -6,8 +6,14 @@ import { redirect } from 'next/navigation'
 import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 
+/** Короткий код для товара без вручную указанного артикула */
+function generateSku(): string {
+  return `AUTO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
+}
+
 const ProductSchema = z.object({
-  sku: z.string().min(2, 'Мин. 2 символа').max(50),
+  // Артикул необязателен — если не указан, генерируем автоматически (см. generateSku)
+  sku: z.string().max(50).refine((v) => v.length === 0 || v.length >= 2, 'Мин. 2 символа'),
   name: z.string().min(2, 'Мин. 2 символа').max(200),
   description: z.string().max(2000).nullable(),
   category_id: z.string().min(1, 'Выберите категорию').regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Неверный формат категории'),
@@ -69,17 +75,42 @@ export async function createProductAction(
     }
 
     const admin = createAdminClient()
-    const { data: insertedProduct, error } = await admin.from('products').insert({
-      ...parsed.data,
-      created_by: user.id,
-      updated_by: user.id,
-    }).select('id').single()
 
-    if (error) {
-      if (error.code === '23505') {
+    // Вариации (например, по цвету) — вместо одного товара создаём набор карточек
+    const variantOptionsRaw = formData.get('variant_options') as string | null
+    if (variantOptionsRaw) {
+      return await createProductVariantsBatch(admin, parsed.data, variantOptionsRaw, user.id, formData)
+    }
+
+    const wasAutoSku = parsed.data.sku.length === 0
+    let skuToUse = wasAutoSku ? generateSku() : parsed.data.sku
+
+    let insertedProduct: { id: string } | null = null
+    let insertError: { code?: string; message: string } | null = null
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await admin.from('products').insert({
+        ...parsed.data,
+        sku: skuToUse,
+        created_by: user.id,
+        updated_by: user.id,
+      }).select('id').single()
+
+      if (!error) { insertedProduct = data; insertError = null; break }
+      insertError = error
+      // Коллизия автогенерированного артикула — маловероятно, но пробуем ещё раз с новым кодом
+      if (error.code === '23505' && wasAutoSku) {
+        skuToUse = generateSku()
+        continue
+      }
+      break
+    }
+
+    if (insertError) {
+      if (insertError.code === '23505') {
         return { fieldErrors: { sku: 'Артикул уже существует' } }
       }
-      return { error: `Не удалось создать товар: ${error.message} (${error.code})` }
+      return { error: `Не удалось создать товар: ${insertError.message}` }
     }
 
     // Save image URLs if provided
@@ -137,6 +168,128 @@ export async function createProductAction(
   redirect('/catalog')
 }
 
+/**
+ * Создаёт набор товаров-вариаций одним заходом: менеджер один раз указывает
+ * параметр (например «Цвет») и значения через запятую, здесь строится
+ * декартово произведение и на каждую комбинацию создаётся отдельная карточка
+ * с общим variant_group_id. Каждый параметр по пути автоматически заводится
+ * (или переиспользуется) как обычное дополнительное поле категории — так
+ * значение «Цвет: Красный» видно в карточке как любая другая характеристика.
+ */
+async function createProductVariantsBatch(
+  admin: ReturnType<typeof createAdminClient>,
+  base: z.infer<typeof ProductSchema>,
+  optionsRaw: string,
+  userId: string,
+  formData: FormData,
+): Promise<ProductFormState> {
+  let options: { name: string; values: string[] }[]
+  try {
+    options = JSON.parse(optionsRaw)
+    if (!Array.isArray(options) || options.length === 0) throw new Error('empty')
+  } catch {
+    return { error: 'Некорректные параметры вариаций' }
+  }
+
+  // Декартово произведение значений всех параметров
+  let combos: { name: string; value: string }[][] = [[]]
+  for (const opt of options) {
+    const next: { name: string; value: string }[][] = []
+    for (const combo of combos) {
+      for (const value of opt.values) {
+        next.push([...combo, { name: opt.name, value }])
+      }
+    }
+    combos = next
+  }
+
+  if (combos.length === 0) return { error: 'Добавьте хотя бы одно значение параметра' }
+  if (combos.length > 60) {
+    return { error: `Слишком много комбинаций (${combos.length}). Уменьшите количество значений или параметров.` }
+  }
+
+  const groupId = crypto.randomUUID()
+
+  // Находим/создаём дополнительное поле под каждый параметр вариации в этой категории
+  const fieldIdByOptionName = new Map<string, string>()
+  for (const opt of options) {
+    const { data: existing } = await admin
+      .from('custom_fields')
+      .select('id, options')
+      .eq('name', opt.name)
+      .eq('category_id', base.category_id)
+      .maybeSingle()
+
+    if (existing) {
+      const merged = Array.from(new Set([...(existing.options ?? []), ...opt.values]))
+      await admin.from('custom_fields').update({ options: merged }).eq('id', existing.id)
+      fieldIdByOptionName.set(opt.name, existing.id)
+    } else {
+      const { data: maxOrder } = await admin
+        .from('custom_fields')
+        .select('sort_order')
+        .order('sort_order', { ascending: false })
+        .limit(1)
+        .single()
+      const { data: created, error: cfErr } = await admin
+        .from('custom_fields')
+        .insert({
+          name: opt.name,
+          field_type: 'select',
+          options: opt.values,
+          is_required: false,
+          category_id: base.category_id,
+          sort_order: (maxOrder?.sort_order ?? 0) + 1,
+        })
+        .select('id')
+        .single()
+      if (cfErr || !created) return { error: `Не удалось создать параметр «${opt.name}»: ${cfErr?.message ?? 'ошибка'}` }
+      fieldIdByOptionName.set(opt.name, created.id)
+    }
+  }
+
+  // Обычные доп. поля, введённые в форме один раз — клонируем на каждую вариацию
+  const baseCfEntries: { field_id: string; value: string }[] = []
+  for (const [key, val] of formData.entries()) {
+    if (key.startsWith('cf_') && typeof val === 'string' && val.trim()) {
+      baseCfEntries.push({ field_id: key.slice(3), value: val })
+    }
+  }
+
+  const { saveProductCustomValues } = await import('./settings-data')
+
+  for (const [index, combo] of combos.entries()) {
+    const suffix = combo.map((c) => c.value).join(' / ')
+    const sku = base.sku.length > 0 ? `${base.sku}-${index + 1}` : generateSku()
+
+    const { data: inserted, error } = await admin
+      .from('products')
+      .insert({
+        ...base,
+        sku,
+        name: `${base.name} — ${suffix}`,
+        variant_group_id: groupId,
+        created_by: userId,
+        updated_by: userId,
+      })
+      .select('id')
+      .single()
+
+    if (error || !inserted) {
+      return { error: `Не удалось создать вариацию «${suffix}»: ${error?.message ?? 'ошибка'} (создано ${index} из ${combos.length})` }
+    }
+
+    const cfValues = [
+      ...baseCfEntries,
+      ...combo.map((c) => ({ field_id: fieldIdByOptionName.get(c.name)!, value: c.value })),
+    ]
+    await saveProductCustomValues(inserted.id, cfValues)
+  }
+
+  revalidateTag('products', 'minutes')
+  redirect('/catalog')
+}
+
 export async function updateProductAction(
   _prevState: ProductFormState,
   formData: FormData
@@ -187,6 +340,7 @@ export async function updateProductAction(
     .from('products')
     .update({
       ...parsed.data,
+      sku: parsed.data.sku.length === 0 ? generateSku() : parsed.data.sku,
       updated_by: user.id,
     })
     .eq('id', productId)
