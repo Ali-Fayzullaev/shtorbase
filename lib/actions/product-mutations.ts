@@ -11,6 +11,47 @@ function generateSku(): string {
   return `AUTO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
 }
 
+interface InsertableProduct {
+  sku: string
+  name: string
+  description: string | null
+  category_id: string
+  price: number
+  unit: string
+  stock: number
+  vat_included: boolean
+  note: string | null
+  variant_group_id: string | null
+  created_by: string
+  updated_by: string
+}
+
+/** Вставляет товар, при пустом артикуле генерирует его и повторяет попытку при редкой коллизии */
+async function insertProductRow(
+  admin: ReturnType<typeof createAdminClient>,
+  data: InsertableProduct,
+): Promise<{ id: string } | { error: string; isSkuConflict?: boolean }> {
+  const wasAutoSku = data.sku.length === 0
+  let sku = wasAutoSku ? generateSku() : data.sku
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: row, error } = await admin
+      .from('products')
+      .insert({ ...data, sku })
+      .select('id')
+      .single()
+
+    if (!error && row) return { id: row.id }
+
+    if (error?.code === '23505') {
+      if (wasAutoSku) { sku = generateSku(); continue }
+      return { error: 'Артикул уже существует', isSkuConflict: true }
+    }
+    return { error: error?.message ?? 'Не удалось создать товар' }
+  }
+  return { error: 'Артикул уже существует', isSkuConflict: true }
+}
+
 const ProductSchema = z.object({
   // Артикул необязателен — если не указан, генерируем автоматически (см. generateSku)
   sku: z.string().max(50).refine((v) => v.length === 0 || v.length >= 2, 'Мин. 2 символа'),
@@ -76,86 +117,59 @@ export async function createProductAction(
 
     const admin = createAdminClient()
 
-    // Вариации (например, по цвету) — вместо одного товара создаём набор карточек
-    const variantOptionsRaw = formData.get('variant_options') as string | null
-    if (variantOptionsRaw) {
-      return await createProductVariantsBatch(admin, parsed.data, variantOptionsRaw, user.id, formData)
+    const result = await insertProductRow(admin, {
+      ...parsed.data,
+      created_by: user.id,
+      updated_by: user.id,
+    })
+
+    if ('error' in result) {
+      if (result.isSkuConflict) return { fieldErrors: { sku: result.error } }
+      return { error: `Не удалось создать товар: ${result.error}` }
     }
-
-    const wasAutoSku = parsed.data.sku.length === 0
-    let skuToUse = wasAutoSku ? generateSku() : parsed.data.sku
-
-    let insertedProduct: { id: string } | null = null
-    let insertError: { code?: string; message: string } | null = null
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { data, error } = await admin.from('products').insert({
-        ...parsed.data,
-        sku: skuToUse,
-        created_by: user.id,
-        updated_by: user.id,
-      }).select('id').single()
-
-      if (!error) { insertedProduct = data; insertError = null; break }
-      insertError = error
-      // Коллизия автогенерированного артикула — маловероятно, но пробуем ещё раз с новым кодом
-      if (error.code === '23505' && wasAutoSku) {
-        skuToUse = generateSku()
-        continue
-      }
-      break
-    }
-
-    if (insertError) {
-      if (insertError.code === '23505') {
-        return { fieldErrors: { sku: 'Артикул уже существует' } }
-      }
-      return { error: `Не удалось создать товар: ${insertError.message}` }
-    }
+    const insertedProduct = result
 
     // Save image URLs if provided
-    if (insertedProduct) {
-      const imageUrls = formData.getAll('image_urls').filter((u) => typeof u === 'string' && (u as string).trim())
-      if (imageUrls.length > 0) {
-        const rows = imageUrls.map((url, i) => ({
+    const imageUrls = formData.getAll('image_urls').filter((u) => typeof u === 'string' && (u as string).trim())
+    if (imageUrls.length > 0) {
+      const rows = imageUrls.map((url, i) => ({
+        product_id: insertedProduct.id,
+        url: url as string,
+        sort_order: i,
+      }))
+      await admin.from('product_images').insert(rows)
+    }
+
+    // Save uploaded files
+    const files = formData.getAll('image_files') as File[]
+    let sortOffset = imageUrls.length
+    for (const file of files) {
+      if (!file || file.size === 0) continue
+      if (file.size > 5 * 1024 * 1024) continue // skip too large
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+      const path = `${insertedProduct.id}/${crypto.randomUUID()}.${ext}`
+      const { error: uploadErr } = await admin.storage
+        .from('product-images')
+        .upload(path, file, { contentType: file.type })
+      if (!uploadErr) {
+        await admin.from('product_images').insert({
           product_id: insertedProduct.id,
-          url: url as string,
-          sort_order: i,
-        }))
-        await admin.from('product_images').insert(rows)
+          storage_path: path,
+          sort_order: sortOffset++,
+        })
       }
+    }
 
-      // Save uploaded files
-      const files = formData.getAll('image_files') as File[]
-      let sortOffset = imageUrls.length
-      for (const file of files) {
-        if (!file || file.size === 0) continue
-        if (file.size > 5 * 1024 * 1024) continue // skip too large
-        const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-        const path = `${insertedProduct.id}/${crypto.randomUUID()}.${ext}`
-        const { error: uploadErr } = await admin.storage
-          .from('product-images')
-          .upload(path, file, { contentType: file.type })
-        if (!uploadErr) {
-          await admin.from('product_images').insert({
-            product_id: insertedProduct.id,
-            storage_path: path,
-            sort_order: sortOffset++,
-          })
-        }
+    // Save custom field values
+    const cfEntries: { field_id: string; value: string }[] = []
+    for (const [key, val] of formData.entries()) {
+      if (key.startsWith('cf_') && typeof val === 'string' && val.trim()) {
+        cfEntries.push({ field_id: key.slice(3), value: val })
       }
-
-      // Save custom field values
-      const cfEntries: { field_id: string; value: string }[] = []
-      for (const [key, val] of formData.entries()) {
-        if (key.startsWith('cf_') && typeof val === 'string' && val.trim()) {
-          cfEntries.push({ field_id: key.slice(3), value: val })
-        }
-      }
-      if (cfEntries.length > 0) {
-        const { saveProductCustomValues } = await import('./settings-data')
-        await saveProductCustomValues(insertedProduct.id, cfEntries)
-      }
+    }
+    if (cfEntries.length > 0) {
+      const { saveProductCustomValues } = await import('./settings-data')
+      await saveProductCustomValues(insertedProduct.id, cfEntries)
     }
   } catch (err) {
     // Re-throw redirect errors (Next.js uses throw for redirects)
@@ -168,62 +182,53 @@ export async function createProductAction(
   redirect('/catalog')
 }
 
+// ============================================
+// Вариации товара (создание по одной, с прогрессом на клиенте)
+// ============================================
+
+async function requireProductEditor() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Не авторизован' } as const
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'manager')) {
+    return { error: 'Нет прав для создания товаров' } as const
+  }
+  return { userId: user.id } as const
+}
+
+export interface VariantOptionInput {
+  name: string
+  values: string[]
+}
+
 /**
- * Создаёт набор товаров-вариаций одним заходом: менеджер один раз указывает
- * параметр (например «Цвет») и значения через запятую, здесь строится
- * декартово произведение и на каждую комбинацию создаётся отдельная карточка
- * с общим variant_group_id. Каждый параметр по пути автоматически заводится
- * (или переиспользуется) как обычное дополнительное поле категории — так
- * значение «Цвет: Красный» видно в карточке как любая другая характеристика.
+ * Готовит дополнительные поля под параметры вариаций (например «Цвет») —
+ * находит существующее поле категории или создаёт новое (тип select).
+ * Вызывается один раз перед циклом создания вариаций на клиенте.
  */
-async function createProductVariantsBatch(
-  admin: ReturnType<typeof createAdminClient>,
-  base: z.infer<typeof ProductSchema>,
-  optionsRaw: string,
-  userId: string,
-  formData: FormData,
-): Promise<ProductFormState> {
-  let options: { name: string; values: string[] }[]
-  try {
-    options = JSON.parse(optionsRaw)
-    if (!Array.isArray(options) || options.length === 0) throw new Error('empty')
-  } catch {
-    return { error: 'Некорректные параметры вариаций' }
-  }
+export async function prepareVariantFields(
+  categoryId: string,
+  options: VariantOptionInput[],
+): Promise<{ fieldIds?: Record<string, string>; error?: string }> {
+  const auth = await requireProductEditor()
+  if ('error' in auth) return { error: auth.error }
 
-  // Декартово произведение значений всех параметров
-  let combos: { name: string; value: string }[][] = [[]]
-  for (const opt of options) {
-    const next: { name: string; value: string }[][] = []
-    for (const combo of combos) {
-      for (const value of opt.values) {
-        next.push([...combo, { name: opt.name, value }])
-      }
-    }
-    combos = next
-  }
+  const admin = createAdminClient()
+  const fieldIds: Record<string, string> = {}
 
-  if (combos.length === 0) return { error: 'Добавьте хотя бы одно значение параметра' }
-  if (combos.length > 60) {
-    return { error: `Слишком много комбинаций (${combos.length}). Уменьшите количество значений или параметров.` }
-  }
-
-  const groupId = crypto.randomUUID()
-
-  // Находим/создаём дополнительное поле под каждый параметр вариации в этой категории
-  const fieldIdByOptionName = new Map<string, string>()
   for (const opt of options) {
     const { data: existing } = await admin
       .from('custom_fields')
       .select('id, options')
       .eq('name', opt.name)
-      .eq('category_id', base.category_id)
+      .eq('category_id', categoryId)
       .maybeSingle()
 
     if (existing) {
       const merged = Array.from(new Set([...(existing.options ?? []), ...opt.values]))
       await admin.from('custom_fields').update({ options: merged }).eq('id', existing.id)
-      fieldIdByOptionName.set(opt.name, existing.id)
+      fieldIds[opt.name] = existing.id
     } else {
       const { data: maxOrder } = await admin
         .from('custom_fields')
@@ -231,63 +236,77 @@ async function createProductVariantsBatch(
         .order('sort_order', { ascending: false })
         .limit(1)
         .single()
-      const { data: created, error: cfErr } = await admin
+      const { data: created, error } = await admin
         .from('custom_fields')
         .insert({
           name: opt.name,
           field_type: 'select',
           options: opt.values,
           is_required: false,
-          category_id: base.category_id,
+          category_id: categoryId,
           sort_order: (maxOrder?.sort_order ?? 0) + 1,
         })
         .select('id')
         .single()
-      if (cfErr || !created) return { error: `Не удалось создать параметр «${opt.name}»: ${cfErr?.message ?? 'ошибка'}` }
-      fieldIdByOptionName.set(opt.name, created.id)
+      if (error || !created) return { error: `Не удалось создать параметр «${opt.name}»: ${error?.message ?? 'ошибка'}` }
+      fieldIds[opt.name] = created.id
     }
   }
 
-  // Обычные доп. поля, введённые в форме один раз — клонируем на каждую вариацию
-  const baseCfEntries: { field_id: string; value: string }[] = []
-  for (const [key, val] of formData.entries()) {
-    if (key.startsWith('cf_') && typeof val === 'string' && val.trim()) {
-      baseCfEntries.push({ field_id: key.slice(3), value: val })
-    }
+  return { fieldIds }
+}
+
+export interface CreateVariantInput {
+  base: {
+    sku: string
+    name: string
+    description: string | null
+    category_id: string
+    price: number
+    unit: string
+    stock: number
+    vat_included: boolean
+    note: string | null
+  }
+  comboLabel: string
+  comboValues: { field_id: string; value: string }[]
+  extraCfValues: { field_id: string; value: string }[]
+  groupId: string
+  variantIndex: number
+}
+
+/** Создаёт одну вариацию товара — вызывается по очереди с клиента, чтобы показывать прогресс */
+export async function createOneVariantAction(input: CreateVariantInput): Promise<{ id?: string; error?: string }> {
+  const auth = await requireProductEditor()
+  if ('error' in auth) return { error: auth.error }
+
+  const { base } = input
+  if (!base.category_id || !base.name.trim() || !base.unit || !(base.price > 0) || !(base.stock >= 0)) {
+    return { error: 'Проверьте обязательные поля товара' }
   }
 
-  const { saveProductCustomValues } = await import('./settings-data')
+  const admin = createAdminClient()
+  const sku = base.sku.trim().length > 0 ? `${base.sku.trim()}-${input.variantIndex + 1}` : ''
 
-  for (const [index, combo] of combos.entries()) {
-    const suffix = combo.map((c) => c.value).join(' / ')
-    const sku = base.sku.length > 0 ? `${base.sku}-${index + 1}` : generateSku()
+  const result = await insertProductRow(admin, {
+    ...base,
+    sku,
+    name: `${base.name} — ${input.comboLabel}`,
+    variant_group_id: input.groupId,
+    created_by: auth.userId,
+    updated_by: auth.userId,
+  })
 
-    const { data: inserted, error } = await admin
-      .from('products')
-      .insert({
-        ...base,
-        sku,
-        name: `${base.name} — ${suffix}`,
-        variant_group_id: groupId,
-        created_by: userId,
-        updated_by: userId,
-      })
-      .select('id')
-      .single()
+  if ('error' in result) return { error: result.error }
 
-    if (error || !inserted) {
-      return { error: `Не удалось создать вариацию «${suffix}»: ${error?.message ?? 'ошибка'} (создано ${index} из ${combos.length})` }
-    }
-
-    const cfValues = [
-      ...baseCfEntries,
-      ...combo.map((c) => ({ field_id: fieldIdByOptionName.get(c.name)!, value: c.value })),
-    ]
-    await saveProductCustomValues(inserted.id, cfValues)
+  const cfValues = [...input.extraCfValues, ...input.comboValues]
+  if (cfValues.length > 0) {
+    const { saveProductCustomValues } = await import('./settings-data')
+    await saveProductCustomValues(result.id, cfValues)
   }
 
   revalidateTag('products', 'minutes')
-  redirect('/catalog')
+  return { id: result.id }
 }
 
 export async function updateProductAction(

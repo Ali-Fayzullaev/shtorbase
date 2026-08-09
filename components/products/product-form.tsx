@@ -1,14 +1,17 @@
 ﻿'use client'
 
-import { useActionState, useState, useRef } from 'react'
+import { useActionState, useState, useRef, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { type Product, type Category, type Unit, type CustomField } from '@/lib/types/database'
 import {
   createProductAction,
   updateProductAction,
+  prepareVariantFields,
+  createOneVariantAction,
   type ProductFormState,
 } from '@/lib/actions/product-mutations'
 import { cn } from '@/lib/utils'
-import { Plus, Trash2, ImageIcon, Loader2, Upload, CheckCircle2, Circle, Package, ReceiptText, SlidersHorizontal, Images, Layers, X } from 'lucide-react'
+import { Plus, Trash2, ImageIcon, Loader2, Upload, CheckCircle2, Circle, Package, ReceiptText, SlidersHorizontal, Images, Layers, X, PartyPopper } from 'lucide-react'
 
 const inputCls =
   'flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50'
@@ -122,16 +125,96 @@ export function ProductForm({ categories, units, customFields, product, initialC
   const variantComboCount = parsedVariantOptions.reduce((acc, o) => acc * o.values.length, 1)
   const hasVariantOptions = parsedVariantOptions.length > 0
 
+  const router = useRouter()
+  const [batchPending, startBatchTransition] = useTransition()
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; label: string } | null>(null)
+  const [batchError, setBatchError] = useState('')
+
+  function buildCombos(options: { name: string; values: string[] }[]): { name: string; value: string }[][] {
+    let combos: { name: string; value: string }[][] = [[]]
+    for (const opt of options) {
+      const next: { name: string; value: string }[][] = []
+      for (const combo of combos) {
+        for (const value of opt.values) next.push([...combo, { name: opt.name, value }])
+      }
+      combos = next
+    }
+    return combos
+  }
+
+  function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (!hasVariantOptions) return // обычное создание/редактирование — нативный action делает всё сам
+
+    e.preventDefault()
+    setBatchError('')
+
+    const combos = buildCombos(parsedVariantOptions)
+    if (combos.length > 60) {
+      setBatchError(`Слишком много комбинаций (${combos.length}). Уменьшите количество значений или параметров.`)
+      return
+    }
+
+    const groupId = crypto.randomUUID()
+    const base = {
+      sku: sku.trim(),
+      name: name.trim(),
+      description: description.trim() || null,
+      category_id: categoryId,
+      price: parseFloat(price) || 0,
+      unit,
+      stock: parseFloat(stock) || 0,
+      vat_included: vatIncluded,
+      note: note.trim() || null,
+    }
+    const extraCfValues = Object.entries(customValues)
+      .filter(([, v]) => v.trim())
+      .map(([field_id, value]) => ({ field_id, value }))
+
+    setBatchProgress({ current: 0, total: combos.length, label: 'Готовим параметры…' })
+
+    startBatchTransition(async () => {
+      const prep = await prepareVariantFields(categoryId, parsedVariantOptions)
+      if (prep.error || !prep.fieldIds) {
+        setBatchError(prep.error ?? 'Не удалось подготовить параметры')
+        setBatchProgress(null)
+        return
+      }
+
+      for (let i = 0; i < combos.length; i++) {
+        const combo = combos[i]
+        const label = combo.map((c) => c.value).join(' / ')
+        setBatchProgress({ current: i, total: combos.length, label: `${base.name} — ${label}` })
+
+        const result = await createOneVariantAction({
+          base,
+          comboLabel: label,
+          comboValues: combo.map((c) => ({ field_id: prep.fieldIds![c.name], value: c.value })),
+          extraCfValues,
+          groupId,
+          variantIndex: i,
+        })
+
+        if (result.error) {
+          setBatchError(`«${label}»: ${result.error} (создано ${i} из ${combos.length})`)
+          setBatchProgress(null)
+          return
+        }
+      }
+
+      setBatchProgress({ current: combos.length, total: combos.length, label: '' })
+      await new Promise((resolve) => setTimeout(resolve, 700))
+      router.push('/catalog')
+      router.refresh()
+    })
+  }
+
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} onSubmit={handleFormSubmit} className="space-y-6">
       {product && <input type="hidden" name="product_id" value={product.id} />}
       <input type="hidden" name="vat_included" value={vatIncluded ? 'on' : ''} />
       <input type="hidden" name="category_id" value={categoryId} />
       <input type="hidden" name="unit" value={unit} />
       <input type="hidden" name="variant_group_id" value={variantGroupId} />
-      {!isEdit && !variantOf && hasVariantOptions && (
-        <input type="hidden" name="variant_options" value={JSON.stringify(parsedVariantOptions)} />
-      )}
       {/* Hidden custom field values — только поля, применимые к выбранной категории */}
       {visibleCustomFields.map((field) => (
         <input key={field.id} type="hidden" name={`cf_${field.id}`} value={customValues[field.id] ?? ''} />
@@ -494,17 +577,76 @@ export function ProductForm({ categories, units, customFields, product, initialC
       )}
 
       {/* Submit */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/50 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-xs leading-relaxed text-muted-foreground">
-          {isEdit ? 'После сохранения карточка сразу обновится в каталоге.' : 'После создания товар появится в каталоге и будет доступен в заказах.'}
-        </div>
-        <div className="flex items-center gap-3 pt-2 sm:pt-0">
-        <button type="submit" disabled={isPending} className={btnPrimaryCls}>
-          {isPending && <Loader2 size={14} className="animate-spin" />}
-          {isEdit ? 'Сохранить' : 'Создать товар'}
-        </button>
+      <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/50 p-4">
+        {(isPending || batchPending) && (
+          <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-border/60">
+            <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 animate-indeterminate" />
+          </div>
+        )}
+        {batchError && (
+          <div className="mb-3 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
+            {batchError}
+          </div>
+        )}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs leading-relaxed text-muted-foreground">
+            {isEdit
+              ? 'После сохранения карточка сразу обновится в каталоге.'
+              : hasVariantOptions
+                ? `Будет создано ${variantComboCount} карточек — процесс покажет каждую по очереди.`
+                : 'После создания товар появится в каталоге и будет доступен в заказах.'}
+          </div>
+          <div className="flex items-center gap-3 pt-2 sm:pt-0">
+            <button type="submit" disabled={isPending || batchPending} className={btnPrimaryCls}>
+              {(isPending || batchPending) && <Loader2 size={14} className="animate-spin" />}
+              {isEdit ? 'Сохранить' : hasVariantOptions ? `Создать ${variantComboCount} карточек` : 'Создать товар'}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Прогресс создания вариаций */}
+      {(batchPending || batchProgress) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-sm rounded-2xl bg-card p-6 shadow-2xl animate-scale-in">
+            {batchProgress && batchProgress.current >= batchProgress.total && !batchError ? (
+              <div className="flex flex-col items-center text-center gap-2 py-2">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-md">
+                  <PartyPopper size={22} />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">Готово! Создано карточек: {batchProgress.total}</h3>
+                <p className="text-xs text-muted-foreground">Переходим в каталог…</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-sm shadow-indigo-500/20">
+                    <Layers size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground">Создаём вариации товара</h3>
+                    <p className="text-xs text-muted-foreground truncate">{batchProgress?.label || 'Готовим параметры…'}</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
+                    <span>Прогресс</span>
+                    <span className="tabular-nums">{batchProgress?.current ?? 0}/{batchProgress?.total ?? variantComboCount}</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-300 ease-out"
+                      style={{
+                        width: `${Math.min(100, Math.round(((batchProgress?.current ?? 0) / (batchProgress?.total || variantComboCount || 1)) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </form>
   )
 }
