@@ -2,6 +2,8 @@
 
 ← [Назад к обзору](./00-overview.md)
 
+> **Статус: ✅ реализовано** — `acceptOrder`/`completeOrder` в `lib/actions/orders.ts`, доска для сотрудника `components/orders/employee-order-board.tsx`. Не требует Supabase-миграции.
+
 ## 1. Проблема сейчас
 
 Сегодня в коде (`lib/actions/orders.ts::updateOrderStatus`) стоит жёсткая блокировка:
