@@ -6,13 +6,18 @@ import { createNewClient as createClientAction } from '@/lib/actions/clients'
 import { type Client, type Product, type UserRole } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
 import { formatPhoneInput, isValidPhone } from '@/lib/utils/phone'
-import { Plus, Trash2, Search, Loader2, UserPlus, Package } from 'lucide-react'
+import { Plus, Trash2, Search, Loader2, UserPlus, Package, X } from 'lucide-react'
 
 const inputCls =
   'flex h-9 w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50'
 const labelCls = 'text-sm font-medium text-slate-700 dark:text-zinc-300'
 const selectCls =
   'flex h-9 w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-transparent px-2.5 py-1.5 text-sm shadow-sm transition-colors outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50'
+
+interface OrderItemAttribute {
+  key: string
+  value: string
+}
 
 interface OrderItem {
   product_id: string
@@ -21,6 +26,7 @@ interface OrderItem {
   product_unit: string
   quantity: number
   unit_price: number
+  attributes: OrderItemAttribute[]
 }
 
 interface OrderFormProps {
@@ -90,6 +96,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
       product_unit: product.unit,
       quantity: 1,
       unit_price: product.price,
+      attributes: [],
     }])
     setSearchResults([])
     setProductSearch('')
@@ -103,13 +110,35 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
     setItems(items.filter((_, i) => i !== index))
   }
 
+  function addAttribute(index: number) {
+    setItems(items.map((item, i) => i === index ? { ...item, attributes: [...item.attributes, { key: '', value: '' }] } : item))
+  }
+
+  function updateAttribute(index: number, attrIndex: number, field: 'key' | 'value', value: string) {
+    setItems(items.map((item, i) => i === index
+      ? { ...item, attributes: item.attributes.map((a, ai) => ai === attrIndex ? { ...a, [field]: value } : a) }
+      : item
+    ))
+  }
+
+  function removeAttribute(index: number, attrIndex: number) {
+    setItems(items.map((item, i) => i === index
+      ? { ...item, attributes: item.attributes.filter((_, ai) => ai !== attrIndex) }
+      : item
+    ))
+  }
+
   const total = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0)
 
   function handleSubmit(formData: FormData) {
-    const itemsForSubmit = items.map(({ product_id, quantity, unit_price }) => ({
+    const itemsForSubmit = items.map(({ product_id, quantity, unit_price, attributes }) => ({
       product_id,
       quantity,
       unit_price,
+      custom_attributes: attributes.reduce<Record<string, string>>((acc, a) => {
+        if (a.key.trim()) acc[a.key.trim()] = a.value.trim()
+        return acc
+      }, {}),
     }))
     formData.set('items', JSON.stringify(itemsForSubmit))
     formData.set('client_id', clientId)
@@ -372,37 +401,76 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
             </div>
 
             {items.map((item, i) => (
-              <div key={item.product_id} className="grid sm:grid-cols-[1fr_100px_120px_120px_40px] gap-2 px-4 py-2.5 border-b border-slate-50 dark:border-zinc-800 last:border-0 items-center">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-slate-800 dark:text-zinc-200 truncate">{item.product_name}</p>
-                  <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">{item.product_sku}</p>
+              <div key={item.product_id} className="border-b border-slate-50 dark:border-zinc-800 last:border-0">
+                <div className="grid sm:grid-cols-[1fr_100px_120px_120px_40px] gap-2 px-4 py-2.5 items-center">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-slate-800 dark:text-zinc-200 truncate">{item.product_name}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">{item.product_sku}</p>
+                  </div>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={item.quantity}
+                    onChange={(e) => updateItem(i, 'quantity', parseFloat(e.target.value) || 0)}
+                    className="h-8 rounded-md border border-slate-200 dark:border-zinc-700 px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  />
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={item.unit_price}
+                    onChange={(e) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
+                    className="h-8 rounded-md border border-slate-200 dark:border-zinc-700 px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  />
+                  <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-200 text-right">
+                    {formatPrice(item.quantity * item.unit_price)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(i)}
+                    className="justify-self-center text-slate-400 dark:text-zinc-500 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(i, 'quantity', parseFloat(e.target.value) || 0)}
-                  className="h-8 rounded-md border border-slate-200 dark:border-zinc-700 px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary/30"
-                />
-                <input
-                  type="number"
-                  step="1"
-                  min="0"
-                  value={item.unit_price}
-                  onChange={(e) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
-                  className="h-8 rounded-md border border-slate-200 dark:border-zinc-700 px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary/30"
-                />
-                <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-200 text-right">
-                  {formatPrice(item.quantity * item.unit_price)}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => removeItem(i)}
-                  className="justify-self-center text-slate-400 dark:text-zinc-500 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
+
+                {/* Индивидуальные параметры позиции (размер, цвет и т.д.) */}
+                <div className="px-4 pb-2.5 flex flex-wrap items-center gap-1.5">
+                  {item.attributes.map((attr, ai) => (
+                    <div key={ai} className="flex items-center gap-1 rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/60 pl-2 pr-1 py-0.5">
+                      <input
+                        type="text"
+                        value={attr.key}
+                        onChange={(e) => updateAttribute(i, ai, 'key', e.target.value)}
+                        placeholder="параметр"
+                        className="w-20 bg-transparent text-[11px] text-slate-500 dark:text-zinc-400 outline-none placeholder:text-slate-300 dark:placeholder:text-zinc-600"
+                      />
+                      <span className="text-[11px] text-slate-300 dark:text-zinc-600">:</span>
+                      <input
+                        type="text"
+                        value={attr.value}
+                        onChange={(e) => updateAttribute(i, ai, 'value', e.target.value)}
+                        placeholder="значение"
+                        className="w-20 bg-transparent text-[11px] text-slate-700 dark:text-zinc-300 outline-none placeholder:text-slate-300 dark:placeholder:text-zinc-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeAttribute(i, ai)}
+                        className="text-slate-300 dark:text-zinc-600 hover:text-red-500 transition-colors"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => addAttribute(i)}
+                    className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 dark:border-zinc-600 px-2 py-0.5 text-[11px] text-slate-400 dark:text-zinc-500 hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <Plus size={10} /> Параметр (размер, цвет...)
+                  </button>
+                </div>
               </div>
             ))}
 

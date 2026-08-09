@@ -390,6 +390,7 @@ const OrderItemSchema = z.object({
   quantity: z.coerce.number().positive('Кол-во > 0'),
   unit_price: z.coerce.number().min(0),
   note: z.string().max(500).optional(),
+  custom_attributes: z.record(z.string(), z.string()).optional(),
 })
 
 export type OrderFormState = {
@@ -463,6 +464,7 @@ export async function createOrderAction(
       quantity: item.quantity,
       unit_price: item.unit_price,
       note: item.note || null,
+      custom_attributes: item.custom_attributes ?? {},
     }))
 
     const { error: itemsErr } = await admin.from('order_items').insert(rows)

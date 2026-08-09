@@ -152,6 +152,7 @@ export interface OrderItem {
   unit_price: number
   total_price: number
   note: string | null
+  custom_attributes: Record<string, string>
   created_at: string
   // Joined
   product?: Product

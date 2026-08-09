@@ -225,6 +225,15 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
                       {item.product?.sku && (
                         <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">{item.product.sku}</p>
                       )}
+                      {item.custom_attributes && Object.keys(item.custom_attributes).length > 0 && (
+                        <p className="flex flex-wrap gap-x-2 text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                          {Object.entries(item.custom_attributes).map(([k, v]) => (
+                            <span key={k}>
+                              <span className="text-slate-400 dark:text-zinc-500">{k}:</span> {v}
+                            </span>
+                          ))}
+                        </p>
+                      )}
                       {item.note && (
                         <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">{item.note}</p>
                       )}

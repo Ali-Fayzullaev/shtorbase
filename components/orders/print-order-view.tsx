@@ -85,7 +85,14 @@ export function PrintOrderView({ order, statusLabel }: Props) {
             <tr key={item.id} className="border-b border-gray-300">
               <td className="py-2 pr-2">{idx + 1}</td>
               <td className="py-2 pr-2 font-mono text-xs">{item.product?.sku ?? '—'}</td>
-              <td className="py-2 pr-2">{item.product?.name ?? 'Товар удалён'}</td>
+              <td className="py-2 pr-2">
+                {item.product?.name ?? 'Товар удалён'}
+                {item.custom_attributes && Object.keys(item.custom_attributes).length > 0 && (
+                  <div className="text-[11px] text-gray-500 mt-0.5">
+                    {Object.entries(item.custom_attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                  </div>
+                )}
+              </td>
               <td className="py-2 pr-2 text-right tabular-nums">{item.quantity}</td>
               <td className="py-2 pr-2 text-right tabular-nums">{formatPrice(item.unit_price)} ₸</td>
               <td className="py-2 text-right tabular-nums font-medium">{formatPrice(item.total_price)} ₸</td>
