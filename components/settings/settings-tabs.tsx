@@ -130,7 +130,7 @@ export function SettingsTabs({ categories, units, customFields, orderStatuses, r
         {tab === 'branding' && <BrandingManager initial={branding} />}
         {tab === 'categories' && <CategoriesManager initial={categories} />}
         {tab === 'units' && <UnitsManager initial={units} />}
-        {tab === 'fields' && <CustomFieldsManager initial={customFields} />}
+        {tab === 'fields' && <CustomFieldsManager initial={customFields} categories={categories} />}
         {tab === 'statuses' && <OrderStatusesManager initial={orderStatuses} />}
         {tab === 'general' && (
           <div className="max-w-xl space-y-5">

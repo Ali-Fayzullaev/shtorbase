@@ -187,6 +187,7 @@ export async function createCustomField(
   fieldType: string,
   options: string[] | null,
   isRequired: boolean,
+  categoryId: string | null = null,
 ) {
   await requireAdmin()
   const admin = createAdminClient()
@@ -203,6 +204,7 @@ export async function createCustomField(
     field_type: fieldType,
     options: options && options.length > 0 ? options : null,
     is_required: isRequired,
+    category_id: categoryId,
     sort_order: (maxOrder?.sort_order ?? 0) + 1,
   })
 
@@ -218,6 +220,7 @@ export async function updateCustomField(
   fieldType: string,
   options: string[] | null,
   isRequired: boolean,
+  categoryId: string | null = null,
 ) {
   await requireAdmin()
   const admin = createAdminClient()
@@ -229,6 +232,7 @@ export async function updateCustomField(
       field_type: fieldType,
       options: options && options.length > 0 ? options : null,
       is_required: isRequired,
+      category_id: categoryId,
     })
     .eq('id', id)
 

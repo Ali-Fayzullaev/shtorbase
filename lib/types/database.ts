@@ -84,6 +84,7 @@ export interface CustomField {
   options: string[] | null
   is_required: boolean
   sort_order: number
+  category_id: string | null
   created_at: string
 }
 

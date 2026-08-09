@@ -89,6 +89,9 @@ export function ProductForm({ categories, units, customFields, product, initialC
   ]
   const completedCount = completion.filter((item) => item.done).length
 
+  // Поля без category_id — общие для всех товаров, остальные — только для своей категории
+  const visibleCustomFields = customFields.filter((f) => !f.category_id || f.category_id === categoryId)
+
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
     setImageFiles((prev) => [...prev, ...files])
@@ -105,8 +108,8 @@ export function ProductForm({ categories, units, customFields, product, initialC
       <input type="hidden" name="vat_included" value={vatIncluded ? 'on' : ''} />
       <input type="hidden" name="category_id" value={categoryId} />
       <input type="hidden" name="unit" value={unit} />
-      {/* Hidden custom field values */}
-      {customFields.map((field) => (
+      {/* Hidden custom field values — только поля, применимые к выбранной категории */}
+      {visibleCustomFields.map((field) => (
         <input key={field.id} type="hidden" name={`cf_${field.id}`} value={customValues[field.id] ?? ''} />
       ))}
 
@@ -284,11 +287,11 @@ export function ProductForm({ categories, units, customFields, product, initialC
             {state?.fieldErrors?.note && <p className="text-xs text-destructive">{state.fieldErrors.note}</p>}
           </div>
 
-          {customFields.length > 0 && (
+          {visibleCustomFields.length > 0 && (
             <div className="space-y-3 rounded-xl border border-border/60 bg-background/60 p-4">
               <span className={cn(labelCls, 'text-slate-600 dark:text-zinc-300')}>Дополнительные поля</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {customFields.map((field) => (
+                {visibleCustomFields.map((field) => (
                   <div key={field.id} className="space-y-1.5">
                     <label className="text-xs font-medium text-slate-700 dark:text-zinc-300">
                       {field.name}

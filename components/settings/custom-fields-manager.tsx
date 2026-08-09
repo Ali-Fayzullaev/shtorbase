@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { type CustomField, type CustomFieldType } from '@/lib/types/database'
+import { type CustomField, type CustomFieldType, type Category } from '@/lib/types/database'
 import { createCustomField, updateCustomField, deleteCustomField } from '@/lib/actions/settings-data'
 import { cn } from '@/lib/utils'
 import { toast } from '@/lib/utils/toast'
@@ -22,22 +22,26 @@ const typeLabels: Record<CustomFieldType, string> = {
   select: 'Выбор',
 }
 
-export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
+export function CustomFieldsManager({ initial, categories }: { initial: CustomField[]; categories: Category[] }) {
   const [items, setItems] = useState(initial)
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [fieldType, setFieldType] = useState<CustomFieldType>('text')
   const [options, setOptions] = useState('')
   const [isRequired, setIsRequired] = useState(false)
+  const [categoryId, setCategoryId] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
+
+  const categoryName = (id: string | null) => categories.find((c) => c.id === id)?.name
 
   function resetForm() {
     setName('')
     setFieldType('text')
     setOptions('')
     setIsRequired(false)
+    setCategoryId('')
     setShowForm(false)
     setEditingId(null)
   }
@@ -47,7 +51,7 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
     setError('')
     const opts = fieldType === 'select' ? options.split(',').map((s) => s.trim()).filter(Boolean) : null
     startTransition(async () => {
-      const result = await createCustomField(name.trim(), fieldType, opts, isRequired)
+      const result = await createCustomField(name.trim(), fieldType, opts, isRequired, categoryId || null)
       if (result.error) { setError(result.error); return }
       resetForm()
       const mod = await import('@/lib/actions/settings-data')
@@ -59,7 +63,7 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
     if (!editingId || !name.trim()) return
     const opts = fieldType === 'select' ? options.split(',').map((s) => s.trim()).filter(Boolean) : null
     startTransition(async () => {
-      const result = await updateCustomField(editingId, name.trim(), fieldType, opts, isRequired)
+      const result = await updateCustomField(editingId, name.trim(), fieldType, opts, isRequired, categoryId || null)
       if (result.error) { setError(result.error); return }
       resetForm()
       const mod = await import('@/lib/actions/settings-data')
@@ -73,6 +77,7 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
     setFieldType(field.field_type)
     setOptions(field.options?.join(', ') ?? '')
     setIsRequired(field.is_required)
+    setCategoryId(field.category_id ?? '')
     setShowForm(true)
   }
 
@@ -129,6 +134,19 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
                 className={cn(inputCls, 'w-full')}
               />
             )}
+            <div className="space-y-1">
+              <label className="text-xs text-slate-500 dark:text-zinc-400">Применяется к</label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className={cn(selectCls, 'w-full')}
+              >
+                <option value="">Все категории</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-zinc-300 cursor-pointer">
                 <input
@@ -179,6 +197,9 @@ export function CustomFieldsManager({ initial }: { initial: CustomField[] }) {
                       Обязательное
                     </span>
                   )}
+                  <span className="text-[10px] bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 rounded px-1.5 py-px">
+                    {categoryName(field.category_id) ?? 'Все категории'}
+                  </span>
                   {field.options && field.options.length > 0 && (
                     <span className="text-[10px] text-slate-400 dark:text-zinc-500 truncate">
                       {field.options.join(', ')}
