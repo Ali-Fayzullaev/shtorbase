@@ -19,6 +19,7 @@ import {
   UserCircle,
   PanelLeftClose,
   PanelLeft,
+  BarChart3,
 } from 'lucide-react'
 import { type UserRole } from '@/lib/types/database'
 import { logoutAction } from '@/lib/actions/auth'
@@ -56,6 +57,7 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'Добавить товар', href: '/products/new', icon: Plus, roles: ['manager', 'admin'] },
       { name: 'Логи изменений', href: '/audit', icon: ClipboardList, roles: ['manager', 'admin'] },
+      { name: 'Отчёты', href: '/reports', icon: BarChart3, roles: ['admin'] },
     ],
   },
   {

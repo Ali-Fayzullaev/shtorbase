@@ -21,6 +21,7 @@ const breadcrumbMap: Record<string, string> = {
   '/audit': 'Логи',
   '/users': 'Пользователи',
   '/settings': 'Настройки',
+  '/reports': 'Отчёты',
 }
 
 function getBreadcrumbs(pathname: string) {
