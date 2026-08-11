@@ -19,7 +19,7 @@
 
 ## Шаг 1 — Оплата заказа
 
-**Статус: ⬜ не выполнено**
+**Статус: ✅ выполнено** (проверено напрямую в БД 10.08.2026)
 **Файл миграции:** `supabase/migrations/019_order_payments.sql`
 
 ```sql
@@ -54,7 +54,7 @@ create trigger trg_order_payment_status
 
 ## Шаг 2 — Индивидуальные параметры позиции заказа
 
-**Статус: ⬜ не выполнено**
+**Статус: ✅ выполнено** (проверено напрямую в БД 10.08.2026)
 **Файл миграции:** `supabase/migrations/020_order_item_attributes.sql`
 
 ```sql
@@ -84,7 +84,7 @@ alter table public.order_items
 
 ## Шаг 5 — Категория для динамических полей товара
 
-**Статус: ⬜ не выполнено**
+**Статус: ✅ выполнено** (проверено напрямую в БД 10.08.2026)
 **Файл миграции:** `supabase/migrations/021_custom_fields_category_scope.sql`
 
 ```sql
@@ -97,7 +97,7 @@ alter table public.custom_fields
 
 ## Шаг 6 — Вариации товара
 
-**Статус: ⬜ не выполнено**
+**Статус: ✅ выполнено** (проверено напрямую в БД 10.08.2026)
 **Файл миграции:** `supabase/migrations/022_product_variants.sql`
 
 ```sql
@@ -105,6 +105,36 @@ alter table public.products
   add column variant_group_id uuid;
 
 create index idx_products_variant_group on public.products(variant_group_id);
+```
+
+---
+
+## Шаг 7 — RLS на notifications и order_history (security fix)
+
+**Статус: ✅ выполнено** (применено напрямую в БД 10.08.2026)
+**Файл миграции:** `supabase/migrations/023_rls_notifications_order_history.sql`
+
+Не относится к ТЗ v2.0 — это закрытие бреши безопасности, обнаруженной Supabase security advisor: обе таблицы с момента создания (миграции 014, 015) не имели RLS вообще, то есть были полностью открыты на чтение/запись через anon/authenticated Supabase-клиент, в обход Server Actions. Приложение всегда ходит в эти таблицы через service-role клиент (`createAdminClient()`), так что включение RLS ничего не ломает — закрывает только прямой доступ через публичный anon key.
+
+```sql
+alter table public.notifications enable row level security;
+alter table public.order_history enable row level security;
+
+create policy "Пользователь видит свои уведомления"
+  on public.notifications for select using (user_id = auth.uid());
+create policy "Админ видит все уведомления"
+  on public.notifications for select using (public.get_my_role() = 'admin');
+create policy "Пользователь отмечает свои уведомления прочитанными"
+  on public.notifications for update
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy "Запись истории заказа от своего имени"
+  on public.order_history for insert with check (user_id = auth.uid());
+create policy "Менеджер/админ видят всю историю, сотрудник — свои записи"
+  on public.order_history for select
+  using (user_id = auth.uid() or public.get_my_role() in ('manager', 'admin'));
+
+revoke update, delete on public.order_history from authenticated;
 ```
 
 ---
@@ -119,8 +149,9 @@ create index idx_products_variant_group on public.products(variant_group_id);
 | 4 | Уведомление менеджеру | — | Не требует SQL |
 | 5 | Атрибуты по категориям | `custom_fields` | Нет — новая nullable-колонка |
 | 6 | Вариации товара | `products` | Нет — новая nullable-колонка |
+| 7 | RLS security fix | `notifications`, `order_history` | Нет — приложение ходит через service-role, RLS его не касается |
 
-Все миграции безопасны для уже работающего приложения: только `ADD COLUMN` с значениями по умолчанию, без удаления или переименования существующих полей.
+Все миграции безопасны для уже работающего приложения: только `ADD COLUMN` с значениями по умолчанию или включение RLS с политиками, покрывающими существующий service-role доступ — без удаления или переименования существующих полей.
 
 ---
 
