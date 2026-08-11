@@ -6,7 +6,7 @@ import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
 import { updateOrderStatus, deleteOrder } from '@/lib/actions/orders'
-import { cn } from '@/lib/utils/format'
+import { cn, getPayable } from '@/lib/utils/format'
 import { ClipboardList, User, Calendar, ChevronDown, Loader2, Check, Phone, Trash2, MoreHorizontal, ExternalLink, Clock, AlertTriangle, LayoutList, PanelsTopLeft } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { PaymentBadge } from './payment-badge'
@@ -427,7 +427,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
                             )}
 
                             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-                              <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={order.total_amount} />
+                              <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={getPayable(order)} />
                               {order.assigned_user && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-1 dark:bg-white/[0.05]">
                                   <User size={11} />
@@ -453,7 +453,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
 
                             <div className="mt-3 flex items-center justify-between gap-3">
                               <div className="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
-                                {formatPrice(order.total_amount)}
+                                {formatPrice(getPayable(order))}
                               </div>
                               <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
                                 {canChangeStatus ? (
@@ -606,8 +606,8 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
 
               {/* Amount */}
               <div className="flex flex-col items-end justify-center gap-1">
-                <span className="text-sm font-bold text-zinc-800 tabular-nums">{formatPrice(order.total_amount)}</span>
-                <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={order.total_amount} />
+                <span className="text-sm font-bold text-zinc-800 tabular-nums">{formatPrice(getPayable(order))}</span>
+                <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={getPayable(order)} />
               </div>
 
               {/* Actions */}
@@ -660,8 +660,8 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">{formatPrice(order.total_amount)}</span>
-                  <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={order.total_amount} />
+                  <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">{formatPrice(getPayable(order))}</span>
+                  <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={getPayable(order)} />
                 </div>
               </div>
 

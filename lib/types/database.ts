@@ -133,6 +133,7 @@ export interface Order {
   phone: string | null
   deadline: string | null
   total_amount: number
+  discount_amount: number
   payment_status: PaymentStatus
   paid_amount: number
   created_at: string
@@ -144,6 +145,18 @@ export interface Order {
   created_user?: Profile
   items?: OrderItem[]
   history?: OrderHistory[]
+  payments?: Payment[]
+}
+
+export interface Payment {
+  id: string
+  order_id: string
+  amount: number
+  note: string | null
+  created_at: string
+  created_by: string
+  // Joined
+  user?: Profile
 }
 
 export interface OrderItem {

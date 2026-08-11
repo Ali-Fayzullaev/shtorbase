@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { type Order } from '@/lib/types/database'
 import { acceptOrder, completeOrder } from '@/lib/actions/orders'
-import { cn } from '@/lib/utils/format'
+import { cn, getPayable } from '@/lib/utils/format'
 import { PaymentBadge } from './payment-badge'
 import { Inbox, Wrench, History, Calendar, Clock, AlertTriangle, User, Phone, CheckCircle2, Loader2 } from 'lucide-react'
 
@@ -162,7 +162,7 @@ function OrderActionCard({ order, mode }: { order: Order; mode: 'accept' | 'comp
       <div className="px-4 py-3 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">#{order.order_number}</span>
-          <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={order.total_amount} />
+          <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={getPayable(order)} />
         </div>
 
         {order.client ? (
@@ -196,7 +196,7 @@ function OrderActionCard({ order, mode }: { order: Order; mode: 'accept' | 'comp
           )}
         </div>
 
-        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 pt-0.5">{formatPrice(order.total_amount)}</p>
+        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 pt-0.5">{formatPrice(getPayable(order))}</p>
 
         {error && <p className="text-[11px] text-red-600">{error}</p>}
       </div>

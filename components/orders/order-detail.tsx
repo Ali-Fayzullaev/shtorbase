@@ -2,8 +2,9 @@
 
 import { useTransition, useState, useMemo, useEffect } from 'react'
 import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
-import { updateOrderStatus, assignOrder, deleteOrder, updateOrderPayment, acceptOrder, completeOrder } from '@/lib/actions/orders'
-import { cn } from '@/lib/utils/format'
+import { updateOrderStatus, assignOrder, deleteOrder, updateOrderDiscount, acceptOrder, completeOrder } from '@/lib/actions/orders'
+import { addPayment, deletePayment } from '@/lib/actions/payments'
+import { cn, getPayable } from '@/lib/utils/format'
 import { PaymentBadge } from './payment-badge'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
@@ -20,6 +21,9 @@ import {
   History,
   Clock,
   Wallet,
+  Percent,
+  Plus,
+  X,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -58,9 +62,19 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
   const [changingTo, setChangingTo] = useState<string | null>(null)
   const [deliverConfirmStatus, setDeliverConfirmStatus] = useState<string | null>(null)
 
-  const [editingPayment, setEditingPayment] = useState(false)
-  const [paymentInput, setPaymentInput] = useState('')
+  const [editingDiscount, setEditingDiscount] = useState(false)
+  const [discountInput, setDiscountInput] = useState('')
+  const [discountPending, startDiscountTransition] = useTransition()
+
+  const [showAddPayment, setShowAddPayment] = useState(false)
+  const [paymentAmountInput, setPaymentAmountInput] = useState('')
+  const [paymentNoteInput, setPaymentNoteInput] = useState('')
   const [paymentPending, startPaymentTransition] = useTransition()
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null)
+  const [deletePaymentPending, startDeletePaymentTransition] = useTransition()
+
+  const payable = getPayable(order)
+  const remaining = Math.max(payable - order.paid_amount, 0)
 
   const isManager = userRole === 'manager' || userRole === 'admin'
   const [mounted, setMounted] = useState(false)
@@ -96,20 +110,50 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
     })
   }
 
-  function handleSavePayment() {
-    const amount = parseFloat(paymentInput)
+  function handleSaveDiscount() {
+    const amount = parseFloat(discountInput)
     if (!Number.isFinite(amount) || amount < 0) {
+      setError('Некорректная сумма скидки')
+      return
+    }
+    setError('')
+    startDiscountTransition(async () => {
+      const result = await updateOrderDiscount(order.id, amount)
+      if (result?.error) setError(result.error)
+      else {
+        setEditingDiscount(false)
+        router.refresh()
+      }
+    })
+  }
+
+  function handleAddPayment() {
+    const amount = parseFloat(paymentAmountInput)
+    if (!Number.isFinite(amount) || amount <= 0) {
       setError('Некорректная сумма оплаты')
       return
     }
     setError('')
     startPaymentTransition(async () => {
-      const result = await updateOrderPayment(order.id, amount)
+      const result = await addPayment(order.id, amount, paymentNoteInput)
       if (result?.error) setError(result.error)
       else {
-        setEditingPayment(false)
+        setShowAddPayment(false)
+        setPaymentAmountInput('')
+        setPaymentNoteInput('')
         router.refresh()
       }
+    })
+  }
+
+  function handleDeletePayment(paymentId: string) {
+    setError('')
+    setDeletingPaymentId(paymentId)
+    startDeletePaymentTransition(async () => {
+      const result = await deletePayment(paymentId)
+      if (result?.error) setError(result.error)
+      else router.refresh()
+      setDeletingPaymentId(null)
     })
   }
 
@@ -250,9 +294,23 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
                   </div>
                 ))}
                 {/* Total */}
-                <div className="px-5 py-3 bg-slate-50/50 dark:bg-zinc-800/50 grid grid-cols-[1fr_100px] gap-3">
-                  <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 text-right">Итого:</p>
-                  <p className="text-sm font-bold text-slate-900 dark:text-zinc-100 text-right">{formatPrice(order.total_amount)}</p>
+                <div className="px-5 py-3 bg-slate-50/50 dark:bg-zinc-800/50 space-y-1">
+                  {order.discount_amount > 0 && (
+                    <>
+                      <div className="grid grid-cols-[1fr_100px] gap-3">
+                        <p className="text-[12px] text-slate-500 dark:text-zinc-400 text-right">Сумма товаров:</p>
+                        <p className="text-[12px] text-slate-500 dark:text-zinc-400 text-right">{formatPrice(order.total_amount)}</p>
+                      </div>
+                      <div className="grid grid-cols-[1fr_100px] gap-3">
+                        <p className="text-[12px] text-amber-600 text-right">Скидка:</p>
+                        <p className="text-[12px] text-amber-600 text-right">−{formatPrice(order.discount_amount)}</p>
+                      </div>
+                    </>
+                  )}
+                  <div className="grid grid-cols-[1fr_100px] gap-3">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 text-right">Итого к оплате:</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-zinc-100 text-right">{formatPrice(payable)}</p>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -352,48 +410,138 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
               <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-zinc-100">
                 <Wallet size={14} /> Оплата
               </h3>
-              <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={order.total_amount} />
+              <PaymentBadge status={order.payment_status} paidAmount={order.paid_amount} totalAmount={payable} />
             </div>
             <p className="text-[13px] text-slate-600 dark:text-zinc-300">
-              {formatPrice(order.paid_amount)} из {formatPrice(order.total_amount)}
+              {formatPrice(order.paid_amount)} из {formatPrice(payable)}
+              {remaining > 0 && <span className="text-red-500 font-medium"> · долг {formatPrice(remaining)}</span>}
             </p>
+
+            {/* Скидка */}
             {isManager && (
-              editingPayment ? (
-                <div className="flex items-center gap-2 mt-3">
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={paymentInput}
-                    onChange={(e) => setPaymentInput(e.target.value)}
-                    autoFocus
-                    className="h-8 w-28 rounded-md border border-slate-200 dark:border-zinc-700 bg-transparent px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
-                  />
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
+                <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-zinc-400 mb-1.5">
+                  <Percent size={12} /> Скидка
+                </div>
+                {editingDiscount ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={discountInput}
+                      onChange={(e) => setDiscountInput(e.target.value)}
+                      autoFocus
+                      className="h-8 w-28 rounded-md border border-slate-200 dark:border-zinc-700 bg-transparent px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                    <button
+                      onClick={handleSaveDiscount}
+                      disabled={discountPending}
+                      className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[12px] font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                      {discountPending && <Loader2 size={12} className="animate-spin" />}
+                      Сохранить
+                    </button>
+                    <button
+                      onClick={() => setEditingDiscount(false)}
+                      disabled={discountPending}
+                      className="rounded-lg border border-slate-200 dark:border-zinc-700 px-2.5 py-1.5 text-[12px] text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                ) : (
                   <button
-                    onClick={handleSavePayment}
-                    disabled={paymentPending}
-                    className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[12px] font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    onClick={() => { setDiscountInput(String(order.discount_amount)); setEditingDiscount(true) }}
+                    className="text-[12px] font-medium text-primary hover:underline"
                   >
-                    {paymentPending && <Loader2 size={12} className="animate-spin" />}
-                    Сохранить
+                    {order.discount_amount > 0 ? `${formatPrice(order.discount_amount)} — изменить` : 'Добавить скидку'}
                   </button>
+                )}
+              </div>
+            )}
+
+            {/* История платежей */}
+            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[12px] text-slate-500 dark:text-zinc-400">Платежи {order.payments?.length ? `(${order.payments.length})` : ''}</span>
+                {isManager && remaining > 0 && !showAddPayment && (
                   <button
-                    onClick={() => setEditingPayment(false)}
-                    disabled={paymentPending}
-                    className="rounded-lg border border-slate-200 dark:border-zinc-700 px-2.5 py-1.5 text-[12px] text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                    onClick={() => { setPaymentAmountInput(String(remaining)); setShowAddPayment(true) }}
+                    className="inline-flex items-center gap-1 text-[12px] font-medium text-primary hover:underline"
                   >
-                    Отмена
+                    <Plus size={12} /> Добавить оплату
                   </button>
+                )}
+              </div>
+
+              {showAddPayment && (
+                <div className="space-y-2 mb-3 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50/50 dark:bg-zinc-800/50 p-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={paymentAmountInput}
+                      onChange={(e) => setPaymentAmountInput(e.target.value)}
+                      autoFocus
+                      placeholder="Сумма"
+                      className="h-8 w-28 rounded-md border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                    <input
+                      type="text"
+                      value={paymentNoteInput}
+                      onChange={(e) => setPaymentNoteInput(e.target.value)}
+                      placeholder="Комментарий (необязательно)"
+                      className="h-8 flex-1 min-w-0 rounded-md border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleAddPayment}
+                      disabled={paymentPending}
+                      className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[12px] font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                      {paymentPending && <Loader2 size={12} className="animate-spin" />}
+                      Записать оплату
+                    </button>
+                    <button
+                      onClick={() => setShowAddPayment(false)}
+                      disabled={paymentPending}
+                      className="rounded-lg border border-slate-200 dark:border-zinc-700 px-2.5 py-1.5 text-[12px] text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {order.payments && order.payments.length > 0 ? (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {order.payments.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between gap-2 text-[12px]">
+                      <div className="min-w-0">
+                        <span className="font-medium text-slate-700 dark:text-zinc-300 tabular-nums">{formatPrice(p.amount)}</span>
+                        <span className="text-slate-400 dark:text-zinc-500"> · {p.user?.full_name ?? 'Система'} · {formatDate(p.created_at)}</span>
+                        {p.note && <span className="text-slate-400 dark:text-zinc-500"> · {p.note}</span>}
+                      </div>
+                      {userRole === 'admin' && (
+                        <button
+                          onClick={() => handleDeletePayment(p.id)}
+                          disabled={deletePaymentPending && deletingPaymentId === p.id}
+                          className="shrink-0 text-slate-300 dark:text-zinc-600 hover:text-red-500 transition-colors disabled:opacity-50"
+                          title="Удалить оплату"
+                        >
+                          {deletePaymentPending && deletingPaymentId === p.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <button
-                  onClick={() => { setPaymentInput(String(order.paid_amount)); setEditingPayment(true) }}
-                  className="mt-2 text-[12px] font-medium text-primary hover:underline"
-                >
-                  Изменить сумму
-                </button>
-              )
-            )}
+                <p className="text-[12px] text-slate-400 dark:text-zinc-500 italic">Оплат ещё не было</p>
+              )}
+            </div>
           </div>
 
           {/* Meta info */}
@@ -447,6 +595,9 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
                         {h.action === 'created' && 'создал заказ'}
                         {h.action === 'status_change' && `изменил статус: ${h.old_value} → ${h.new_value}`}
                         {h.action === 'assigned' && (h.new_value ? `назначил исполнителя` : 'снял исполнителя')}
+                        {h.action === 'payment_added' && `добавил оплату: ${formatPrice(Number(h.new_value ?? 0))}`}
+                        {h.action === 'payment_removed' && `удалил оплату: ${formatPrice(Number(h.old_value ?? 0))}`}
+                        {h.action === 'discount_update' && `изменил скидку: ${formatPrice(Number(h.old_value ?? 0))} → ${formatPrice(Number(h.new_value ?? 0))}`}
                         {h.action === 'payment_update' && `изменил оплату: ${formatPrice(Number(h.old_value ?? 0))} → ${formatPrice(Number(h.new_value ?? 0))}`}
                       </span>
                       <p className="text-[11px] text-slate-400 dark:text-zinc-500">{formatDate(h.created_at)}</p>
@@ -499,7 +650,7 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
       <ConfirmDialog
         open={!!deliverConfirmStatus}
         title="Заказ оплачен не полностью"
-        description={`Оплачено ${formatPrice(order.paid_amount)} из ${formatPrice(order.total_amount)}. Всё равно выдать заказ?`}
+        description={`Оплачено ${formatPrice(order.paid_amount)} из ${formatPrice(payable)}. Всё равно выдать заказ?`}
         confirmLabel="Всё равно выдать"
         tone="danger"
         loading={pending}

@@ -44,6 +44,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
   const [phone, setPhone] = useState('')
   const [deadline, setDeadline] = useState('')
   const [paidAmount, setPaidAmount] = useState('')
+  const [discountAmount, setDiscountAmount] = useState('')
   const [items, setItems] = useState<OrderItem[]>([])
   const [clientSearch, setClientSearch] = useState('')
 
@@ -147,6 +148,7 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
     formData.set('phone', phone)
     formData.set('deadline', deadline)
     formData.set('paid_amount', paidAmount)
+    formData.set('discount_amount', discountAmount)
     formAction(formData)
   }
 
@@ -310,20 +312,35 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
         </div>
       </div>
 
-      {/* Payment — только для менеджеров и админов */}
+      {/* Payment + discount — только для менеджеров и админов */}
       {userRole !== 'employee' && (
-        <div className="space-y-2">
-          <label className={labelCls}>Оплачено сейчас (₸)</label>
-          <input
-            type="number"
-            step="1"
-            min="0"
-            value={paidAmount}
-            onChange={(e) => setPaidAmount(e.target.value)}
-            placeholder="0"
-            className={cn(inputCls, 'sm:max-w-55')}
-          />
-          <p className="text-[12px] text-slate-400 dark:text-zinc-500">Необязательно — можно указать позже, в карточке заказа.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className={labelCls}>Оплачено сейчас (₸)</label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              value={paidAmount}
+              onChange={(e) => setPaidAmount(e.target.value)}
+              placeholder="0"
+              className={inputCls}
+            />
+            <p className="text-[12px] text-slate-400 dark:text-zinc-500">Необязательно — можно указать позже, в карточке заказа.</p>
+          </div>
+          <div className="space-y-2">
+            <label className={labelCls}>Скидка (₸)</label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              value={discountAmount}
+              onChange={(e) => setDiscountAmount(e.target.value)}
+              placeholder="0"
+              className={inputCls}
+            />
+            <p className="text-[12px] text-slate-400 dark:text-zinc-500">Необязательно — вычитается из суммы заказа.</p>
+          </div>
         </div>
       )}
 

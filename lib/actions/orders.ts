@@ -12,7 +12,7 @@ import { broadcastTelegram, tgNewOrder, tgStatusChanged } from '@/lib/telegram'
 // ============================================
 // Helpers
 // ============================================
-async function requireAuth() {
+export async function requireAuth() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Не авторизован')
@@ -86,7 +86,7 @@ async function checkStock(
 }
 
 /** Log an order history event */
-async function logOrderHistory(
+export async function logOrderHistory(
   admin: ReturnType<typeof createAdminClient>,
   orderId: string,
   userId: string,
@@ -219,9 +219,19 @@ export async function getOrder(id: string) {
     .eq('order_id', id)
     .order('created_at', { ascending: false })
 
-  // Add history user profiles to profileMap
-  const historyUserIds = [...new Set((history ?? []).map(h => h.user_id).filter(Boolean))] as string[]
-  const missingIds = historyUserIds.filter(id => !profileMap[id])
+  // Fetch payments (история оплат)
+  const { data: payments } = await admin
+    .from('payments')
+    .select('*')
+    .eq('order_id', id)
+    .order('created_at', { ascending: false })
+
+  // Add history/payments user profiles to profileMap
+  const otherUserIds = [
+    ...(history ?? []).map(h => h.user_id),
+    ...(payments ?? []).map(p => p.created_by),
+  ]
+  const missingIds = [...new Set(otherUserIds.filter(Boolean))].filter(id => !profileMap[id]) as string[]
   if (missingIds.length > 0) {
     const { data: extraProfiles } = await admin
       .from('profiles')
@@ -238,6 +248,7 @@ export async function getOrder(id: string) {
     created_user: data.created_by ? profileMap[data.created_by] ?? null : null,
     items: items ?? [],
     history: (history ?? []).map(h => ({ ...h, user: profileMap[h.user_id] ?? null })),
+    payments: (payments ?? []).map(p => ({ ...p, user: profileMap[p.created_by] ?? null })),
   } as Order
 }
 
@@ -417,6 +428,8 @@ export async function createOrderAction(
     const deadline = formData.get('deadline') as string
     const paidAmountRaw = formData.get('paid_amount') as string
     const paidAmount = paidAmountRaw ? Math.max(0, parseFloat(paidAmountRaw) || 0) : 0
+    const discountRaw = formData.get('discount_amount') as string
+    const discountAmount = discountRaw ? Math.max(0, parseFloat(discountRaw) || 0) : 0
 
     // Parse items from form
     const itemsJson = formData.get('items') as string
@@ -449,7 +462,7 @@ export async function createOrderAction(
         note: note?.trim() || null,
         phone: phone?.trim() || null,
         deadline: deadline || null,
-        paid_amount: paidAmount,
+        discount_amount: discountAmount,
         created_by: user.id,
       })
       .select('id')
@@ -475,6 +488,11 @@ export async function createOrderAction(
 
     // Deduct stock
     await deductStock(admin, items, user.id)
+
+    // Первый платёж, если менеджер сразу указал сумму оплаты
+    if (paidAmount > 0) {
+      await admin.from('payments').insert({ order_id: order.id, amount: paidAmount, created_by: user.id })
+    }
 
     // Log history
     await logOrderHistory(admin, order.id, user.id, 'created', null, 'new')
@@ -799,37 +817,37 @@ export async function completeOrder(orderId: string) {
 }
 
 // ============================================
-// Обновление оплаты
+// Скидка на заказ
 // ============================================
-export async function updateOrderPayment(orderId: string, paidAmount: number) {
+export async function updateOrderDiscount(orderId: string, discountAmount: number) {
   const { user, role } = await requireAuth()
   if (role === 'employee') return { error: 'Нет прав' }
 
-  if (!Number.isFinite(paidAmount) || paidAmount < 0) {
-    return { error: 'Некорректная сумма' }
+  if (!Number.isFinite(discountAmount) || discountAmount < 0) {
+    return { error: 'Некорректная сумма скидки' }
   }
 
   const admin = createAdminClient()
   const { data: order } = await admin
     .from('orders')
-    .select('total_amount, paid_amount')
+    .select('total_amount, discount_amount')
     .eq('id', orderId)
     .single()
 
   if (!order) return { error: 'Заказ не найден' }
-  if (paidAmount > order.total_amount) {
-    return { error: 'Сумма оплаты не может превышать сумму заказа' }
+  if (discountAmount > order.total_amount) {
+    return { error: 'Скидка не может превышать сумму заказа' }
   }
-  if (paidAmount === order.paid_amount) return { success: true }
+  if (discountAmount === order.discount_amount) return { success: true }
 
   const { error } = await admin
     .from('orders')
-    .update({ paid_amount: paidAmount, updated_at: new Date().toISOString() })
+    .update({ discount_amount: discountAmount, updated_at: new Date().toISOString() })
     .eq('id', orderId)
 
-  if (error) return { error: `Не удалось обновить оплату: ${error.message}` }
+  if (error) return { error: `Не удалось обновить скидку: ${error.message}` }
 
-  await logOrderHistory(admin, orderId, user.id, 'payment_update', String(order.paid_amount), String(paidAmount))
+  await logOrderHistory(admin, orderId, user.id, 'discount_update', String(order.discount_amount), String(discountAmount))
 
   revalidatePath('/orders')
   revalidatePath(`/orders/${orderId}`)

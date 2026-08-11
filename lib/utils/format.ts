@@ -57,3 +57,8 @@ export function formatDateShort(date: string): string {
 export function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(' ')
 }
+
+/** Сумма к оплате по заказу — итог минус скидка, не может быть отрицательной */
+export function getPayable(order: { total_amount: number; discount_amount: number }): number {
+  return Math.max(order.total_amount - order.discount_amount, 0)
+}

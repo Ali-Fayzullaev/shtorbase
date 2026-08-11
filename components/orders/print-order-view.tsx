@@ -100,9 +100,21 @@ export function PrintOrderView({ order, statusLabel }: Props) {
           ))}
         </tbody>
         <tfoot>
+          {order.discount_amount > 0 && (
+            <>
+              <tr>
+                <td colSpan={5} className="pt-2 text-right text-gray-500">Сумма товаров:</td>
+                <td className="pt-2 text-right tabular-nums text-gray-500">{formatPrice(order.total_amount)} ₸</td>
+              </tr>
+              <tr>
+                <td colSpan={5} className="text-right text-gray-500">Скидка:</td>
+                <td className="text-right tabular-nums text-gray-500">−{formatPrice(order.discount_amount)} ₸</td>
+              </tr>
+            </>
+          )}
           <tr className="border-t-2 border-black">
-            <td colSpan={5} className="py-3 text-right font-bold">Итого:</td>
-            <td className="py-3 text-right font-bold tabular-nums text-base">{formatPrice(order.total_amount)} ₸</td>
+            <td colSpan={5} className="py-3 text-right font-bold">Итого к оплате:</td>
+            <td className="py-3 text-right font-bold tabular-nums text-base">{formatPrice(order.total_amount - order.discount_amount)} ₸</td>
           </tr>
         </tfoot>
       </table>
