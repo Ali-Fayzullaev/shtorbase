@@ -20,6 +20,7 @@ export function DebtorsTable({ debtors }: DebtorsTableProps) {
   const router = useRouter()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [closingKey, setClosingKey] = useState<string | null>(null)
+  const [amountInputs, setAmountInputs] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
 
@@ -32,23 +33,22 @@ export function DebtorsTable({ debtors }: DebtorsTableProps) {
     })
   }
 
-  function closeOrderDebt(e: React.MouseEvent, orderId: string, amount: number) {
-    e.preventDefault()
-    e.stopPropagation()
-    if (amount <= 0) return
+  function payOrder(orderId: string, amount: number, note?: string) {
+    if (!(amount > 0)) { setError('Введите сумму больше нуля'); return }
     setError('')
     setClosingKey(orderId)
     startTransition(async () => {
-      const result = await addPayment(orderId, amount, 'Полное закрытие долга')
+      const result = await addPayment(orderId, amount, note)
       if (result?.error) setError(result.error)
-      else router.refresh()
+      else {
+        setAmountInputs((prev) => ({ ...prev, [orderId]: '' }))
+        router.refresh()
+      }
       setClosingKey(null)
     })
   }
 
-  function closeClientDebt(e: React.MouseEvent, debtor: Debtor, key: string) {
-    e.preventDefault()
-    e.stopPropagation()
+  function closeClientDebt(debtor: Debtor, key: string) {
     setError('')
     setClosingKey(key)
     startTransition(async () => {
@@ -89,10 +89,13 @@ export function DebtorsTable({ debtors }: DebtorsTableProps) {
             const isClosingClient = pending && closingKey === key
             return (
               <div key={key}>
-                <button
-                  type="button"
+                {/* Заголовок клиента — div, не button: внутри есть свои кнопки (закрыть, звонок) */}
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggle(key)}
-                  className="w-full flex items-center justify-between gap-3 px-5 py-3 text-left hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(key) } }}
+                  className="w-full flex items-center justify-between gap-3 px-5 py-3 text-left hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer"
                 >
                   <div className="min-w-0 flex items-center gap-2">
                     <ChevronDown
@@ -134,7 +137,7 @@ export function DebtorsTable({ debtors }: DebtorsTableProps) {
                     </span>
                     <button
                       type="button"
-                      onClick={(e) => closeClientDebt(e, d, key)}
+                      onClick={(e) => { e.stopPropagation(); closeClientDebt(d, key) }}
                       disabled={pending}
                       title="Отметить весь долг клиента оплаченным"
                       className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
@@ -143,25 +146,25 @@ export function DebtorsTable({ debtors }: DebtorsTableProps) {
                       Закрыть
                     </button>
                   </div>
-                </button>
+                </div>
 
                 {isOpen && (
                   <div className="px-5 pb-3 space-y-2 bg-zinc-50/40 dark:bg-zinc-900/40">
                     {d.orders.map((o) => {
                       const isClosingOrder = pending && closingKey === o.id
                       return (
-                        <Link
+                        <div
                           key={o.id}
-                          href={`/orders/${o.id}`}
-                          className="block rounded-xl border border-zinc-200/70 dark:border-white/6 bg-white dark:bg-zinc-950/60 p-3 hover:border-zinc-300 dark:hover:border-white/12 transition-colors"
+                          className="rounded-xl border border-zinc-200/70 dark:border-white/6 bg-white dark:bg-zinc-950/60 p-3"
                         >
                           <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <span className="text-[12px] font-semibold text-zinc-700 dark:text-zinc-300">
+                            <Link
+                              href={`/orders/${o.id}`}
+                              className="inline-flex items-center gap-1 text-[12px] font-semibold text-zinc-700 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                            >
                               Заказ #{o.orderNumber} · {formatDateShort(o.createdAt)}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-[11px] text-indigo-500">
-                              Открыть <ExternalLink size={10} />
-                            </span>
+                              <ExternalLink size={10} />
+                            </Link>
                           </div>
 
                           {o.items.length > 0 && (
@@ -183,23 +186,44 @@ export function DebtorsTable({ debtors }: DebtorsTableProps) {
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 text-[11px] tabular-nums">
-                              <span className="text-zinc-500 dark:text-zinc-400">Сумма: {formatPrice(o.total)} ₸</span>
-                              <span className="text-emerald-600">Оплачено: {formatPrice(o.paid)} ₸</span>
-                              <span className="text-red-600 font-semibold">Долг: {formatPrice(o.debt)} ₸</span>
-                            </div>
+                          <div className="flex items-center gap-3 text-[11px] tabular-nums mb-2">
+                            <span className="text-zinc-500 dark:text-zinc-400">Сумма: {formatPrice(o.total)} ₸</span>
+                            <span className="text-emerald-600">Оплачено: {formatPrice(o.paid)} ₸</span>
+                            <span className="text-red-600 font-semibold">Долг: {formatPrice(o.debt)} ₸</span>
+                          </div>
+
+                          {/* Внести оплату — произвольную сумму или закрыть долг целиком */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <input
+                              type="number"
+                              min="0"
+                              max={o.debt}
+                              step="1"
+                              placeholder="Сумма"
+                              value={amountInputs[o.id] ?? ''}
+                              onChange={(e) => setAmountInputs((prev) => ({ ...prev, [o.id]: e.target.value }))}
+                              className="h-7 w-24 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                            />
                             <button
                               type="button"
-                              onClick={(e) => closeOrderDebt(e, o.id, o.debt)}
+                              onClick={() => payOrder(o.id, parseFloat(amountInputs[o.id] ?? '0'))}
+                              disabled={pending || !amountInputs[o.id]}
+                              className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 text-[11px] font-medium text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors disabled:opacity-50"
+                            >
+                              {isClosingOrder ? <Loader2 size={11} className="animate-spin" /> : null}
+                              Внести оплату
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => payOrder(o.id, o.debt, 'Полное закрытие долга')}
                               disabled={pending}
-                              className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
                             >
                               {isClosingOrder ? <Loader2 size={11} className="animate-spin" /> : <CheckCheck size={11} />}
-                              Закрыть
+                              Закрыть целиком
                             </button>
                           </div>
-                        </Link>
+                        </div>
                       )
                     })}
                   </div>

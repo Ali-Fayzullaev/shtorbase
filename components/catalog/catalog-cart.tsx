@@ -304,7 +304,7 @@ export function CartPanel() {
       {/* Slide-over panel */}
       <div
         className={cn(
-          'fixed top-0 right-0 z-50 h-full w-full max-w-lg flex flex-col bg-white dark:bg-zinc-950 shadow-2xl transition-transform duration-300 ease-out',
+          'fixed top-0 right-0 z-50 h-full w-full max-w-2xl flex flex-col bg-white dark:bg-zinc-950 shadow-2xl transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}
       >
@@ -329,8 +329,11 @@ export function CartPanel() {
           </button>
         </div>
 
+        {/* Товары + форма заказа — единая прокручиваемая область, чтобы форма
+            не выдавливала список товаров на невысоких экранах */}
+        <div className="flex-1 overflow-y-auto">
         {/* Items list */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2.5">
+        <div className="px-4 py-4 space-y-2.5">
           {success && (
             <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 font-medium flex items-center gap-2.5">
               <div className="h-5 w-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
@@ -493,7 +496,7 @@ export function CartPanel() {
 
         {/* Footer: order form */}
         {items.length > 0 && (
-          <div className="shrink-0 border-t border-zinc-100 dark:border-zinc-800/80 px-4 py-4 space-y-3 bg-zinc-50/80 dark:bg-zinc-900/60">
+          <div className="border-t border-zinc-100 dark:border-zinc-800/80 px-4 py-4 space-y-3 bg-zinc-50/80 dark:bg-zinc-900/60">
             {/* Client search */}
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
@@ -715,6 +718,7 @@ export function CartPanel() {
             </button>
           </div>
         )}
+        </div>
       </div>
     </>
   )
