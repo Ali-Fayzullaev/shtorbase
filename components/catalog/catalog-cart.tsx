@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useTransition, useEffect, createContext, useContext, useCallback, type ReactNode } from 'react'
-import { ShoppingCart, Trash2, Minus, Plus, X, Loader2, ShoppingBag, Search, Package } from 'lucide-react'
+import { ShoppingCart, Trash2, Minus, Plus, X, Loader2, ShoppingBag, Search, Package, UserPlus } from 'lucide-react'
 import { formatPrice, cn } from '@/lib/utils/format'
 import { formatPhoneInput, isValidPhone } from '@/lib/utils/phone'
 import { createQuickOrder } from '@/lib/actions/orders'
-import { getClients } from '@/lib/actions/clients'
-import type { Client } from '@/lib/types/database'
+import { getClients, createNewClient } from '@/lib/actions/clients'
+import type { Client, PaymentStatus } from '@/lib/types/database'
+import { PaymentBadge } from '@/components/orders/payment-badge'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -107,9 +108,21 @@ export function CartPanel() {
   const [clients, setClients] = useState<Client[]>([])
   const [clientSearch, setClientSearch] = useState('')
   const [clientDropdown, setClientDropdown] = useState(false)
+  const [showNewClientForm, setShowNewClientForm] = useState(false)
+  const [newClientName, setNewClientName] = useState('')
+  const [newClientPhone, setNewClientPhone] = useState('')
+  const [newClientPending, startNewClientTransition] = useTransition()
+  const [newClientError, setNewClientError] = useState<string | null>(null)
+  const [discount, setDiscount] = useState('')
+  const [paidAmount, setPaidAmount] = useState('')
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  const discountNum = Math.max(0, parseFloat(discount) || 0)
+  const payable = Math.max(0, totalAmount - discountNum)
+  const paidNum = Math.min(Math.max(0, parseFloat(paidAmount) || 0), payable)
+  const previewStatus: PaymentStatus = paidNum <= 0 ? 'unpaid' : paidNum >= payable ? 'paid' : 'partial'
 
   useEffect(() => {
     if (isOpen && clients.length === 0) getClients().then(setClients)
@@ -129,13 +142,50 @@ export function CartPanel() {
     if (c.phone && !phone) setPhone(c.phone.replace(/\D/g, '').slice(0, 11))
   }
 
+  function openNewClientForm() {
+    setNewClientError(null)
+    setNewClientName(clientSearch.trim())
+    setNewClientPhone(phone)
+    setClientDropdown(false)
+    setShowNewClientForm(true)
+  }
+
+  function handleCreateClient() {
+    if (newClientName.trim().length < 2) {
+      setNewClientError('Имя клиента — минимум 2 символа')
+      return
+    }
+    setNewClientError(null)
+    startNewClientTransition(async () => {
+      const result = await createNewClient({ name: newClientName, phone: newClientPhone || undefined })
+      if ('error' in result) {
+        setNewClientError(result.error ?? 'Не удалось создать клиента')
+        return
+      }
+      const created: Client = {
+        id: result.id!,
+        name: newClientName.trim(),
+        phone: newClientPhone.trim() || null,
+        email: null,
+        address: null,
+        note: null,
+        created_at: new Date().toISOString(),
+        created_by: null,
+      }
+      setClients((prev) => [...prev, created])
+      selectClient(created)
+      if (newClientPhone) setPhone(newClientPhone.replace(/\D/g, '').slice(0, 11))
+      setShowNewClientForm(false)
+    })
+  }
+
   function handleSubmit() {
     if (items.length === 0) return
     if (!isValidPhone(phone)) { setError('Укажите полный номер телефона'); return }
     setError(null)
     const orderItems = items.map((i) => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.price }))
     startTransition(async () => {
-      const result = await createQuickOrder(orderItems, note || undefined, phone || undefined, clientId || undefined)
+      const result = await createQuickOrder(orderItems, note || undefined, phone || undefined, clientId || undefined, discountNum || undefined, paidNum || undefined)
       if (result.error) {
         setError(result.error)
       } else {
@@ -145,6 +195,8 @@ export function CartPanel() {
         setPhone('')
         setClientId(null)
         setClientSearch('')
+        setDiscount('')
+        setPaidAmount('')
         setTimeout(() => { setSuccess(false); closeCart() }, 2000)
       }
     })
@@ -318,8 +370,8 @@ export function CartPanel() {
                 onFocus={() => setClientDropdown(true)}
                 className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-9 pr-3 py-2.5 text-[13px] placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
               />
-              {clientDropdown && filteredClients.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full max-h-44 overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl">
+              {clientDropdown && (
+                <div className="absolute z-10 mt-1 w-full max-h-52 overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl">
                   {filteredClients.slice(0, 20).map((c) => (
                     <button
                       key={c.id}
@@ -334,9 +386,64 @@ export function CartPanel() {
                       {c.phone && <span className="text-zinc-400 ml-2 text-[12px]">{c.phone}</span>}
                     </button>
                   ))}
+                  {filteredClients.length === 0 && (
+                    <p className="px-3 py-2.5 text-[12px] text-zinc-400">Клиент не найден</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={openNewClientForm}
+                    className="flex w-full items-center gap-2 border-t border-zinc-100 dark:border-zinc-800 px-3 py-2.5 text-[13px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
+                  >
+                    <UserPlus size={14} />
+                    {clientSearch.trim() ? `Добавить клиента «${clientSearch.trim()}»` : 'Добавить нового клиента'}
+                  </button>
                 </div>
               )}
             </div>
+
+            {/* New client — быстрое добавление постоянного клиента прямо при оформлении заказа */}
+            {showNewClientForm && (
+              <div className="space-y-2 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/60 dark:bg-indigo-950/20 p-3">
+                <div className="flex items-center gap-1.5 text-[12px] font-medium text-indigo-700 dark:text-indigo-300">
+                  <UserPlus size={13} /> Новый клиент
+                </div>
+                <input
+                  type="text"
+                  placeholder="Имя *"
+                  value={newClientName}
+                  onChange={(e) => setNewClientName(e.target.value)}
+                  autoFocus
+                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+                />
+                <input
+                  type="tel"
+                  placeholder="Телефон"
+                  value={newClientPhone}
+                  onChange={(e) => setNewClientPhone(formatPhoneInput(e.target.value))}
+                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+                />
+                {newClientError && <p className="text-[11px] text-red-600">{newClientError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCreateClient}
+                    disabled={newClientPending}
+                    className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  >
+                    {newClientPending && <Loader2 size={12} className="animate-spin" />}
+                    Сохранить
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewClientForm(false)}
+                    disabled={newClientPending}
+                    className="rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-1.5 text-[12px] text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Phone */}
             <div>
@@ -365,6 +472,82 @@ export function CartPanel() {
               className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2.5 text-[13px] placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 resize-none"
             />
 
+            {/* Discount */}
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] text-zinc-500 dark:text-zinc-400 shrink-0">Скидка</span>
+              <input
+                type="number"
+                min={0}
+                step="1"
+                placeholder="0"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+                className="w-24 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-1.5 text-[13px] text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              <span className="text-[12px] text-zinc-400">₸</span>
+            </div>
+
+            {/* Payment — конкретно и сразу: оплачено, в долг или частями */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-zinc-500 dark:text-zinc-400">Оплата</span>
+                <PaymentBadge status={previewStatus} paidAmount={paidNum} totalAmount={payable} />
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPaidAmount('0')}
+                  className={cn(
+                    'rounded-lg border px-2 py-1.5 text-[12px] font-medium transition-colors',
+                    paidNum === 0
+                      ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-950/30 dark:text-red-400'
+                      : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  )}
+                >
+                  В долг
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaidAmount(String(Math.round(payable / 2)))}
+                  className={cn(
+                    'rounded-lg border px-2 py-1.5 text-[12px] font-medium transition-colors',
+                    previewStatus === 'partial'
+                      ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-400'
+                      : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  )}
+                >
+                  Половина
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaidAmount(String(Math.round(payable)))}
+                  disabled={payable <= 0}
+                  className={cn(
+                    'rounded-lg border px-2 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-40',
+                    previewStatus === 'paid'
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/30 dark:text-emerald-400'
+                      : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  )}
+                >
+                  Полностью
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-zinc-400 shrink-0">Точная сумма</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={payable}
+                  step="1"
+                  placeholder="0"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  className="w-24 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-1.5 text-[13px] text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <span className="text-[12px] text-zinc-400">₸</span>
+              </div>
+            </div>
+
             {/* Total + clear */}
             <div className="flex items-center justify-between">
               <button
@@ -374,9 +557,11 @@ export function CartPanel() {
                 Очистить корзину
               </button>
               <div className="text-right">
-                <p className="text-[11px] text-zinc-400">Итого</p>
+                <p className="text-[11px] text-zinc-400">
+                  {discountNum > 0 ? `Итого (со скидкой ${formatPrice(discountNum)})` : 'Итого'}
+                </p>
                 <p className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums leading-tight">
-                  {formatPrice(totalAmount)} <span className="text-sm text-zinc-400 font-medium">₸</span>
+                  {formatPrice(payable)} <span className="text-sm text-zinc-400 font-medium">₸</span>
                 </p>
               </div>
             </div>

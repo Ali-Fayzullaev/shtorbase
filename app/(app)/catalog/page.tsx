@@ -5,6 +5,8 @@ import { CatalogGrid } from '@/components/catalog/catalog-grid'
 import { Pagination } from '@/components/ui/pagination'
 import { PrintButton } from '@/components/ui/print-button'
 import { getCatalogProducts, getCategories } from '@/lib/actions/products'
+import { requireProfile } from '@/lib/actions/profile'
+import { redirect } from 'next/navigation'
 import { Download } from 'lucide-react'
 
 interface SearchParams {
@@ -19,7 +21,12 @@ interface CatalogPageProps {
   searchParams: Promise<SearchParams>
 }
 
-export default function CatalogPage({ searchParams }: CatalogPageProps) {
+export default async function CatalogPage({ searchParams }: CatalogPageProps) {
+  const profile = await requireProfile()
+  if (profile.role === 'employee') {
+    redirect('/')
+  }
+
   return (
     <>
       <Header title="Каталог" description="Товары со склада">

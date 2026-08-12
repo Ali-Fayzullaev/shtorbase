@@ -48,7 +48,7 @@ const navGroups: NavGroup[] = [
     label: 'Основные',
     items: [
       { name: 'Главная', href: '/', icon: LayoutDashboard, roles: ['employee', 'manager', 'admin'] },
-      { name: 'Каталог', href: '/catalog', icon: Package, roles: ['employee', 'manager', 'admin'] },
+      { name: 'Каталог', href: '/catalog', icon: Package, roles: ['manager', 'admin'] },
       { name: 'Заказы', href: '/orders', icon: ShoppingCart, roles: ['employee', 'manager', 'admin'] },
     ],
   },
@@ -118,7 +118,13 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
   const filteredGroups = navGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => item.roles.includes(role)),
+      items: group.items
+        .filter((item) => item.roles.includes(role))
+        .map((item) =>
+          item.href === '/catalog' && role === 'manager'
+            ? { ...item, name: 'Оформить заказ' }
+            : item
+        ),
     }))
     .filter((group) => group.items.length > 0)
 

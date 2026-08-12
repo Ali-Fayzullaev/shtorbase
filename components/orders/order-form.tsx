@@ -390,10 +390,10 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
                   type="button"
                   onClick={() => addItem(product)}
                   disabled={items.some((i) => i.product_id === product.id)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-b border-slate-50 dark:border-zinc-800 last:border-0"
+                  className="w-full flex items-start justify-between gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-b border-slate-50 dark:border-zinc-800 last:border-0"
                 >
                   <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-slate-800 dark:text-zinc-200 truncate">{product.name}</p>
+                    <p className="text-[13px] font-medium text-slate-800 dark:text-zinc-200 line-clamp-2">{product.name}</p>
                     <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">{product.sku}</p>
                   </div>
                   <div className="text-right shrink-0 ml-3">

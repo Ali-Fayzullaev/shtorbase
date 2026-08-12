@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils/format'
 import { useMobileMenu } from './mobile-menu-context'
 import { useCart } from '@/components/catalog/catalog-cart'
+import { type UserRole } from '@/lib/types/database'
 import {
   LayoutDashboard,
   Package,
@@ -13,14 +14,15 @@ import {
   MoreHorizontal,
 } from 'lucide-react'
 
-export function BottomNav() {
+export function BottomNav({ role }: { role: UserRole }) {
   const pathname = usePathname()
   const { toggle } = useMobileMenu()
   const { totalItems, openCart } = useCart()
+  const canUseCatalog = role !== 'employee'
 
   const tabs = [
     { name: 'Главная', href: '/', icon: LayoutDashboard },
-    { name: 'Каталог', href: '/catalog', icon: Package },
+    ...(canUseCatalog ? [{ name: 'Каталог', href: '/catalog', icon: Package }] : []),
     { name: 'Заказы', href: '/orders', icon: ClipboardList },
   ]
 
@@ -50,21 +52,23 @@ export function BottomNav() {
             )
           })}
 
-          {/* Cart button with badge */}
-          <button
-            onClick={openCart}
-            className="btn-press relative flex flex-1 flex-col items-center gap-0.5 py-2 pt-2.5 transition-colors duration-200 text-zinc-400 active:text-zinc-600"
-          >
-            <div className="relative">
-              <ShoppingCart size={21} strokeWidth={1.5} />
-              {totalItems > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white tabular-nums ring-1 ring-white">
-                  {totalItems > 9 ? '9+' : totalItems}
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] font-medium leading-none">Корзина</span>
-          </button>
+          {/* Cart button with badge — не нужен сотруднику, у него нет доступа к каталогу */}
+          {canUseCatalog && (
+            <button
+              onClick={openCart}
+              className="btn-press relative flex flex-1 flex-col items-center gap-0.5 py-2 pt-2.5 transition-colors duration-200 text-zinc-400 active:text-zinc-600"
+            >
+              <div className="relative">
+                <ShoppingCart size={21} strokeWidth={1.5} />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white tabular-nums ring-1 ring-white">
+                    {totalItems > 9 ? '9+' : totalItems}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-medium leading-none">Корзина</span>
+            </button>
+          )}
 
           {/* More */}
           <button

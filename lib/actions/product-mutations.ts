@@ -26,6 +26,21 @@ interface InsertableProduct {
   updated_by: string
 }
 
+/**
+ * Первая вариация в группе создаётся с variant_group_id, указывающим на
+ * САМ СЕБЯ ещё не существующий "якорный" товар (см. product-form.tsx) —
+ * анкор так и остаётся с variant_group_id = null, если его никто не
+ * обновит. Это делает его невидимым в списке "Другие варианты" у
+ * собственных вариаций (getProductVariants ищет по variant_group_id
+ * анкора, а тот null). Самопривязываем анкор при первой вариации: если
+ * товар с id = groupId существует и ещё не в группе — присоединяем.
+ * Безопасно и идемпотентно для случайного groupId (просто 0 строк).
+ */
+async function ensureGroupAnchor(admin: ReturnType<typeof createAdminClient>, groupId: string | null) {
+  if (!groupId) return
+  await admin.from('products').update({ variant_group_id: groupId }).eq('id', groupId).is('variant_group_id', null)
+}
+
 /** Вставляет товар, при пустом артикуле генерирует его и повторяет попытку при редкой коллизии */
 async function insertProductRow(
   admin: ReturnType<typeof createAdminClient>,
@@ -41,7 +56,10 @@ async function insertProductRow(
       .select('id')
       .single()
 
-    if (!error && row) return { id: row.id }
+    if (!error && row) {
+      await ensureGroupAnchor(admin, data.variant_group_id)
+      return { id: row.id }
+    }
 
     if (error?.code === '23505') {
       if (wasAutoSku) { sku = generateSku(); continue }
@@ -214,14 +232,25 @@ export async function prepareVariantFields(
   const auth = await requireProductEditor()
   if ('error' in auth) return { error: auth.error }
 
+  for (const opt of options) {
+    if (opt.name.trim().length < 2) {
+      return { error: `Название параметра «${opt.name}» слишком короткое — минимум 2 символа` }
+    }
+  }
+
   const admin = createAdminClient()
   const fieldIds: Record<string, string> = {}
 
   for (const opt of options) {
+    const name = opt.name.trim()
+    // Регистронезависимый поиск — иначе «цвет»/«Цвет»/«ЦВЕТ» заводят
+    // отдельные поля с непересекающимися списками значений (был баг:
+    // товар с сохранённым «Красный» не мог переключиться на «Белый»,
+    // потому что тот жил в другом, «дублирующем» поле).
     const { data: existing } = await admin
       .from('custom_fields')
       .select('id, options')
-      .eq('name', opt.name)
+      .ilike('name', name)
       .eq('category_id', categoryId)
       .maybeSingle()
 
@@ -239,7 +268,7 @@ export async function prepareVariantFields(
       const { data: created, error } = await admin
         .from('custom_fields')
         .insert({
-          name: opt.name,
+          name,
           field_type: 'select',
           options: opt.values,
           is_required: false,

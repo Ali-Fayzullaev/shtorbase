@@ -5,17 +5,21 @@ import { ProductImages } from '@/components/products/product-images'
 import { ProductVariants } from '@/components/products/product-variants'
 import { getProductById, getProductAuditLogs, getProductVariants } from '@/lib/actions/products'
 import { getProductImages } from '@/lib/actions/images'
-import { getProfile } from '@/lib/actions/profile'
-import { notFound } from 'next/navigation'
+import { requireProfile } from '@/lib/actions/profile'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Pencil } from 'lucide-react'
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [product, logs, profile, images] = await Promise.all([
+  const profile = await requireProfile()
+  if (profile.role === 'employee') {
+    redirect('/')
+  }
+
+  const [product, logs, images] = await Promise.all([
     getProductById(id),
     getProductAuditLogs(id),
-    getProfile(),
     getProductImages(id),
   ])
 

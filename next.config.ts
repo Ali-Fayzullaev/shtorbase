@@ -45,6 +45,10 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@base-ui/react'],
     instantNavigationDevToolsToggle: true,
+    serverActions: {
+      // Файлы фото товара до 5MB (см. lib/actions/images.ts) + запас на multipart-накладные расходы
+      bodySizeLimit: '8mb',
+    },
   },
   async headers() {
     return [

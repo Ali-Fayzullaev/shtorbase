@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { connection } from 'next/server'
 import { Sidebar } from '@/components/layout/sidebar'
 import { MobileMenuProvider } from '@/components/layout/mobile-menu-context'
 import { BottomNav } from '@/components/layout/bottom-nav'
@@ -23,6 +24,11 @@ async function SidebarLoader() {
   )
 }
 
+async function BottomNavLoader() {
+  const profile = await getProfile().then((p) => p ?? demoProfile)
+  return <BottomNav role={profile.role} />
+}
+
 function SidebarSkeleton() {
   return (
     <div className="hidden lg:block w-60 shrink-0 h-full border-r border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-950">
@@ -43,7 +49,17 @@ function SidebarSkeleton() {
   )
 }
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+// CartProvider must render in the same per-request pass as page content that
+// consumes it via useCart() (e.g. catalog's product grid). Under Cache Components,
+// content with no dynamic API usage of its own — like CartProvider — is eligible
+// for the prerendered static shell, while page content that reads dynamic data
+// (e.g. /catalog reading cookies/searchParams) is resolved as a separate dynamic
+// hole. That split can leave a Client Context Provider unreachable from a
+// descendant rendered in a different pass ("useCart must be used within
+// CartProvider" during SSR). connection() forces this subtree to always resolve
+// dynamically, in step with the page content it wraps.
+async function AppShell({ children }: { children: React.ReactNode }) {
+  await connection()
   return (
     <CartProvider>
       <MobileMenuProvider>
@@ -56,10 +72,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </main>
         </div>
         <Suspense fallback={null}>
-          <BottomNav />
+          <BottomNavLoader />
         </Suspense>
         <CartPanel />
       </MobileMenuProvider>
     </CartProvider>
+  )
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<SidebarSkeleton />}>
+      <AppShell>{children}</AppShell>
+    </Suspense>
   )
 }

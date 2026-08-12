@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/header'
 import { OrdersTable } from '@/components/orders/orders-table'
 import { OrdersFilters } from '@/components/orders/orders-filters'
 import { EmployeeOrderBoard } from '@/components/orders/employee-order-board'
+import { OrdersRealtimeSync } from '@/components/orders/orders-realtime'
 import { Pagination } from '@/components/ui/pagination'
 import { getOrders, getOrderStats, getEmployees, getOrderQueue, getMyActiveOrders, getMyRecentDoneOrders } from '@/lib/actions/orders'
 import { getOrderStatuses } from '@/lib/actions/settings-data'
@@ -34,6 +35,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         title={userRole === 'employee' ? 'Мои заказы' : 'Заказы'}
         description="Управление заказами"
       >
+        <OrdersRealtimeSync />
         <Link
           href="/orders/new"
           className="btn-press inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/30 transition-all"

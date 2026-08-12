@@ -7,6 +7,7 @@ import { addPayment, deletePayment } from '@/lib/actions/payments'
 import { cn, getPayable } from '@/lib/utils/format'
 import { PaymentBadge } from './payment-badge'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { CompleteChecklistModal } from './complete-checklist-modal'
 import {
   User,
   Calendar,
@@ -65,6 +66,8 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
   const [editingDiscount, setEditingDiscount] = useState(false)
   const [discountInput, setDiscountInput] = useState('')
   const [discountPending, startDiscountTransition] = useTransition()
+
+  const [showChecklist, setShowChecklist] = useState(false)
 
   const [showAddPayment, setShowAddPayment] = useState(false)
   const [paymentAmountInput, setPaymentAmountInput] = useState('')
@@ -196,7 +199,7 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
       {/* Крупное действие для сотрудника — принять/завершить заказ */}
       {(canAccept || canComplete) && (
         <button
-          onClick={() => handleSelfAction(canAccept ? 'accept' : 'complete')}
+          onClick={() => canAccept ? handleSelfAction('accept') : setShowChecklist(true)}
           disabled={selfActionPending}
           className={cn(
             'btn-press flex w-full items-center justify-center gap-2 rounded-xl h-14 text-[15px] font-semibold text-white shadow-sm transition-colors disabled:opacity-60',
@@ -206,6 +209,16 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
           {selfActionPending && <Loader2 size={16} className="animate-spin" />}
           {canAccept ? '✅ Принять заказ' : '✔️ Готово'}
         </button>
+      )}
+
+      {showChecklist && (
+        <CompleteChecklistModal
+          orderNumber={order.order_number}
+          items={order.items ?? []}
+          pending={selfActionPending}
+          onConfirm={() => { setShowChecklist(false); handleSelfAction('complete') }}
+          onClose={() => setShowChecklist(false)}
+        />
       )}
 
       {/* Status + Actions */}
@@ -263,7 +276,7 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
                 {order.items.map((item) => (
                   <div key={item.id} className="px-5 py-3 grid grid-cols-[1fr_80px_100px_100px] gap-3 items-center">
                     <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-slate-800 dark:text-zinc-200 truncate">
+                      <p className="text-[13px] font-medium text-slate-800 dark:text-zinc-200">
                         {item.product?.name ?? 'Удалённый товар'}
                       </p>
                       {item.product?.sku && (
@@ -329,7 +342,8 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
 
         {/* Right: Info */}
         <div className="space-y-5">
-          {/* Client */}
+          {/* Client — менеджеру/админу нужен контакт клиента, сотруднику нет */}
+          {isManager && (
           <div className="glass-card rounded-xl p-5">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 mb-3">Контакт</h3>
             {order.phone && (
@@ -381,6 +395,7 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
               <p className="text-sm text-slate-400 dark:text-zinc-500 italic">Клиент не указан</p>
             )}
           </div>
+          )}
 
           {/* Assigned to */}
           <div className="glass-card rounded-xl p-5">
@@ -404,7 +419,8 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
             )}
           </div>
 
-          {/* Payment */}
+          {/* Payment — сотруднику эти детали не нужны, это работа менеджера */}
+          {isManager && (
           <div className="glass-card rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-zinc-100">
@@ -543,6 +559,7 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
               )}
             </div>
           </div>
+          )}
 
           {/* Meta info */}
           <div className="glass-card rounded-xl p-5 space-y-2">

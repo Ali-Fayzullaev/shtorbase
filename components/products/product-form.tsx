@@ -119,6 +119,19 @@ export function ProductForm({ categories, units, customFields, product, initialC
     setVariantOptions(variantOptions.filter((_, i) => i !== index))
   }
 
+  function toggleVariantValue(index: number, value: string) {
+    setVariantOptions(variantOptions.map((o, i) => {
+      if (i !== index) return o
+      const current = o.values.split(',').map((v) => v.trim()).filter(Boolean)
+      const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value]
+      return { ...o, values: next.join(', ') }
+    }))
+  }
+
+  // Готовые select-поля этой категории (например «Цвет») — для них показываем галочки
+  // вместо текста через запятую, чтобы не расходиться со значениями, уже заведёнными в настройках.
+  const selectCustomFields = visibleCustomFields.filter((f) => f.field_type === 'select' && f.options && f.options.length > 0)
+
   const parsedVariantOptions = variantOptions
     .map((o) => ({ name: o.name.trim(), values: o.values.split(',').map((v) => v.trim()).filter(Boolean) }))
     .filter((o) => o.name.length > 0 && o.values.length > 0)
@@ -148,13 +161,21 @@ export function ProductForm({ categories, units, customFields, product, initialC
     e.preventDefault()
     setBatchError('')
 
+    const tooShort = parsedVariantOptions.find((o) => o.name.length < 2)
+    if (tooShort) {
+      setBatchError(`Название параметра «${tooShort.name}» слишком короткое — минимум 2 символа`)
+      return
+    }
+
     const combos = buildCombos(parsedVariantOptions)
     if (combos.length > 60) {
       setBatchError(`Слишком много комбинаций (${combos.length}). Уменьшите количество значений или параметров.`)
       return
     }
 
-    const groupId = crypto.randomUUID()
+    // При редактировании новые вариации присоединяются к группе текущего товара
+    // (если у него ещё нет группы — она «самопривязывается» к его собственному id на сервере)
+    const groupId = isEdit ? (product!.variant_group_id ?? product!.id) : crypto.randomUUID()
     const base = {
       sku: sku.trim(),
       name: name.trim(),
@@ -439,44 +460,100 @@ export function ProductForm({ categories, units, customFields, product, initialC
       </StepSection>
 
       {/* Вариации — создаём сразу несколько товаров по значениям (например, по цвету) */}
-      {!isEdit && !variantOf && (
+      {!variantOf && (
         <StepSection
           step="4"
           title="Вариации"
-          description="Если товар бывает в разных цветах/размерах — укажите параметр и значения через запятую. Мы создадим отдельную карточку на каждое значение, с общими остальными полями."
+          description={
+            isEdit
+              ? 'Добавьте ещё вариации к этому товару — укажите параметр и значения через запятую. Мы создадим отдельную карточку на каждое значение (текущий товар останется как есть — поля формы выше используются только как шаблон для новых карточек).'
+              : 'Если товар бывает в разных цветах/размерах — укажите параметр и значения через запятую. Мы создадим отдельную карточку на каждое значение, с общими остальными полями.'
+          }
           icon={Layers}
         >
           <div className="space-y-3">
-            {variantOptions.map((opt, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <input
-                  type="text"
-                  value={opt.name}
-                  onChange={(e) => updateVariantOption(i, 'name', e.target.value)}
-                  placeholder="Параметр: Цвет"
-                  className={cn(inputCls, 'sm:w-40')}
-                />
-                <input
-                  type="text"
-                  value={opt.values}
-                  onChange={(e) => updateVariantOption(i, 'values', e.target.value)}
-                  placeholder="Значения: Красный, Синий, Зелёный"
-                  className={cn(inputCls, 'flex-1')}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeVariantOption(i)}
-                  className="mt-1.5 shrink-0 text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ))}
+            {selectCustomFields.length > 0 && (
+              <datalist id="variant-field-names">
+                {selectCustomFields.map((f) => <option key={f.id} value={f.name} />)}
+              </datalist>
+            )}
+
+            {variantOptions.map((opt, i) => {
+              const matchedField = selectCustomFields.find(
+                (f) => f.name.trim().toLowerCase() === opt.name.trim().toLowerCase()
+              )
+              const selectedValues = opt.values.split(',').map((v) => v.trim()).filter(Boolean)
+
+              return (
+                <div key={i} className={cn('space-y-2 rounded-lg', matchedField && 'border border-border/60 p-3')}>
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="text"
+                      list="variant-field-names"
+                      value={opt.name}
+                      onChange={(e) => updateVariantOption(i, 'name', e.target.value)}
+                      placeholder="Параметр: Цвет"
+                      className={cn(inputCls, 'sm:w-40')}
+                    />
+                    {!matchedField && (
+                      <input
+                        type="text"
+                        value={opt.values}
+                        onChange={(e) => updateVariantOption(i, 'values', e.target.value)}
+                        placeholder="Значения: Красный, Синий, Зелёный"
+                        className={cn(inputCls, 'flex-1')}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeVariantOption(i)}
+                      className="mt-1.5 shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {matchedField && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {matchedField.options!.map((option) => {
+                        const checked = selectedValues.includes(option)
+                        return (
+                          <label
+                            key={option}
+                            className={cn(
+                              'inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors select-none',
+                              checked
+                                ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300'
+                                : 'border-border/60 bg-background/60 text-muted-foreground hover:border-border'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleVariantValue(i, option)}
+                              className="sr-only"
+                            />
+                            {checked ? <CheckCircle2 size={12} /> : <Circle size={12} />}
+                            {option}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
 
             <button type="button" onClick={addVariantOption} className={cn(btnOutlineCls, 'h-8 gap-1.5 px-3 text-xs')}>
               <Plus size={13} />
               Добавить параметр
             </button>
+
+            {selectCustomFields.length > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                Совет: назовите параметр так же, как готовое поле категории (например, «{selectCustomFields[0].name}») — появятся галочки с готовыми значениями вместо ручного ввода.
+              </p>
+            )}
 
             {hasVariantOptions && (
               <div className="rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200/70 dark:border-indigo-500/20 px-3 py-2 text-[13px] text-indigo-700 dark:text-indigo-300">
@@ -590,16 +667,16 @@ export function ProductForm({ categories, units, customFields, product, initialC
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs leading-relaxed text-muted-foreground">
-            {isEdit
-              ? 'После сохранения карточка сразу обновится в каталоге.'
-              : hasVariantOptions
-                ? `Будет создано ${variantComboCount} карточек — процесс покажет каждую по очереди.`
+            {hasVariantOptions
+              ? `Будет создано ${variantComboCount} новых карточек — процесс покажет каждую по очереди.`
+              : isEdit
+                ? 'После сохранения карточка сразу обновится в каталоге.'
                 : 'После создания товар появится в каталоге и будет доступен в заказах.'}
           </div>
           <div className="flex items-center gap-3 pt-2 sm:pt-0">
             <button type="submit" disabled={isPending || batchPending} className={btnPrimaryCls}>
               {(isPending || batchPending) && <Loader2 size={14} className="animate-spin" />}
-              {isEdit ? 'Сохранить' : hasVariantOptions ? `Создать ${variantComboCount} карточек` : 'Создать товар'}
+              {hasVariantOptions ? `Создать ${variantComboCount} карточек` : isEdit ? 'Сохранить' : 'Создать товар'}
             </button>
           </div>
         </div>

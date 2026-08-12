@@ -274,9 +274,10 @@ export async function getOrderQueue() {
 /** Заказы, назначенные сотруднику и находящиеся в работе — без пагинации, все сразу */
 export async function getMyActiveOrders(userId: string) {
   const admin = createAdminClient()
+  // items нужны для чек-листа проверки позиций перед завершением заказа
   const { data, error } = await admin
     .from('orders')
-    .select('*, client:clients(*)')
+    .select('*, client:clients(*), items:order_items(*, product:products(id, name, unit, sku))')
     .eq('status', 'in_progress')
     .eq('assigned_to', userId)
     .order('deadline', { ascending: true, nullsFirst: false })
@@ -548,7 +549,9 @@ export async function createQuickOrder(
   items: { product_id: string; quantity: number; unit_price: number }[],
   note?: string,
   phone?: string,
-  clientId?: string
+  clientId?: string,
+  discountAmount?: number,
+  paidAmount?: number
 ): Promise<{ error?: string; success?: boolean }> {
   try {
     const { user, role } = await requireAuth()
@@ -558,6 +561,8 @@ export async function createQuickOrder(
     if (!phoneDigits || phoneDigits.length !== 11) return { error: 'Укажите полный номер телефона' }
 
     const validated = z.array(OrderItemSchema).parse(items)
+    const discount = Math.max(0, discountAmount ?? 0)
+    const paid = Math.max(0, paidAmount ?? 0)
 
     const admin = createAdminClient()
 
@@ -575,6 +580,7 @@ export async function createQuickOrder(
         client_id: clientId || null,
         created_by: user.id,
         assigned_to: role === 'employee' ? user.id : null,
+        discount_amount: discount,
       })
       .select('id')
       .single()
@@ -597,6 +603,11 @@ export async function createQuickOrder(
 
     // Deduct stock
     await deductStock(admin, validated, user.id)
+
+    // Первый платёж, если менеджер сразу указал сумму оплаты
+    if (paid > 0) {
+      await admin.from('payments').insert({ order_id: order.id, amount: paid, created_by: user.id })
+    }
 
     // Log history
     await logOrderHistory(admin, order.id, user.id, 'created', null, 'new')

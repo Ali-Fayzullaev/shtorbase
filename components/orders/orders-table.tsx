@@ -282,7 +282,7 @@ interface OrdersTableProps {
 
 export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
   const canChangeStatus = userRole === 'admin' || userRole === 'manager'
-  const [view, setView] = useState<'list' | 'board'>('list')
+  const [view, setView] = useState<'list' | 'board'>('board')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -380,7 +380,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
             {boardColumns.map(({ status, orders: statusOrders }) => {
               const badge = statusMap[status.slug] ?? defaultBadge
               return (
-                <div key={status.slug} className="flex min-h-[520px] flex-col rounded-2xl border border-zinc-200/70 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/[0.06] dark:bg-zinc-950/65">
+                <div key={status.slug} className="flex min-h-[520px] flex-col rounded-xl border border-zinc-200/70 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/[0.06] dark:bg-zinc-950/65">
                   <div className="mb-3 flex items-center gap-2 rounded-xl border border-zinc-200/70 bg-zinc-50/80 px-3 py-2 dark:border-white/[0.05] dark:bg-white/[0.03]">
                     <span className={cn('h-2 w-2 rounded-full', badge.dot)} />
                     <span className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">{badge.label}</span>
@@ -402,7 +402,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
                             key={order.id}
                             href={`/orders/${order.id}`}
                             className={cn(
-                              'block rounded-2xl border border-zinc-200/70 bg-white px-4 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-white/[0.06] dark:bg-zinc-900/80',
+                              'block rounded-lg border border-zinc-200/70 bg-white px-4 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-white/[0.06] dark:bg-zinc-900/80',
                               overdue && 'border-red-200 bg-red-50/60 dark:border-red-500/20 dark:bg-red-950/10'
                             )}
                           >
@@ -634,7 +634,7 @@ export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
               key={order.id}
               href={`/orders/${order.id}`}
               className={cn(
-                'block rounded-2xl glass-card overflow-hidden transition-all duration-200 active:scale-[0.98]',
+                'block rounded-lg glass-card overflow-hidden transition-all duration-200 active:scale-[0.98]',
                 overdue && '!border-red-300/40 dark:!border-red-500/20'
               )}
             >
