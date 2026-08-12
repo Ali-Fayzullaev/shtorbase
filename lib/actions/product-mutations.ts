@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { z } from 'zod'
 
 /** Короткий код для товара без вручную указанного артикула */
@@ -196,7 +196,7 @@ export async function createProductAction(
     return { error: `Ошибка: ${message}` }
   }
 
-  revalidateTag('products', 'minutes')
+  updateTag('products')
   redirect('/products')
 }
 
@@ -238,7 +238,7 @@ export async function addCustomFieldOption(
   const { error } = await admin.from('custom_fields').update({ options: merged }).eq('id', fieldId)
   if (error) return { error: 'Не удалось сохранить значение' }
 
-  revalidateTag('products', 'minutes')
+  updateTag('products')
   return { success: true }
 }
 
@@ -361,7 +361,7 @@ export async function createOneVariantAction(input: CreateVariantInput): Promise
     await saveProductCustomValues(result.id, cfValues)
   }
 
-  revalidateTag('products', 'minutes')
+  updateTag('products')
   return { id: result.id }
 }
 
@@ -437,7 +437,7 @@ export async function updateProductAction(
   const { saveProductCustomValues } = await import('./settings-data')
   await saveProductCustomValues(productId, cfEntries)
 
-  revalidateTag('products', 'minutes')
+  updateTag('products')
   redirect('/products')
 }
 
@@ -468,7 +468,7 @@ export async function updateProductQuickFields(
 
   if (error) return { error: 'Не удалось сохранить' }
 
-  revalidateTag('products', 'minutes')
+  updateTag('products')
   return { success: true }
 }
 
@@ -500,7 +500,7 @@ export async function deleteProductAction(productId: string): Promise<ProductFor
     return { error: 'Не удалось удалить товар' }
   }
 
-  revalidateTag('products', 'minutes')
+  updateTag('products')
   redirect('/products')
 }
 
@@ -518,6 +518,6 @@ export async function bulkDeleteProducts(productIds: string[]): Promise<{ error?
 
   if (error) return { error: 'Не удалось удалить товары' }
 
-  revalidateTag('products', 'minutes')
+  updateTag('products')
   return { success: true }
 }

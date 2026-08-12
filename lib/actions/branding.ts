@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getCompanyBranding } from '@/lib/data/branding'
@@ -31,7 +31,7 @@ async function upsertSetting(key: string, value: unknown) {
 }
 
 function invalidateBranding() {
-  revalidateTag('branding', 'max')
+  updateTag('branding')
   revalidatePath('/', 'layout')
 }
 

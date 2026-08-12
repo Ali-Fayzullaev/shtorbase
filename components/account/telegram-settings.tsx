@@ -44,7 +44,7 @@ export function TelegramSettings({ telegramChatId }: TelegramSettingsProps) {
           <ol className="space-y-3">
             {([
               <>
-                Открой нашего бота в Telegram:{' '}
+                Открой нашего бота{' '}
                 <a
                   href="https://t.me/shtorbase_bot"
                   target="_blank"
@@ -53,12 +53,23 @@ export function TelegramSettings({ telegramChatId }: TelegramSettingsProps) {
                 >
                   @shtorbase_bot
                   <ExternalLink size={11} />
-                </a>
+                </a>{' '}
+                и нажми <span className="font-bold">Старт</span>. Это обязательный шаг — по правилам Telegram бот не может написать тебе первым, пока ты сам не начал с ним диалог.
               </>,
               <>
-                Нажми кнопку <span className="font-bold">Старт</span> — бот сразу ответит твоим ID
+                Бот должен ответить твоим ID. Если ответа нет — открой{' '}
+                <a
+                  href="https://t.me/userinfobot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-0.5 font-bold text-sky-600 dark:text-sky-400 hover:underline"
+                >
+                  @userinfobot
+                  <ExternalLink size={11} />
+                </a>{' '}
+                и нажми <span className="font-bold">Старт</span> — он мгновенно пришлёт твой ID в поле «Id».
               </>,
-              'Скопируй число из ответа и вставь в поле ниже',
+              'Скопируй число (только цифры, без @ и букв) и вставь в поле ниже',
             ] as React.ReactNode[]).map((step, i) => (
               <li key={i} className="flex items-start gap-3 text-xs text-zinc-700 dark:text-zinc-300">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-500 text-white text-[10px] font-bold mt-px">

@@ -629,7 +629,8 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
                       {' '}
                       <span className="text-slate-500 dark:text-zinc-400">
                         {h.action === 'created' && 'создал заказ'}
-                        {h.action === 'status_change' && `изменил статус: ${h.old_value} → ${h.new_value}`}
+                        {h.action === 'status_change' && `изменил статус: ${statusMap[h.old_value ?? '']?.label ?? h.old_value} → ${statusMap[h.new_value ?? '']?.label ?? h.new_value}`}
+                        {h.action === 'accepted' && 'принял заказ в работу'}
                         {h.action === 'assigned' && (h.new_value ? `назначил исполнителя` : 'снял исполнителя')}
                         {h.action === 'payment_added' && `добавил оплату: ${formatPrice(Number(h.new_value ?? 0))}`}
                         {h.action === 'payment_removed' && `удалил оплату: ${formatPrice(Number(h.old_value ?? 0))}`}

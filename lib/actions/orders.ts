@@ -85,6 +85,14 @@ async function checkStock(
   return errors
 }
 
+/** Русские метки статусов заказа по slug — для Telegram и уведомлений (order_statuses настраиваема) */
+async function getStatusLabels(admin: ReturnType<typeof createAdminClient>): Promise<Record<string, string>> {
+  const { data } = await admin.from('order_statuses').select('slug, label')
+  const map: Record<string, string> = {}
+  for (const s of data ?? []) map[s.slug] = s.label
+  return map
+}
+
 /** Log an order history event */
 export async function logOrderHistory(
   admin: ReturnType<typeof createAdminClient>,
@@ -741,12 +749,14 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
   await logOrderHistory(admin, orderId, user.id, 'status_change', order.status, newStatus)
 
   // Notify assigned employee about status change + Telegram
-  const [{ data: fullOrder }, { data: changerProfile }] = await Promise.all([
+  const [{ data: fullOrder }, { data: changerProfile }, statusLabels] = await Promise.all([
     admin.from('orders').select('assigned_to, client:clients(name)').eq('id', orderId).single(),
     admin.from('profiles').select('full_name').eq('id', user.id).single(),
+    getStatusLabels(admin),
   ])
+  const newStatusLabel = statusLabels[newStatus] ?? newStatus
   if (fullOrder?.assigned_to && fullOrder.assigned_to !== user.id) {
-    await createNotification(fullOrder.assigned_to, 'Статус заказа изменён', `Заказ #${orderId.slice(0, 8)} — ${newStatus}`, `/orders/${orderId}`)
+    await createNotification(fullOrder.assigned_to, 'Статус заказа изменён', `Заказ #${orderId.slice(0, 8)} — ${newStatusLabel}`, `/orders/${orderId}`)
   }
   // Also notify the assigned employee personally (graceful — column may not exist yet)
   let assignedTgId: string | null = null
@@ -758,8 +768,9 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
     tgStatusChanged({
       orderNumber: orderId.slice(0, 8).toUpperCase(),
       clientName: (fullOrder?.client as { name?: string } | null)?.name ?? 'Клиент',
-      oldStatus: order.status,
-      newStatus,
+      oldStatus: statusLabels[order.status] ?? order.status,
+      newStatus: newStatusLabel,
+      newStatusSlug: newStatus,
       changedBy: changerProfile?.full_name ?? 'Неизвестно',
     }),
     [assignedTgId],
@@ -783,9 +794,10 @@ async function notifyCreator(
 ) {
   if (!createdBy || createdBy === actorId) return
 
-  const [{ data: actorProfile }, { data: fullOrder }] = await Promise.all([
+  const [{ data: actorProfile }, { data: fullOrder }, statusLabels] = await Promise.all([
     admin.from('profiles').select('*').eq('id', actorId).single(),
     admin.from('orders').select('client:clients(name)').eq('id', orderId).single(),
+    getStatusLabels(admin),
   ])
 
   await createNotification(createdBy, title, message, `/orders/${orderId}`)
@@ -795,8 +807,9 @@ async function notifyCreator(
     tgStatusChanged({
       orderNumber: orderId.slice(0, 8).toUpperCase(),
       clientName: (fullOrder?.client as { name?: string } | null)?.name ?? 'Клиент',
-      oldStatus,
-      newStatus,
+      oldStatus: statusLabels[oldStatus] ?? oldStatus,
+      newStatus: statusLabels[newStatus] ?? newStatus,
+      newStatusSlug: newStatus,
       changedBy: (actorProfile as { full_name?: string } | null)?.full_name ?? 'Сотрудник',
     }),
     [(creatorProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id],

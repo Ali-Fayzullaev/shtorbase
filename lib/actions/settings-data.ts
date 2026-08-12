@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { type Category, type Unit, type CustomField, type OrderStatusConfig } from '@/lib/types/database'
 
 // ============================================
@@ -58,6 +58,7 @@ export async function createCategory(name: string) {
     return { error: error.message }
   }
 
+  updateTag('categories')
   revalidatePath('/settings')
   return { success: true }
 }
@@ -77,6 +78,7 @@ export async function updateCategory(id: string, name: string) {
     return { error: error.message }
   }
 
+  updateTag('categories')
   revalidatePath('/settings')
   return { success: true }
 }
@@ -99,6 +101,7 @@ export async function deleteCategory(id: string) {
   const { error } = await admin.from('categories').delete().eq('id', id)
   if (error) return { error: error.message }
 
+  updateTag('categories')
   revalidatePath('/settings')
   return { success: true }
 }

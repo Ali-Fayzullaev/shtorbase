@@ -86,8 +86,12 @@ export function tgNewOrder(params: {
 export function tgStatusChanged(params: {
   orderNumber: string | number
   clientName: string
+  /** Текст для показа (русская метка статуса, не служебный slug) */
   oldStatus: string
+  /** Текст для показа (русская метка статуса, не служебный slug) */
   newStatus: string
+  /** Служебный slug нового статуса — только для выбора эмодзи, не показывается */
+  newStatusSlug?: string
   changedBy: string
 }) {
   const statusEmoji: Record<string, string> = {
@@ -97,7 +101,7 @@ export function tgStatusChanged(params: {
     delivered: '📬',
     cancelled: '❌',
   }
-  const emoji = statusEmoji[params.newStatus] ?? '📋'
+  const emoji = statusEmoji[params.newStatusSlug ?? params.newStatus] ?? '📋'
   return [
     `${emoji} <b>Заказ #${params.orderNumber}</b> — смена статуса`,
     `👤 Клиент: ${params.clientName}`,
