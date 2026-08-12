@@ -19,6 +19,7 @@ export default async function NewOrderPage() {
     .single()
 
   if (!profile) redirect('/login')
+  if (profile.role === 'employee') redirect('/orders')
 
   const [clients, employees] = await Promise.all([
     getClients(),

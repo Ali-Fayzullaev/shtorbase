@@ -17,6 +17,7 @@ const breadcrumbMap: Record<string, string> = {
   '/catalog': 'Каталог',
   '/orders': 'Заказы',
   '/orders/new': 'Новый заказ',
+  '/products': 'Товары',
   '/products/new': 'Новый товар',
   '/audit': 'Логи',
   '/users': 'Пользователи',

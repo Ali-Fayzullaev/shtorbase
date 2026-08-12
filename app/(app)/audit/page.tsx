@@ -3,6 +3,8 @@ import { Header } from '@/components/layout/header'
 import { AuditFilters } from '@/components/audit/audit-filters'
 import { AuditPagination } from '@/components/audit/audit-pagination'
 import { getAuditLogs } from '@/lib/actions/products'
+import { requireProfile } from '@/lib/actions/profile'
+import { redirect } from 'next/navigation'
 import { formatPrice, cn } from '@/lib/utils/format'
 import {
   ArrowRight,
@@ -109,6 +111,11 @@ interface AuditPageProps {
 }
 
 export default async function AuditPage({ searchParams }: AuditPageProps) {
+  const profile = await requireProfile()
+  if (profile.role !== 'admin') {
+    redirect('/')
+  }
+
   const params = await searchParams
   const { logs, total, page, totalPages } = await getAuditLogs({
     field: params.field,

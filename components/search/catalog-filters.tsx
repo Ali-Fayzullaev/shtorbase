@@ -12,6 +12,7 @@ interface CatalogFiltersProps {
   currentCategory?: string
   currentUnit?: string
   currentStock?: string
+  basePath?: string
 }
 
 export function CatalogFilters({
@@ -20,6 +21,7 @@ export function CatalogFilters({
   currentCategory,
   currentUnit,
   currentStock,
+  basePath = '/catalog',
 }: CatalogFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -37,9 +39,9 @@ export function CatalogFilters({
         params.delete(key)
       }
       params.delete('page')
-      router.push(`/catalog?${params.toString()}`)
+      router.push(`${basePath}?${params.toString()}`)
     },
-    [router, searchParams]
+    [router, searchParams, basePath]
   )
 
   const handleSearch = useCallback(
@@ -52,9 +54,9 @@ export function CatalogFilters({
         params.delete('q')
       }
       params.delete('page')
-      router.push(`/catalog?${params.toString()}`)
+      router.push(`${basePath}?${params.toString()}`)
     },
-    [router, searchParams]
+    [router, searchParams, basePath]
   )
 
   // Debounced search on typing

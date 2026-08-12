@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useActionState, useState, useRef, useTransition } from 'react'
+import { useActionState, useState, useRef, useTransition, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { type Product, type Category, type Unit, type CustomField } from '@/lib/types/database'
 import {
@@ -8,10 +8,13 @@ import {
   updateProductAction,
   prepareVariantFields,
   createOneVariantAction,
+  addCustomFieldOption,
   type ProductFormState,
 } from '@/lib/actions/product-mutations'
 import { cn } from '@/lib/utils'
-import { Plus, Trash2, ImageIcon, Loader2, Upload, CheckCircle2, Circle, Package, ReceiptText, SlidersHorizontal, Images, Layers, X, PartyPopper } from 'lucide-react'
+import { toast } from '@/lib/utils/toast'
+import { ColorSwatch } from '@/components/ui/color-swatch'
+import { Plus, Trash2, ImageIcon, Loader2, Upload, CheckCircle2, Circle, Check, Package, ReceiptText, SlidersHorizontal, Images, Layers, X, PartyPopper } from 'lucide-react'
 
 const inputCls =
   'flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50'
@@ -77,13 +80,66 @@ export function ProductForm({ categories, units, customFields, product, initialC
   const [stock, setStock] = useState(product?.stock?.toString() ?? '')
   const [imageUrls, setImageUrls] = useState<string[]>([''])
   const [imageFiles, setImageFiles] = useState<File[]>([])
-  const [vatIncluded, setVatIncluded] = useState(product?.vat_included ?? true)
+  // Поле убрано из формы — сохраняем прежнее значение при редактировании, для новых товаров всегда true
+  const vatIncluded = product?.vat_included ?? true
   const [categoryId, setCategoryId] = useState(product?.category_id ?? variantOf?.category_id ?? '')
   const [unit, setUnit] = useState(product?.unit ?? variantOf?.unit ?? '')
   const variantGroupId = product?.variant_group_id ?? (variantOf ? (variantOf.variant_group_id ?? variantOf.id) : '')
   const [customValues, setCustomValues] = useState<Record<string, string>>(initialCustomValues ?? {})
   const [variantOptions, setVariantOptions] = useState<{ name: string; values: string }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Новые значения select-полей («Цвет» и т.д.), добавленные прямо из формы в этой сессии
+  const [extraFieldOptions, setExtraFieldOptions] = useState<Record<string, string[]>>({})
+  const [addingOptionFor, setAddingOptionFor] = useState<string | null>(null)
+  const [newOptionValue, setNewOptionValue] = useState('')
+  const [addingOptionPending, startAddingOptionTransition] = useTransition()
+
+  function handleAddOption(fieldId: string) {
+    const value = newOptionValue.trim()
+    if (!value) return
+    startAddingOptionTransition(async () => {
+      const result = await addCustomFieldOption(fieldId, value)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      setExtraFieldOptions((prev) => ({
+        ...prev,
+        [fieldId]: [...new Set([...(prev[fieldId] ?? []), value])],
+      }))
+      setCustomValues((prev) => ({ ...prev, [fieldId]: value }))
+      setNewOptionValue('')
+      setAddingOptionFor(null)
+    })
+  }
+
+  // Превью выбранных с устройства фото — чтобы менеджер сразу видел, какую картинку добавил
+  const filePreviews = useMemo(() => imageFiles.map((f) => URL.createObjectURL(f)), [imageFiles])
+  useEffect(() => {
+    return () => { filePreviews.forEach((url) => URL.revokeObjectURL(url)) }
+  }, [filePreviews])
+
+  // Если сервер вернул ошибку — явно показываем тост и ведём к полю, где проблема,
+  // чтобы не потерялось где-то выше по длинной форме
+  useEffect(() => {
+    if (state?.error) {
+      toast.error(state.error)
+    } else if (state?.fieldErrors && Object.keys(state.fieldErrors).length > 0) {
+      const fieldLabels: Record<string, string> = {
+        sku: 'Артикул', name: 'Название', category_id: 'Категория', unit: 'Единица',
+        price: 'Цена', stock: 'Остаток', note: 'Заметка',
+      }
+      const names = Object.keys(state.fieldErrors).map((k) => fieldLabels[k] ?? k).join(', ')
+      toast.error('Проверьте поля перед сохранением', names)
+      const firstKey = Object.keys(state.fieldErrors)[0]
+      const el = document.getElementById(firstKey)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.focus()
+      }
+    }
+  }, [state])
 
   const completion = [
     { label: 'Название', done: name.trim().length > 0 },
@@ -155,6 +211,11 @@ export function ProductForm({ categories, units, customFields, product, initialC
     return combos
   }
 
+  function reportBatchError(message: string) {
+    setBatchError(message)
+    toast.error(message)
+  }
+
   function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (!hasVariantOptions) return // обычное создание/редактирование — нативный action делает всё сам
 
@@ -163,13 +224,13 @@ export function ProductForm({ categories, units, customFields, product, initialC
 
     const tooShort = parsedVariantOptions.find((o) => o.name.length < 2)
     if (tooShort) {
-      setBatchError(`Название параметра «${tooShort.name}» слишком короткое — минимум 2 символа`)
+      reportBatchError(`Название параметра «${tooShort.name}» слишком короткое — минимум 2 символа`)
       return
     }
 
     const combos = buildCombos(parsedVariantOptions)
     if (combos.length > 60) {
-      setBatchError(`Слишком много комбинаций (${combos.length}). Уменьшите количество значений или параметров.`)
+      reportBatchError(`Слишком много комбинаций (${combos.length}). Уменьшите количество значений или параметров.`)
       return
     }
 
@@ -196,7 +257,7 @@ export function ProductForm({ categories, units, customFields, product, initialC
     startBatchTransition(async () => {
       const prep = await prepareVariantFields(categoryId, parsedVariantOptions)
       if (prep.error || !prep.fieldIds) {
-        setBatchError(prep.error ?? 'Не удалось подготовить параметры')
+        reportBatchError(prep.error ?? 'Не удалось подготовить параметры')
         setBatchProgress(null)
         return
       }
@@ -216,7 +277,7 @@ export function ProductForm({ categories, units, customFields, product, initialC
         })
 
         if (result.error) {
-          setBatchError(`«${label}»: ${result.error} (создано ${i} из ${combos.length})`)
+          reportBatchError(`«${label}»: ${result.error} (создано ${i} из ${combos.length})`)
           setBatchProgress(null)
           return
         }
@@ -224,13 +285,21 @@ export function ProductForm({ categories, units, customFields, product, initialC
 
       setBatchProgress({ current: combos.length, total: combos.length, label: '' })
       await new Promise((resolve) => setTimeout(resolve, 700))
-      router.push('/catalog')
+      router.push('/products')
       router.refresh()
     })
   }
 
+  function preventEnterSubmit(e: React.KeyboardEvent<HTMLFormElement>) {
+    // Enter в любом обычном поле не должен незаметно отправлять длинную форму —
+    // только явный клик на кнопку. В textarea Enter по-прежнему переносит строку.
+    if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+      e.preventDefault()
+    }
+  }
+
   return (
-    <form action={formAction} onSubmit={handleFormSubmit} className="space-y-6">
+    <form action={formAction} onSubmit={handleFormSubmit} onKeyDown={preventEnterSubmit} className="space-y-6">
       {product && <input type="hidden" name="product_id" value={product.id} />}
       <input type="hidden" name="vat_included" value={vatIncluded ? 'on' : ''} />
       <input type="hidden" name="category_id" value={categoryId} />
@@ -358,7 +427,7 @@ export function ProductForm({ categories, units, customFields, product, initialC
         description="Задайте коммерческие данные, которые влияют на корзину, печать заказа и экспорт."
         icon={ReceiptText}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label htmlFor="price" className={labelCls}>Цена</label>
             <input
@@ -378,17 +447,6 @@ export function ProductForm({ categories, units, customFields, product, initialC
               className={cn(inputCls, state?.fieldErrors?.stock && errCls)}
             />
             {state?.fieldErrors?.stock && <p className="text-xs text-destructive">{state.fieldErrors.stock}</p>}
-          </div>
-          <div className="space-y-2">
-            <span className={labelCls}>НДС</span>
-            <label className="flex min-h-9 items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-3 cursor-pointer">
-              <input
-                type="checkbox" checked={vatIncluded}
-                onChange={(e) => setVatIncluded(e.target.checked)}
-                className="h-4 w-4 rounded border-input text-primary accent-primary"
-              />
-              <span className="text-sm text-foreground">Цена включает НДС</span>
-            </label>
           </div>
         </div>
       </StepSection>
@@ -432,16 +490,49 @@ export function ProductForm({ categories, units, customFields, product, initialC
                       {field.is_required && <span className="text-red-400 ml-0.5">*</span>}
                     </label>
                     {field.field_type === 'select' && field.options ? (
-                      <select
-                        value={customValues[field.id] ?? ''}
-                        onChange={(e) => setCustomValues({ ...customValues, [field.id]: e.target.value })}
-                        className={selectCls}
-                      >
-                        <option value="">Выберите...</option>
-                        {field.options.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                      addingOptionFor === field.id ? (
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={newOptionValue}
+                            onChange={(e) => setNewOptionValue(e.target.value)}
+                            placeholder={`Новое значение «${field.name}»`}
+                            className={cn(inputCls, 'flex-1')}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddOption(field.id)}
+                            disabled={addingOptionPending}
+                            className={cn(btnOutlineCls, 'h-9 w-9 shrink-0 text-emerald-600')}
+                          >
+                            {addingOptionPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={14} />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setAddingOptionFor(null); setNewOptionValue('') }}
+                            disabled={addingOptionPending}
+                            className={cn(btnOutlineCls, 'h-9 w-9 shrink-0 text-muted-foreground')}
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <select
+                          value={customValues[field.id] ?? ''}
+                          onChange={(e) => {
+                            if (e.target.value === '__add_new__') { setAddingOptionFor(field.id); setNewOptionValue(''); return }
+                            setCustomValues({ ...customValues, [field.id]: e.target.value })
+                          }}
+                          className={selectCls}
+                        >
+                          <option value="">Выберите...</option>
+                          {[...new Set([...field.options, ...(extraFieldOptions[field.id] ?? [])])].map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                          <option value="__add_new__">+ Добавить своё значение…</option>
+                        </select>
+                      )
                     ) : (
                       <input
                         type={field.field_type === 'number' ? 'number' : 'text'}
@@ -515,7 +606,7 @@ export function ProductForm({ categories, units, customFields, product, initialC
 
                   {matchedField && (
                     <div className="flex flex-wrap gap-1.5">
-                      {matchedField.options!.map((option) => {
+                      {[...new Set(matchedField.options!)].map((option) => {
                         const checked = selectedValues.includes(option)
                         return (
                           <label
@@ -534,6 +625,7 @@ export function ProductForm({ categories, units, customFields, product, initialC
                               className="sr-only"
                             />
                             {checked ? <CheckCircle2 size={12} /> : <Circle size={12} />}
+                            <ColorSwatch value={option} size={11} />
                             {option}
                           </label>
                         )
@@ -599,15 +691,19 @@ export function ProductForm({ categories, units, customFields, product, initialC
               <span className="text-[11px] text-muted-foreground">JPG, PNG, WEBP или GIF. Можно выбрать несколько файлов.</span>
             </button>
             {imageFiles.length > 0 && (
-              <ul className="space-y-1">
+              <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {imageFiles.map((file, i) => (
-                  <li key={i} className="flex items-center gap-2 rounded-lg bg-slate-50 dark:bg-zinc-800/50 px-3 py-1.5 text-xs">
-                    <ImageIcon size={12} className="text-slate-400 dark:text-zinc-500 shrink-0" />
-                    <span className="flex-1 truncate text-slate-600 dark:text-zinc-300">{file.name}</span>
-                    <span className="text-slate-400 dark:text-zinc-500 shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
-                    <button type="button" onClick={() => removeFile(i)} className="text-slate-400 dark:text-zinc-500 hover:text-red-500">
-                      <Trash2 size={12} />
+                  <li key={i} className="relative overflow-hidden rounded-lg border border-border/60 bg-slate-50 dark:bg-zinc-800/50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={filePreviews[i]} alt={file.name} className="h-20 w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="absolute top-1 right-1 rounded-full bg-zinc-950/60 p-1 text-white hover:bg-red-600 transition-colors"
+                    >
+                      <Trash2 size={11} />
                     </button>
+                    <p className="truncate px-1.5 py-1 text-[10px] text-slate-500 dark:text-zinc-400">{file.name}</p>
                   </li>
                 ))}
               </ul>
@@ -618,7 +714,17 @@ export function ProductForm({ categories, units, customFields, product, initialC
           <p className="text-xs text-slate-400 dark:text-zinc-500">Или добавьте по ссылке:</p>
           <div className="space-y-2">
             {imageUrls.map((url, i) => (
-              <div key={i} className="flex gap-2">
+              <div key={i} className="flex gap-2 items-start">
+                {url.trim() && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={url}
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded-lg object-cover border border-border/60 bg-slate-50 dark:bg-zinc-800/50"
+                    onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
+                    onLoad={(e) => { e.currentTarget.style.visibility = 'visible' }}
+                  />
+                )}
                 <input
                   name="image_urls" type="url" value={url}
                   onChange={(e) => {

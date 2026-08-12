@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { AlertTriangle } from 'lucide-react'
 
 export interface ConfirmDialogProps {
@@ -43,9 +44,10 @@ export function ConfirmDialog({
   }, [open, loading, onCancel])
 
   if (!open) return null
+  if (typeof window === 'undefined') return null
 
   const danger = tone === 'danger'
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
       role="dialog"
@@ -97,6 +99,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

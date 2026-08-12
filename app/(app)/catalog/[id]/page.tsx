@@ -1,15 +1,16 @@
 import { Header } from '@/components/layout/header'
 import { ProductCard } from '@/components/products/product-card'
-import { ProductAuditLog } from '@/components/products/product-audit-log'
 import { ProductImages } from '@/components/products/product-images'
 import { ProductVariants } from '@/components/products/product-variants'
-import { getProductById, getProductAuditLogs, getProductVariants } from '@/lib/actions/products'
+import { getProductById, getProductVariants } from '@/lib/actions/products'
 import { getProductImages } from '@/lib/actions/images'
 import { requireProfile } from '@/lib/actions/profile'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Pencil } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
+// Каталог — только просмотр товара для оформления заказа. Редактирование,
+// добавление вариаций и управление фото происходит на странице /products.
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const profile = await requireProfile()
@@ -17,9 +18,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     redirect('/')
   }
 
-  const [product, logs, images] = await Promise.all([
+  const [product, images] = await Promise.all([
     getProductById(id),
-    getProductAuditLogs(id),
     getProductImages(id),
   ])
 
@@ -27,7 +27,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const canEdit = profile?.role === 'admin' || profile?.role === 'manager'
   const variants = product.variant_group_id ? await getProductVariants(product.variant_group_id, product.id) : []
 
   return (
@@ -40,24 +39,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           <ArrowLeft size={14} />
           Назад
         </Link>
-        {canEdit && (
-          <Link
-            href={`/catalog/${id}/edit`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-indigo-600 transition-colors shadow-sm"
-          >
-            <Pencil size={14} />
-            Редактировать
-          </Link>
-        )}
       </Header>
 
       <div className="p-5 max-w-3xl space-y-5">
         <ProductCard product={product} />
-        <ProductImages productId={id} images={images} canEdit={canEdit} />
-        <ProductVariants variants={variants} sourceProductId={product.id} canEdit={canEdit} />
-        {canEdit && logs.length > 0 && (
-          <ProductAuditLog logs={logs} />
-        )}
+        <ProductImages productId={id} images={images} canEdit={false} />
+        <ProductVariants variants={variants} sourceProductId={product.id} canEdit={false} />
       </div>
     </>
   )

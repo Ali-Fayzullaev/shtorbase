@@ -36,13 +36,15 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         description="Управление заказами"
       >
         <OrdersRealtimeSync />
-        <Link
-          href="/orders/new"
-          className="btn-press inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
-        >
-          <Plus size={16} />
-          Новый заказ
-        </Link>
+        {userRole !== 'employee' && (
+          <Link
+            href="/orders/new"
+            className="btn-press inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
+          >
+            <Plus size={16} />
+            Новый заказ
+          </Link>
+        )}
       </Header>
 
       <div className="p-4 sm:p-6 space-y-5 page-enter">

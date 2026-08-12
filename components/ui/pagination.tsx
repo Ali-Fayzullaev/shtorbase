@@ -7,9 +7,10 @@ import { cn } from '@/lib/utils/format'
 interface PaginationProps {
   currentPage: number
   totalPages: number
+  basePath?: string
 }
 
-export function Pagination({ currentPage, totalPages }: PaginationProps) {
+export function Pagination({ currentPage, totalPages, basePath = '/catalog' }: PaginationProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -20,7 +21,7 @@ export function Pagination({ currentPage, totalPages }: PaginationProps) {
     } else {
       params.set('page', String(page))
     }
-    router.push(`/catalog?${params.toString()}`)
+    router.push(`${basePath}?${params.toString()}`)
   }
 
   // Generate page numbers to show

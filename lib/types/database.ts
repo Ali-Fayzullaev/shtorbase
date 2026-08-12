@@ -42,6 +42,7 @@ export interface Product {
   updated_by: string
   // Joined
   category?: Category
+  thumbnail?: string | null
 }
 
 export interface ProductImage {

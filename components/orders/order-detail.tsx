@@ -5,6 +5,7 @@ import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } f
 import { updateOrderStatus, assignOrder, deleteOrder, updateOrderDiscount, acceptOrder, completeOrder } from '@/lib/actions/orders'
 import { addPayment, deletePayment } from '@/lib/actions/payments'
 import { cn, getPayable } from '@/lib/utils/format'
+import { resolveItemColorSwatch } from '@/lib/utils/color'
 import { PaymentBadge } from './payment-badge'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { CompleteChecklistModal } from './complete-checklist-modal'
@@ -273,10 +274,26 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
 
             {order.items && order.items.length > 0 ? (
               <div className="divide-y divide-slate-50">
-                {order.items.map((item) => (
+                {order.items.map((item) => {
+                  const swatch = resolveItemColorSwatch(item.custom_attributes, item.product?.name)
+                  return (
                   <div key={item.id} className="px-5 py-3 grid grid-cols-[1fr_80px_100px_100px] gap-3 items-center">
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-slate-800 dark:text-zinc-200">
+                    <div className="min-w-0 flex items-start gap-3">
+                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-100 dark:bg-zinc-800">
+                        {item.product?.thumbnail ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.product.thumbnail} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-300 dark:text-zinc-600">
+                            <Package size={16} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 text-[13px] font-medium text-slate-800 dark:text-zinc-200">
+                        {swatch && (
+                          <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/15" style={{ backgroundColor: swatch }} />
+                        )}
                         {item.product?.name ?? 'Удалённый товар'}
                       </p>
                       {item.product?.sku && (
@@ -294,6 +311,7 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
                       {item.note && (
                         <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">{item.note}</p>
                       )}
+                      </div>
                     </div>
                     <p className="text-[13px] text-slate-600 dark:text-zinc-300 text-right">
                       {item.quantity} {item.product?.unit ?? 'шт'}
@@ -305,7 +323,8 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
                       {formatPrice(item.total_price)}
                     </p>
                   </div>
-                ))}
+                  )
+                })}
                 {/* Total */}
                 <div className="px-5 py-3 bg-slate-50/50 dark:bg-zinc-800/50 space-y-1">
                   {order.discount_amount > 0 && (

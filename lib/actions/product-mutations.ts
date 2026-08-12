@@ -197,7 +197,7 @@ export async function createProductAction(
   }
 
   revalidateTag('products', 'minutes')
-  redirect('/catalog')
+  redirect('/products')
 }
 
 // ============================================
@@ -213,6 +213,33 @@ async function requireProductEditor() {
     return { error: 'Нет прав для создания товаров' } as const
   }
   return { userId: user.id } as const
+}
+
+/**
+ * Добавляет новое значение в список опций select-поля (например, новый
+ * цвет в «Цвет») прямо из формы товара — сохраняется в БД и сразу
+ * доступно для всех остальных товаров этой категории, без похода в настройки.
+ */
+export async function addCustomFieldOption(
+  fieldId: string,
+  value: string
+): Promise<{ error?: string; success?: boolean }> {
+  const auth = await requireProductEditor()
+  if ('error' in auth) return { error: auth.error }
+
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return { error: 'Пустое значение' }
+
+  const admin = createAdminClient()
+  const { data: field } = await admin.from('custom_fields').select('options').eq('id', fieldId).single()
+  if (!field) return { error: 'Поле не найдено' }
+
+  const merged = Array.from(new Set([...(field.options ?? []), trimmed]))
+  const { error } = await admin.from('custom_fields').update({ options: merged }).eq('id', fieldId)
+  if (error) return { error: 'Не удалось сохранить значение' }
+
+  revalidateTag('products', 'minutes')
+  return { success: true }
 }
 
 export interface VariantOptionInput {
@@ -411,7 +438,38 @@ export async function updateProductAction(
   await saveProductCustomValues(productId, cfEntries)
 
   revalidateTag('products', 'minutes')
-  redirect(`/catalog/${productId}`)
+  redirect('/products')
+}
+
+/** Быстрое изменение цены/остатка прямо из таблицы управления товарами — без полной формы редактирования */
+export async function updateProductQuickFields(
+  productId: string,
+  fields: { price?: number; stock?: number }
+): Promise<{ error?: string; success?: boolean }> {
+  const auth = await requireProductEditor()
+  if ('error' in auth) return { error: auth.error }
+
+  const update: Record<string, number> = {}
+  if (fields.price !== undefined) {
+    if (!(fields.price > 0)) return { error: 'Цена должна быть больше 0' }
+    update.price = fields.price
+  }
+  if (fields.stock !== undefined) {
+    if (!(fields.stock >= 0)) return { error: 'Остаток не может быть отрицательным' }
+    update.stock = fields.stock
+  }
+  if (Object.keys(update).length === 0) return { success: true }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('products')
+    .update({ ...update, updated_by: auth.userId })
+    .eq('id', productId)
+
+  if (error) return { error: 'Не удалось сохранить' }
+
+  revalidateTag('products', 'minutes')
+  return { success: true }
 }
 
 export async function deleteProductAction(productId: string): Promise<ProductFormState> {
@@ -426,8 +484,8 @@ export async function deleteProductAction(productId: string): Promise<ProductFor
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'admin') {
-    return { error: 'Только администратор может удалять товары' }
+  if (profile?.role !== 'admin' && profile?.role !== 'manager') {
+    return { error: 'Нет прав для удаления товаров' }
   }
 
   const { error } = await supabase
@@ -443,5 +501,23 @@ export async function deleteProductAction(productId: string): Promise<ProductFor
   }
 
   revalidateTag('products', 'minutes')
-  redirect('/catalog')
+  redirect('/products')
+}
+
+/** Массовое снятие с продажи — для чекбоксов в таблице /products */
+export async function bulkDeleteProducts(productIds: string[]): Promise<{ error?: string; success?: boolean }> {
+  const auth = await requireProductEditor()
+  if ('error' in auth) return { error: auth.error }
+  if (productIds.length === 0) return { success: true }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('products')
+    .update({ status: 'discontinued', updated_by: auth.userId })
+    .in('id', productIds)
+
+  if (error) return { error: 'Не удалось удалить товары' }
+
+  revalidateTag('products', 'minutes')
+  return { success: true }
 }

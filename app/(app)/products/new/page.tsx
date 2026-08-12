@@ -44,7 +44,7 @@ export default async function NewProductPage({ searchParams }: NewProductPagePro
         description={variantOf ? 'Категория и единица измерения предзаполнены из исходного товара' : 'Добавление позиции в каталог'}
       >
         <Link
-          href="/catalog"
+          href="/products"
           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/60 px-3 py-1.5 text-[13px] font-medium text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
         >
           <ArrowLeft size={14} />

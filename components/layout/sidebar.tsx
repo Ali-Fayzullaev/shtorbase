@@ -20,6 +20,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   BarChart3,
+  Boxes,
 } from 'lucide-react'
 import { type UserRole } from '@/lib/types/database'
 import { logoutAction } from '@/lib/actions/auth'
@@ -55,8 +56,9 @@ const navGroups: NavGroup[] = [
   {
     label: 'Управление',
     items: [
+      { name: 'Товары', href: '/products', icon: Boxes, roles: ['manager', 'admin'] },
       { name: 'Добавить товар', href: '/products/new', icon: Plus, roles: ['manager', 'admin'] },
-      { name: 'Логи изменений', href: '/audit', icon: ClipboardList, roles: ['manager', 'admin'] },
+      { name: 'Логи изменений', href: '/audit', icon: ClipboardList, roles: ['admin'] },
       { name: 'Отчёты', href: '/reports', icon: BarChart3, roles: ['admin'] },
     ],
   },

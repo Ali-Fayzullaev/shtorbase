@@ -242,11 +242,33 @@ export async function getOrder(id: string) {
     }
   }
 
+  // Превью фото товара для каждой позиции — видно, что именно делать/отдать
+  const productIds = [...new Set((items ?? []).map((i) => i.product_id))]
+  const thumbMap: Record<string, string> = {}
+  if (productIds.length > 0) {
+    const { data: images } = await admin
+      .from('product_images')
+      .select('product_id, storage_path, url')
+      .in('product_id', productIds)
+      .order('sort_order', { ascending: true })
+    for (const img of images ?? []) {
+      if (thumbMap[img.product_id]) continue
+      if (img.url) thumbMap[img.product_id] = img.url
+      else if (img.storage_path) {
+        const { data: urlData } = admin.storage.from('product-images').getPublicUrl(img.storage_path)
+        thumbMap[img.product_id] = urlData.publicUrl
+      }
+    }
+  }
+
   return {
     ...data,
     assigned_user: data.assigned_to ? profileMap[data.assigned_to] ?? null : null,
     created_user: data.created_by ? profileMap[data.created_by] ?? null : null,
-    items: items ?? [],
+    items: (items ?? []).map((i) => ({
+      ...i,
+      product: i.product ? { ...i.product, thumbnail: thumbMap[i.product_id] ?? null } : i.product,
+    })),
     history: (history ?? []).map(h => ({ ...h, user: profileMap[h.user_id] ?? null })),
     payments: (payments ?? []).map(p => ({ ...p, user: profileMap[p.created_by] ?? null })),
   } as Order
@@ -255,11 +277,42 @@ export async function getOrder(id: string) {
 // ============================================
 // Общая очередь новых заказов (для производства)
 // ============================================
+
+/** Подмешивает превью фото товара в позиции заказов (для доски сотрудника — видно, что именно делать) */
+async function attachItemThumbnails(admin: ReturnType<typeof createAdminClient>, orders: Order[]): Promise<Order[]> {
+  const productIds = [...new Set(orders.flatMap((o) => (o.items ?? []).map((i) => i.product_id)))]
+  if (productIds.length === 0) return orders
+
+  const { data: images } = await admin
+    .from('product_images')
+    .select('product_id, storage_path, url')
+    .in('product_id', productIds)
+    .order('sort_order', { ascending: true })
+
+  const thumbMap: Record<string, string> = {}
+  for (const img of images ?? []) {
+    if (thumbMap[img.product_id]) continue
+    if (img.url) thumbMap[img.product_id] = img.url
+    else if (img.storage_path) {
+      const { data: urlData } = admin.storage.from('product-images').getPublicUrl(img.storage_path)
+      thumbMap[img.product_id] = urlData.publicUrl
+    }
+  }
+
+  return orders.map((o) => ({
+    ...o,
+    items: (o.items ?? []).map((i) => ({
+      ...i,
+      product: i.product ? { ...i.product, thumbnail: thumbMap[i.product_id] ?? null } : i.product,
+    })),
+  }))
+}
+
 export async function getOrderQueue() {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('orders')
-    .select('*, client:clients(*)')
+    .select('*, client:clients(*), items:order_items(*, product:products(id, name, unit, sku))')
     .eq('status', 'new')
     .is('assigned_to', null)
     .order('created_at', { ascending: true })
@@ -268,7 +321,7 @@ export async function getOrderQueue() {
     console.error('getOrderQueue error:', error)
     return []
   }
-  return (data ?? []) as Order[]
+  return attachItemThumbnails(admin, (data ?? []) as Order[])
 }
 
 /** Заказы, назначенные сотруднику и находящиеся в работе — без пагинации, все сразу */
@@ -286,7 +339,7 @@ export async function getMyActiveOrders(userId: string) {
     console.error('getMyActiveOrders error:', error)
     return []
   }
-  return (data ?? []) as Order[]
+  return attachItemThumbnails(admin, (data ?? []) as Order[])
 }
 
 /** Последние завершённые заказы сотрудника (готов/выдан/отменён) — для истории */
@@ -417,14 +470,15 @@ export async function createOrderAction(
   try {
     const { user, role } = await requireAuth()
 
+    if (role === 'employee') return { error: 'Только менеджер или админ может создавать заказы' }
+
     const clientId = formData.get('client_id') as string
     const assignedTo = formData.get('assigned_to') as string
     const phone = formData.get('phone') as string
     const phoneDigits = phone?.replace(/\D/g, '')
     if (!phoneDigits || phoneDigits.length !== 11) return { error: 'Укажите полный номер телефона' }
 
-    // Сотрудники автоматически назначаются исполнителями
-    const finalAssignedTo = role === 'employee' ? user.id : (assignedTo || null)
+    const finalAssignedTo = assignedTo || null
     const note = formData.get('note') as string
     const deadline = formData.get('deadline') as string
     const paidAmountRaw = formData.get('paid_amount') as string

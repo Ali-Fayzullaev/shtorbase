@@ -6,8 +6,9 @@ import { useState, useTransition } from 'react'
 import { type Order } from '@/lib/types/database'
 import { acceptOrder, completeOrder } from '@/lib/actions/orders'
 import { cn } from '@/lib/utils/format'
+import { resolveItemColorSwatch } from '@/lib/utils/color'
 import { CompleteChecklistModal } from './complete-checklist-modal'
-import { Inbox, Wrench, History, Calendar, Clock, AlertTriangle, CheckCircle2, Loader2, ClipboardList } from 'lucide-react'
+import { Inbox, Wrench, History, Calendar, Clock, AlertTriangle, CheckCircle2, Loader2, ClipboardList, Package } from 'lucide-react'
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -144,6 +145,7 @@ function OrderActionCard({ order, mode }: { order: Order; mode: 'accept' | 'comp
   const [error, setError] = useState('')
   const [showChecklist, setShowChecklist] = useState(false)
   const overdue = isOverdue(order.deadline, order.status)
+  const items = order.items ?? []
 
   function runAccept(e: React.MouseEvent) {
     e.preventDefault()
@@ -185,14 +187,12 @@ function OrderActionCard({ order, mode }: { order: Order; mode: 'accept' | 'comp
         overdue && '!border-red-300/50 dark:!border-red-500/25'
       )}
     >
-      <div className="px-4 py-3 space-y-1.5">
+      <div className="px-4 py-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">#{order.order_number}</span>
-          {mode === 'complete' && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-              <ClipboardList size={11} /> {order.items?.length ?? 0} поз.
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+            <ClipboardList size={11} /> {items.length} поз.
+          </span>
         </div>
 
         {order.client ? (
@@ -201,9 +201,46 @@ function OrderActionCard({ order, mode }: { order: Order; mode: 'accept' | 'comp
           <p className="text-[14px] text-zinc-400 italic">Без клиента</p>
         )}
 
+        {/* Тикет — полный состав заказа, чтобы всё было видно с одного взгляда, без перехода внутрь */}
+        {items.length > 0 && (
+          <div className="space-y-1.5 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-700 p-2">
+            {items.map((item) => {
+              const swatch = resolveItemColorSwatch(item.custom_attributes, item.product?.name)
+              const attrs = item.custom_attributes ? Object.entries(item.custom_attributes) : []
+              return (
+                <div key={item.id} className="flex items-start gap-2">
+                  <div className="h-8 w-8 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
+                    {item.product?.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.product.thumbnail} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-zinc-300 dark:text-zinc-600">
+                        <Package size={13} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5 text-[12px] font-medium leading-snug text-zinc-800 dark:text-zinc-200">
+                      {swatch && (
+                        <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/15" style={{ backgroundColor: swatch }} />
+                      )}
+                      {item.product?.name ?? 'Товар удалён'}
+                    </p>
+                    <p className="text-[11px] text-zinc-400">
+                      {item.quantity} {item.product?.unit === 'meter' ? 'м' : 'шт'}
+                      {attrs.length > 0 && attrs.map(([k, v]) => ` · ${k}: ${v}`).join('')}
+                    </p>
+                    {item.note && <p className="text-[11px] text-amber-600 dark:text-amber-400">{item.note}</p>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         {order.note && <p className="text-[12px] text-zinc-500 dark:text-zinc-400 line-clamp-2">{order.note}</p>}
 
-        <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-zinc-400">
+        <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px] text-zinc-400">
           <span className="flex items-center gap-1">
             <Calendar size={11} /> {formatDate(order.created_at)}
           </span>

@@ -5,13 +5,16 @@ import { deleteProductAction } from '@/lib/actions/product-mutations'
 import { Trash2 } from 'lucide-react'
 import { toast } from '@/lib/utils/toast'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { cn } from '@/lib/utils/format'
 
 interface DeleteProductButtonProps {
   productId: string
   productName: string
+  /** Иконка без текста — для узких мест вроде строки таблицы */
+  compact?: boolean
 }
 
-export function DeleteProductButton({ productId, productName }: DeleteProductButtonProps) {
+export function DeleteProductButton({ productId, productName, compact }: DeleteProductButtonProps) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
 
@@ -30,10 +33,14 @@ export function DeleteProductButton({ productId, productName }: DeleteProductBut
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-white dark:bg-zinc-900 px-3 py-1.5 text-[13px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
+        title="Снять с продажи"
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-white dark:bg-zinc-900 text-[13px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition-colors',
+          compact ? 'p-1.5' : 'px-3 py-1.5'
+        )}
       >
         <Trash2 size={14} />
-        Снять с продажи
+        {!compact && 'Снять с продажи'}
       </button>
       <ConfirmDialog
         open={open}
