@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import type { Order } from '@/lib/types/database'
 import { formatPrice } from '@/lib/utils/format'
+import { extractDimensions, DIMENSION_WIDTH_KEY, DIMENSION_HEIGHT_KEY } from '@/lib/utils/dimensions'
 
 interface Props {
   order: Order
@@ -81,15 +82,25 @@ export function PrintOrderView({ order, statusLabel }: Props) {
           </tr>
         </thead>
         <tbody>
-          {order.items?.map((item, idx) => (
+          {order.items?.map((item, idx) => {
+            const { width, height } = extractDimensions(item.custom_attributes)
+            const otherAttrs = item.custom_attributes
+              ? Object.entries(item.custom_attributes).filter(([k]) => k !== DIMENSION_WIDTH_KEY && k !== DIMENSION_HEIGHT_KEY)
+              : []
+            return (
             <tr key={item.id} className="border-b border-gray-300">
               <td className="py-2 pr-2">{idx + 1}</td>
               <td className="py-2 pr-2 font-mono text-xs">{item.product?.sku ?? '—'}</td>
               <td className="py-2 pr-2">
                 {item.product?.name ?? 'Товар удалён'}
-                {item.custom_attributes && Object.keys(item.custom_attributes).length > 0 && (
+                {(width || height) && (
+                  <div className="text-[13px] font-bold mt-0.5">
+                    Размер: {width ?? '—'} × {height ?? '—'}
+                  </div>
+                )}
+                {otherAttrs.length > 0 && (
                   <div className="text-[11px] text-gray-500 mt-0.5">
-                    {Object.entries(item.custom_attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                    {otherAttrs.map(([k, v]) => `${k}: ${v}`).join(' · ')}
                   </div>
                 )}
               </td>
@@ -97,7 +108,8 @@ export function PrintOrderView({ order, statusLabel }: Props) {
               <td className="py-2 pr-2 text-right tabular-nums">{formatPrice(item.unit_price)} ₸</td>
               <td className="py-2 text-right tabular-nums font-medium">{formatPrice(item.total_price)} ₸</td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
         <tfoot>
           {order.discount_amount > 0 && (

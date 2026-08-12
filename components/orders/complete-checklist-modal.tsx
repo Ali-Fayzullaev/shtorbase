@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { type OrderItem } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
+import { extractDimensions } from '@/lib/utils/dimensions'
+import { DimensionsDiagram } from './dimensions-diagram'
 import { CheckCircle2, Circle, Loader2, ClipboardCheck, X } from 'lucide-react'
 
 interface CompleteChecklistModalProps {
@@ -68,6 +70,7 @@ export function CompleteChecklistModal({ orderNumber, items, pending, onConfirm,
             items.map((item) => {
               const isChecked = checked.has(item.id)
               const attrs = item.custom_attributes ? Object.entries(item.custom_attributes) : []
+              const { width, height } = extractDimensions(item.custom_attributes)
               return (
                 <label
                   key={item.id}
@@ -96,6 +99,9 @@ export function CompleteChecklistModal({ orderNumber, items, pending, onConfirm,
                       </p>
                     )}
                     {item.note && <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">{item.note}</p>}
+                    {(width || height) && (
+                      <DimensionsDiagram width={width} height={height} size="sm" className="mt-1.5" />
+                    )}
                   </div>
                 </label>
               )

@@ -7,6 +7,8 @@ import { type Client, type Product, type UserRole } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
 import { formatPhoneInput, isValidPhone } from '@/lib/utils/phone'
 import { Plus, Trash2, Search, Loader2, UserPlus, Package, X } from 'lucide-react'
+import { DimensionsDiagram } from './dimensions-diagram'
+import { DIMENSION_WIDTH_KEY, DIMENSION_HEIGHT_KEY } from '@/lib/utils/dimensions'
 
 const inputCls =
   'flex h-9 w-full rounded-lg border border-slate-200 dark:border-zinc-700 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50'
@@ -127,6 +129,25 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
       ? { ...item, attributes: item.attributes.filter((_, ai) => ai !== attrIndex) }
       : item
     ))
+  }
+
+  /** Ширина/высота — те же attributes, но с фиксированным ключом и всегда видимым полем */
+  function getDimension(item: OrderItem, key: string): string {
+    return item.attributes.find((a) => a.key === key)?.value ?? ''
+  }
+
+  function setDimension(index: number, key: string, value: string) {
+    setItems(items.map((item, i) => {
+      if (i !== index) return item
+      const exists = item.attributes.some((a) => a.key === key)
+      if (!value.trim()) {
+        return exists ? { ...item, attributes: item.attributes.filter((a) => a.key !== key) } : item
+      }
+      if (exists) {
+        return { ...item, attributes: item.attributes.map((a) => a.key === key ? { ...a, value } : a) }
+      }
+      return { ...item, attributes: [...item.attributes, { key, value }] }
+    }))
   }
 
   const total = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0)
@@ -452,9 +473,42 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
                   </button>
                 </div>
 
-                {/* Индивидуальные параметры позиции (размер, цвет и т.д.) */}
+                {/* Ширина/высота — под заказ, с наглядной схемой */}
+                <div className="px-4 pb-2.5 flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-[11px] text-slate-500 dark:text-zinc-400 shrink-0">Ширина</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={getDimension(item, DIMENSION_WIDTH_KEY)}
+                      onChange={(e) => setDimension(i, DIMENSION_WIDTH_KEY, e.target.value)}
+                      placeholder="250 см"
+                      className="h-7 w-20 rounded-md border border-slate-200 dark:border-zinc-700 bg-transparent px-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-[11px] text-slate-500 dark:text-zinc-400 shrink-0">Высота</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={getDimension(item, DIMENSION_HEIGHT_KEY)}
+                      onChange={(e) => setDimension(i, DIMENSION_HEIGHT_KEY, e.target.value)}
+                      placeholder="180 см"
+                      className="h-7 w-20 rounded-md border border-slate-200 dark:border-zinc-700 bg-transparent px-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                  </div>
+                  <DimensionsDiagram
+                    width={getDimension(item, DIMENSION_WIDTH_KEY)}
+                    height={getDimension(item, DIMENSION_HEIGHT_KEY)}
+                    size="sm"
+                  />
+                </div>
+
+                {/* Остальные параметры позиции (цвет и т.д.) */}
                 <div className="px-4 pb-2.5 flex flex-wrap items-center gap-1.5">
-                  {item.attributes.map((attr, ai) => (
+                  {item.attributes.filter((a) => a.key !== DIMENSION_WIDTH_KEY && a.key !== DIMENSION_HEIGHT_KEY).map((attr) => {
+                    const ai = item.attributes.indexOf(attr)
+                    return (
                     <div key={ai} className="flex items-center gap-1 rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/60 pl-2 pr-1 py-0.5">
                       <input
                         type="text"
@@ -479,13 +533,14 @@ export function OrderForm({ clients, employees, userRole }: OrderFormProps) {
                         <X size={11} />
                       </button>
                     </div>
-                  ))}
+                    )
+                  })}
                   <button
                     type="button"
                     onClick={() => addAttribute(i)}
                     className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 dark:border-zinc-600 px-2 py-0.5 text-[11px] text-slate-400 dark:text-zinc-500 hover:border-primary hover:text-primary transition-colors"
                   >
-                    <Plus size={10} /> Параметр (размер, цвет...)
+                    <Plus size={10} /> Параметр (цвет, тип механизма...)
                   </button>
                 </div>
               </div>

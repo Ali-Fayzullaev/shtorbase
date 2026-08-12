@@ -6,9 +6,11 @@ import { updateOrderStatus, assignOrder, deleteOrder, updateOrderDiscount, accep
 import { addPayment, deletePayment } from '@/lib/actions/payments'
 import { cn, getPayable } from '@/lib/utils/format'
 import { resolveItemColorSwatch } from '@/lib/utils/color'
+import { extractDimensions } from '@/lib/utils/dimensions'
 import { PaymentBadge } from './payment-badge'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { CompleteChecklistModal } from './complete-checklist-modal'
+import { DimensionsDiagram } from './dimensions-diagram'
 import {
   User,
   Calendar,
@@ -276,6 +278,7 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
               <div className="divide-y divide-slate-50">
                 {order.items.map((item) => {
                   const swatch = resolveItemColorSwatch(item.custom_attributes, item.product?.name)
+                  const { width, height } = extractDimensions(item.custom_attributes)
                   return (
                   <div key={item.id} className="px-5 py-3 grid grid-cols-[1fr_80px_100px_100px] gap-3 items-center">
                     <div className="min-w-0 flex items-start gap-3">
@@ -289,7 +292,7 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
                           </div>
                         )}
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                       <p className="flex items-center gap-1.5 text-[13px] font-medium text-slate-800 dark:text-zinc-200">
                         {swatch && (
                           <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/15" style={{ backgroundColor: swatch }} />
@@ -310,6 +313,9 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
                       )}
                       {item.note && (
                         <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">{item.note}</p>
+                      )}
+                      {(width || height) && (
+                        <DimensionsDiagram width={width} height={height} size="sm" className="mt-1.5" />
                       )}
                       </div>
                     </div>
