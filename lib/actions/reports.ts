@@ -91,12 +91,31 @@ export async function getDiscountsReport(period: ReportPeriod) {
 // ============================================
 // Долги клиентов — снимок на сейчас, не завязан на период
 // ============================================
+export interface DebtorOrderItem {
+  productName: string
+  quantity: number
+  unit: string
+  attributes: Record<string, string>
+}
+
+export interface DebtorOrder {
+  id: string
+  orderNumber: number
+  createdAt: string
+  deadline: string | null
+  total: number
+  paid: number
+  debt: number
+  items: DebtorOrderItem[]
+}
+
 export interface Debtor {
   clientId: string | null
   clientName: string
   phone: string | null
   debt: number
   orderCount: number
+  orders: DebtorOrder[]
 }
 
 export async function getDebtSummary() {
@@ -104,25 +123,63 @@ export async function getDebtSummary() {
 
   const { data } = await admin
     .from('orders')
-    .select('id, client_id, phone, total_amount, discount_amount, paid_amount, client:clients(name, phone)')
+    .select('id, order_number, client_id, phone, deadline, created_at, total_amount, discount_amount, paid_amount, client:clients(name, phone)')
     .neq('status', 'cancelled')
 
   const rows = data ?? []
+  const debtRows = rows
+    .map((row) => ({
+      row,
+      debt: getPayable({ total_amount: row.total_amount, discount_amount: row.discount_amount }) - row.paid_amount,
+    }))
+    .filter((r) => r.debt > 0.01)
+
+  // Позиции всех "долговых" заказов одним запросом — что именно взял клиент
+  const orderIds = debtRows.map((r) => r.row.id)
+  const itemsByOrder = new Map<string, DebtorOrderItem[]>()
+  if (orderIds.length > 0) {
+    const { data: items } = await admin
+      .from('order_items')
+      .select('order_id, quantity, custom_attributes, product:products(name, unit)')
+      .in('order_id', orderIds)
+
+    for (const item of items ?? []) {
+      const product = item.product as { name?: string; unit?: string } | null
+      const list = itemsByOrder.get(item.order_id) ?? []
+      list.push({
+        productName: product?.name ?? 'Товар',
+        quantity: item.quantity,
+        unit: product?.unit ?? 'шт',
+        attributes: (item.custom_attributes as Record<string, string>) ?? {},
+      })
+      itemsByOrder.set(item.order_id, list)
+    }
+  }
+
   const byClient = new Map<string, Debtor>()
   let totalDebt = 0
 
-  for (const row of rows) {
-    const payable = getPayable({ total_amount: row.total_amount, discount_amount: row.discount_amount })
-    const debt = payable - row.paid_amount
-    if (debt <= 0.01) continue
-
+  for (const { row, debt } of debtRows) {
     totalDebt += debt
     const client = row.client as { name?: string; phone?: string } | null
     const key = row.client_id ?? `phone:${row.phone ?? row.id}`
+
+    const debtorOrder: DebtorOrder = {
+      id: row.id,
+      orderNumber: row.order_number,
+      createdAt: row.created_at,
+      deadline: row.deadline,
+      total: getPayable({ total_amount: row.total_amount, discount_amount: row.discount_amount }),
+      paid: row.paid_amount,
+      debt,
+      items: itemsByOrder.get(row.id) ?? [],
+    }
+
     const existing = byClient.get(key)
     if (existing) {
       existing.debt += debt
       existing.orderCount += 1
+      existing.orders.push(debtorOrder)
     } else {
       byClient.set(key, {
         clientId: row.client_id,
@@ -130,10 +187,12 @@ export async function getDebtSummary() {
         phone: client?.phone ?? row.phone ?? null,
         debt,
         orderCount: 1,
+        orders: [debtorOrder],
       })
     }
   }
 
   const debtors = [...byClient.values()].sort((a, b) => b.debt - a.debt)
+  for (const d of debtors) d.orders.sort((a, b) => b.debt - a.debt)
   return { totalDebt, debtors }
 }
