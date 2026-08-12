@@ -8,8 +8,15 @@ import { createQuickOrder } from '@/lib/actions/orders'
 import { getClients, createNewClient } from '@/lib/actions/clients'
 import type { Client, PaymentStatus } from '@/lib/types/database'
 import { PaymentBadge } from '@/components/orders/payment-badge'
+import { DimensionsDiagram } from '@/components/orders/dimensions-diagram'
+import { DIMENSION_WIDTH_KEY, DIMENSION_HEIGHT_KEY } from '@/lib/utils/dimensions'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+
+export interface CartItemAttribute {
+  key: string
+  value: string
+}
 
 export interface CartItem {
   product_id: string
@@ -20,13 +27,18 @@ export interface CartItem {
   stock: number
   quantity: number
   thumbnail?: string | null
+  attributes: CartItemAttribute[]
 }
 
 interface CartContextType {
   items: CartItem[]
-  addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void
+  addItem: (item: Omit<CartItem, 'quantity' | 'attributes'>, quantity?: number) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
+  setItemAttribute: (productId: string, key: string, value: string) => void
+  addItemAttribute: (productId: string) => void
+  updateItemAttribute: (productId: string, attrIndex: number, field: 'key' | 'value', value: string) => void
+  removeItemAttribute: (productId: string, attrIndex: number) => void
   clearCart: () => void
   totalItems: number
   totalAmount: number
@@ -51,7 +63,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
-  const addItem = useCallback((item: Omit<CartItem, 'quantity'>, quantity = 1) => {
+  const addItem = useCallback((item: Omit<CartItem, 'quantity' | 'attributes'>, quantity = 1) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.product_id === item.product_id)
       if (existing) {
@@ -61,7 +73,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             : i
         )
       }
-      return [...prev, { ...item, quantity: Math.min(quantity, item.stock) }]
+      return [...prev, { ...item, quantity: Math.min(quantity, item.stock), attributes: [] }]
     })
   }, [])
 
@@ -81,6 +93,43 @@ export function CartProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  /** Ширина/высота и т.д. — та же модель, что в форме заказа: пары ключ/значение по продукту */
+  const setItemAttribute = useCallback((productId: string, key: string, value: string) => {
+    setItems((prev) => prev.map((item) => {
+      if (item.product_id !== productId) return item
+      const exists = item.attributes.some((a) => a.key === key)
+      if (!value.trim()) {
+        return exists ? { ...item, attributes: item.attributes.filter((a) => a.key !== key) } : item
+      }
+      if (exists) {
+        return { ...item, attributes: item.attributes.map((a) => a.key === key ? { ...a, value } : a) }
+      }
+      return { ...item, attributes: [...item.attributes, { key, value }] }
+    }))
+  }, [])
+
+  const addItemAttribute = useCallback((productId: string) => {
+    setItems((prev) => prev.map((item) =>
+      item.product_id === productId ? { ...item, attributes: [...item.attributes, { key: '', value: '' }] } : item
+    ))
+  }, [])
+
+  const updateItemAttribute = useCallback((productId: string, attrIndex: number, field: 'key' | 'value', value: string) => {
+    setItems((prev) => prev.map((item) =>
+      item.product_id === productId
+        ? { ...item, attributes: item.attributes.map((a, ai) => ai === attrIndex ? { ...a, [field]: value } : a) }
+        : item
+    ))
+  }, [])
+
+  const removeItemAttribute = useCallback((productId: string, attrIndex: number) => {
+    setItems((prev) => prev.map((item) =>
+      item.product_id === productId
+        ? { ...item, attributes: item.attributes.filter((_, ai) => ai !== attrIndex) }
+        : item
+    ))
+  }, [])
+
   const clearCart = useCallback(() => setItems([]), [])
   const openCart = useCallback(() => setIsOpen(true), [])
   const closeCart = useCallback(() => setIsOpen(false), [])
@@ -90,8 +139,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <CartContext.Provider value={{
-      items, addItem, removeItem, updateQuantity, clearCart,
-      totalItems, totalAmount, isOpen, openCart, closeCart,
+      items, addItem, removeItem, updateQuantity,
+      setItemAttribute, addItemAttribute, updateItemAttribute, removeItemAttribute,
+      clearCart, totalItems, totalAmount, isOpen, openCart, closeCart,
     }}>
       {children}
     </CartContext.Provider>
@@ -101,7 +151,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 // ── Cart Panel (slide-over) ────────────────────────────────────────────────────
 
 export function CartPanel() {
-  const { items, removeItem, updateQuantity, clearCart, totalItems, totalAmount, isOpen, openCart, closeCart } = useCart()
+  const {
+    items, removeItem, updateQuantity,
+    setItemAttribute, addItemAttribute, updateItemAttribute, removeItemAttribute,
+    clearCart, totalItems, totalAmount, isOpen, openCart, closeCart,
+  } = useCart()
   const [note, setNote] = useState('')
   const [phone, setPhone] = useState('')
   const [clientId, setClientId] = useState<string | null>(null)
@@ -183,7 +237,15 @@ export function CartPanel() {
     if (items.length === 0) return
     if (!isValidPhone(phone)) { setError('Укажите полный номер телефона'); return }
     setError(null)
-    const orderItems = items.map((i) => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.price }))
+    const orderItems = items.map((i) => ({
+      product_id: i.product_id,
+      quantity: i.quantity,
+      unit_price: i.price,
+      custom_attributes: i.attributes.reduce<Record<string, string>>((acc, a) => {
+        if (a.key.trim()) acc[a.key.trim()] = a.value.trim()
+        return acc
+      }, {}),
+    }))
     startTransition(async () => {
       const result = await createQuickOrder(orderItems, note || undefined, phone || undefined, clientId || undefined, discountNum || undefined, paidNum || undefined)
       if (result.error) {
@@ -242,7 +304,7 @@ export function CartPanel() {
       {/* Slide-over panel */}
       <div
         className={cn(
-          'fixed top-0 right-0 z-50 h-full w-full max-w-md flex flex-col bg-white dark:bg-zinc-950 shadow-2xl transition-transform duration-300 ease-out',
+          'fixed top-0 right-0 z-50 h-full w-full max-w-lg flex flex-col bg-white dark:bg-zinc-950 shadow-2xl transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}
       >
@@ -351,6 +413,79 @@ export function CartPanel() {
                 <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">
                   {formatPrice(item.quantity * item.price)} <span className="text-zinc-400 font-medium">₸</span>
                 </p>
+              </div>
+
+              {/* Ширина/высота под заказ — со схемой размеров */}
+              <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <label className="text-[11px] text-zinc-500 dark:text-zinc-400 shrink-0">Ширина</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={item.attributes.find((a) => a.key === DIMENSION_WIDTH_KEY)?.value ?? ''}
+                    onChange={(e) => setItemAttribute(item.product_id, DIMENSION_WIDTH_KEY, e.target.value)}
+                    placeholder="250 см"
+                    className="h-7 w-20 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <label className="text-[11px] text-zinc-500 dark:text-zinc-400 shrink-0">Высота</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={item.attributes.find((a) => a.key === DIMENSION_HEIGHT_KEY)?.value ?? ''}
+                    onChange={(e) => setItemAttribute(item.product_id, DIMENSION_HEIGHT_KEY, e.target.value)}
+                    placeholder="180 см"
+                    className="h-7 w-20 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                </div>
+                <DimensionsDiagram
+                  width={item.attributes.find((a) => a.key === DIMENSION_WIDTH_KEY)?.value}
+                  height={item.attributes.find((a) => a.key === DIMENSION_HEIGHT_KEY)?.value}
+                  size="sm"
+                />
+              </div>
+
+              {/* Остальные параметры (цвет, тип механизма и т.д.) */}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {item.attributes
+                  .filter((a) => a.key !== DIMENSION_WIDTH_KEY && a.key !== DIMENSION_HEIGHT_KEY)
+                  .map((attr) => {
+                    const ai = item.attributes.indexOf(attr)
+                    return (
+                      <div key={ai} className="flex items-center gap-1 rounded-full border border-zinc-200 dark:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-800/60 pl-2 pr-1 py-0.5">
+                        <input
+                          type="text"
+                          value={attr.key}
+                          onChange={(e) => updateItemAttribute(item.product_id, ai, 'key', e.target.value)}
+                          placeholder="параметр"
+                          className="w-16 bg-transparent text-[11px] text-zinc-500 dark:text-zinc-400 outline-none placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
+                        />
+                        <span className="text-[11px] text-zinc-300 dark:text-zinc-600">:</span>
+                        <input
+                          type="text"
+                          value={attr.value}
+                          onChange={(e) => updateItemAttribute(item.product_id, ai, 'value', e.target.value)}
+                          placeholder="значение"
+                          className="w-16 bg-transparent text-[11px] text-zinc-700 dark:text-zinc-300 outline-none placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeItemAttribute(item.product_id, ai)}
+                          className="text-zinc-300 dark:text-zinc-600 hover:text-red-500 transition-colors"
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                <button
+                  type="button"
+                  onClick={() => addItemAttribute(item.product_id)}
+                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600 px-2 py-0.5 text-[11px] text-zinc-400 dark:text-zinc-500 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                >
+                  <Plus size={10} /> Параметр (цвет...)
+                </button>
               </div>
             </div>
           ))}

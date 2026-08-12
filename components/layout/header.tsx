@@ -14,7 +14,7 @@ interface HeaderProps {
 
 const breadcrumbMap: Record<string, string> = {
   '/': 'Главная',
-  '/catalog': 'Каталог',
+  '/catalog': 'Оформить заказ',
   '/orders': 'Заказы',
   '/orders/new': 'Новый заказ',
   '/products': 'Товары',

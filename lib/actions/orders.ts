@@ -608,7 +608,7 @@ export async function createOrderAction(
 // Быстрый заказ из каталога (без redirect)
 // ============================================
 export async function createQuickOrder(
-  items: { product_id: string; quantity: number; unit_price: number }[],
+  items: { product_id: string; quantity: number; unit_price: number; custom_attributes?: Record<string, string> }[],
   note?: string,
   phone?: string,
   clientId?: string,
@@ -663,6 +663,7 @@ export async function createQuickOrder(
       quantity: item.quantity,
       unit_price: item.unit_price,
       note: item.note || null,
+      custom_attributes: item.custom_attributes ?? {},
     }))
 
     const { error: itemsErr } = await admin.from('order_items').insert(rows)

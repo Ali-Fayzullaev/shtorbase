@@ -49,7 +49,7 @@ const navGroups: NavGroup[] = [
     label: 'Основные',
     items: [
       { name: 'Главная', href: '/', icon: LayoutDashboard, roles: ['employee', 'manager', 'admin'] },
-      { name: 'Каталог', href: '/catalog', icon: Package, roles: ['manager', 'admin'] },
+      { name: 'Оформить заказ', href: '/catalog', icon: Package, roles: ['manager', 'admin'] },
       { name: 'Заказы', href: '/orders', icon: ShoppingCart, roles: ['employee', 'manager', 'admin'] },
     ],
   },

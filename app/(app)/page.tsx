@@ -143,7 +143,7 @@ async function WelcomeSection({
               <Plus size={12} />Новый заказ
             </Link>
             <Link href="/catalog" className="inline-flex items-center rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors dark:border-white/10 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] dark:text-zinc-300">
-              Каталог
+              Оформить заказ
             </Link>
             {(userRole === 'manager' || userRole === 'admin') && (
               <Link href="/products/new" className="inline-flex items-center rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors dark:border-white/10 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] dark:text-zinc-300">

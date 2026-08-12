@@ -22,7 +22,7 @@ export function BottomNav({ role }: { role: UserRole }) {
 
   const tabs = [
     { name: 'Главная', href: '/', icon: LayoutDashboard },
-    ...(canUseCatalog ? [{ name: 'Каталог', href: '/catalog', icon: Package }] : []),
+    ...(canUseCatalog ? [{ name: 'Оформить заказ', href: '/catalog', icon: Package }] : []),
     { name: 'Заказы', href: '/orders', icon: ClipboardList },
   ]
 
@@ -45,7 +45,7 @@ export function BottomNav({ role }: { role: UserRole }) {
                   <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[2.5px] w-8 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" />
                 )}
                 <tab.icon size={21} strokeWidth={isActive ? 2.2 : 1.5} className="transition-transform duration-200" />
-                <span className={cn('text-[10px] leading-none', isActive ? 'font-semibold' : 'font-medium')}>
+                <span className={cn('text-[10px] leading-tight text-center', isActive ? 'font-semibold' : 'font-medium')}>
                   {tab.name}
                 </span>
               </Link>

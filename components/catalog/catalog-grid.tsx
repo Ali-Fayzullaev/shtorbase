@@ -64,7 +64,7 @@ export function CatalogGrid({ products, total }: CatalogGridProps) {
       <div className="flex flex-col gap-3 rounded-2xl border border-zinc-200/70 bg-white/90 px-4 py-3 shadow-sm backdrop-blur dark:border-white/[0.06] dark:bg-zinc-950/75 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
-            Каталог
+            Оформить заказ
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">

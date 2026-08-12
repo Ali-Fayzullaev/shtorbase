@@ -29,7 +29,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
   return (
     <>
-      <Header title="Каталог" description="Товары со склада">
+      <Header title="Оформить заказ" description="Выберите товары и оформите заказ">
         <div className="flex items-center gap-2 no-print">
           <PrintButton />
           <Suspense fallback={null}>
