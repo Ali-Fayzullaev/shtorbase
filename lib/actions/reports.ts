@@ -2,8 +2,20 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPayable } from '@/lib/utils/format'
+import { requireAuth } from './orders'
 
 export type ReportPeriod = 'today' | 'week' | 'month'
+
+/**
+ * Отчёты содержат выручку, скидки и персональные данные должников (имя,
+ * телефон, долг) — доступ только администратору. Страница /reports уже
+ * редиректит не-админов, но Server Action обязан проверять сам себя:
+ * он вызываем напрямую, независимо от того, какая страница его дёрнула.
+ */
+async function requireAdminReport() {
+  const { role } = await requireAuth()
+  if (role !== 'admin') throw new Error('Только администратор может просматривать отчёты')
+}
 
 const ALMATY_OFFSET_HOURS = 5 // Asia/Almaty, без перехода на летнее время
 
@@ -33,6 +45,7 @@ function dayKeyAlmaty(iso: string): string {
 // Выручка за период (по фактическим платежам)
 // ============================================
 export async function getRevenueReport(period: ReportPeriod) {
+  await requireAdminReport()
   const admin = createAdminClient()
   const from = getPeriodStart(period)
 
@@ -72,6 +85,7 @@ export async function getRevenueReport(period: ReportPeriod) {
 // Скидки за период (по дате создания заказа)
 // ============================================
 export async function getDiscountsReport(period: ReportPeriod) {
+  await requireAdminReport()
   const admin = createAdminClient()
   const from = getPeriodStart(period)
 
@@ -119,6 +133,7 @@ export interface Debtor {
 }
 
 export async function getDebtSummary() {
+  await requireAdminReport()
   const admin = createAdminClient()
 
   const { data } = await admin

@@ -623,8 +623,16 @@ export async function createQuickOrder(
     if (!phoneDigits || phoneDigits.length !== 11) return { error: 'Укажите полный номер телефона' }
 
     const validated = z.array(OrderItemSchema).parse(items)
-    const discount = Math.max(0, discountAmount ?? 0)
-    const paid = Math.max(0, paidAmount ?? 0)
+    const orderTotal = validated.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+
+    // Скидку и предоплату при быстром заказе может задавать только менеджер/админ,
+    // и обе величины не могут выйти за пределы суммы заказа (как в updateOrderDiscount/addPayment)
+    let discount = 0
+    let paid = 0
+    if (role !== 'employee') {
+      discount = Math.min(Math.max(0, discountAmount ?? 0), orderTotal)
+      paid = Math.min(Math.max(0, paidAmount ?? 0), Math.max(orderTotal - discount, 0))
+    }
 
     const admin = createAdminClient()
 
@@ -675,7 +683,7 @@ export async function createQuickOrder(
     await logOrderHistory(admin, order.id, user.id, 'created', null, 'new')
 
     // Telegram notification (quick order)
-    const total = validated.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+    const total = orderTotal
     const [creatorRes, clientRes] = await Promise.allSettled([
       admin.from('profiles').select('*').eq('id', user.id).single(),
       clientId
