@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { cloudinary } from '@/lib/cloudinary'
+import { getCloudinary } from '@/lib/cloudinary'
 import { revalidatePath } from 'next/cache'
 
 async function requireEditor() {
@@ -49,6 +49,7 @@ export async function uploadProductImage(productId: string, formData: FormData) 
 
   let uploadResult: { secure_url: string; public_id: string }
   try {
+    const cloudinary = getCloudinary()
     uploadResult = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         {
@@ -123,7 +124,7 @@ export async function deleteProductImage(imageId: string, storagePath: string | 
   // Delete from Cloudinary if we have a public_id (storage_path)
   if (storagePath && storagePath.startsWith('shtorbase/')) {
     try {
-      await cloudinary.uploader.destroy(storagePath)
+      await getCloudinary().uploader.destroy(storagePath)
     } catch {
       // Non-critical — continue with DB deletion
     }
