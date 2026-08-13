@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
+import { useState, useTransition, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
 import { updateOrderStatus, deleteOrder } from '@/lib/actions/orders'
 import { cn, getPayable } from '@/lib/utils/format'
+import { useHydrated } from '@/lib/hooks/use-hydrated'
+import { useLocalStorageState } from '@/lib/hooks/use-local-storage-state'
 import { ClipboardList, User, Calendar, ChevronDown, Loader2, Check, Phone, Trash2, MoreHorizontal, ExternalLink, Clock, AlertTriangle, LayoutList, PanelsTopLeft } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { PaymentBadge } from './payment-badge'
@@ -282,20 +284,16 @@ interface OrdersTableProps {
 
 export function OrdersTable({ orders, userRole, statuses }: OrdersTableProps) {
   const canChangeStatus = userRole === 'admin' || userRole === 'manager'
-  const [view, setView] = useState<'list' | 'board'>('board')
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    const saved = localStorage.getItem('orders-view')
-    if (saved === 'list' || saved === 'board') {
-      setView(saved)
-    }
-    setMounted(true)
-  }, [])
+  const [view, setView] = useLocalStorageState<'list' | 'board'>(
+    'orders-view',
+    (raw) => (raw === 'list' || raw === 'board' ? raw : 'board'),
+    (v) => v,
+    'board'
+  )
+  const mounted = useHydrated()
 
   function handleViewChange(nextView: 'list' | 'board') {
     setView(nextView)
-    localStorage.setItem('orders-view', nextView)
   }
 
   const statusMap = useMemo(() => {

@@ -4,8 +4,9 @@ import { type Product } from '@/lib/types/database'
 import { formatPrice, formatStock, unitLabel, normalizeUnit, cn } from '@/lib/utils/format'
 import { useCart } from '@/components/catalog/catalog-cart'
 import { ShoppingCart, Plus, Minus, Check, ImageIcon, AlertTriangle, Trash2, LayoutGrid, Rows3, PanelsTopLeft } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
+import { useLocalStorageState } from '@/lib/hooks/use-local-storage-state'
 
 interface ProductWithThumb extends Product {
   thumbnail?: string | null
@@ -26,18 +27,15 @@ const densityOptions: Array<{ value: CatalogDensity; label: string; short: strin
 ]
 
 export function CatalogGrid({ products, total }: CatalogGridProps) {
-  const [density, setDensity] = useState<CatalogDensity>('comfortable')
-
-  useEffect(() => {
-    const saved = localStorage.getItem('catalog-density') as CatalogDensity | null
-    if (saved === 'compact' || saved === 'comfortable' || saved === 'showcase') {
-      setDensity(saved)
-    }
-  }, [])
+  const [density, setDensity] = useLocalStorageState<CatalogDensity>(
+    'catalog-density',
+    (raw) => (raw === 'compact' || raw === 'comfortable' || raw === 'showcase' ? raw : 'comfortable'),
+    (v) => v,
+    'comfortable'
+  )
 
   function handleDensityChange(nextDensity: CatalogDensity) {
     setDensity(nextDensity)
-    localStorage.setItem('catalog-density', nextDensity)
   }
 
   if (products.length === 0) {

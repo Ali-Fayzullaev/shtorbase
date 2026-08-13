@@ -1,6 +1,7 @@
 'use client'
 
-import { useTransition, useState, useMemo, useEffect } from 'react'
+import { useTransition, useState, useMemo } from 'react'
+import { useHydrated } from '@/lib/hooks/use-hydrated'
 import { type Order, type OrderStatus, type OrderStatusConfig, type UserRole } from '@/lib/types/database'
 import { updateOrderStatus, assignOrder, deleteOrder, updateOrderDiscount, acceptOrder, completeOrder } from '@/lib/actions/orders'
 import { addPayment, deletePayment } from '@/lib/actions/payments'
@@ -83,8 +84,7 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
   const remaining = Math.max(payable - order.paid_amount, 0)
 
   const isManager = userRole === 'manager' || userRole === 'admin'
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useHydrated()
 
   const statusMap = useMemo(() => {
     const map: Record<string, { label: string; color: string; bg: string; dot_color: string }> = {}

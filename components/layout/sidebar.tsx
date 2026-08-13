@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils/format'
 import { useMobileMenu } from './mobile-menu-context'
+import { useLocalStorageState } from '@/lib/hooks/use-local-storage-state'
 import {
   LayoutDashboard,
   Package,
@@ -96,25 +96,15 @@ function getDisplayName(name: string) {
 export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) {
   const pathname = usePathname()
   const { isOpen, close } = useMobileMenu()
-  const [collapsed, setCollapsed] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    const saved = localStorage.getItem('sidebar-collapsed')
-    if (saved !== null) {
-      setCollapsed(saved === 'true')
-    } else {
-      setCollapsed(window.innerWidth < 1280)
-    }
-    setMounted(true)
-  }, [])
+  const [collapsed, setCollapsed] = useLocalStorageState<boolean>(
+    'sidebar-collapsed',
+    (raw) => (raw !== null ? raw === 'true' : window.innerWidth < 1280),
+    (v) => String(v),
+    false
+  )
 
   const toggleCollapsed = () => {
-    setCollapsed((c) => {
-      const next = !c
-      localStorage.setItem('sidebar-collapsed', String(next))
-      return next
-    })
+    setCollapsed(!collapsed)
   }
 
   const filteredGroups = navGroups
@@ -294,7 +284,7 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
         className={cn(
           'hidden lg:block shrink-0 h-full border-r border-zinc-200 dark:border-zinc-800/80 overflow-hidden',
           'transition-[width] duration-300 ease-in-out',
-          mounted ? (collapsed ? 'w-[72px]' : 'w-60') : 'w-60'
+          collapsed ? 'w-[72px]' : 'w-60'
         )}
       >
         {sidebarContent}

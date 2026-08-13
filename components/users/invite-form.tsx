@@ -1,18 +1,21 @@
 'use client'
 
-import { useActionState, useState, useEffect } from 'react'
+import { useActionState, useState, useSyncExternalStore } from 'react'
 import { inviteUserAction, type InviteState } from '@/lib/actions/invite'
 import { UserPlus, Copy, Check } from 'lucide-react'
 import { cn } from '@/lib/utils/format'
 
+const emptySubscribe = () => () => {}
+
+/** window.location.origin недоступен на сервере; безопасно читаем на клиенте без setState в эффекте. */
+function useOrigin(): string {
+  return useSyncExternalStore(emptySubscribe, () => window.location.origin, () => '')
+}
+
 export function InviteForm() {
   const [state, formAction, pending] = useActionState<InviteState, FormData>(inviteUserAction, null)
   const [copied, setCopied] = useState(false)
-  const [origin, setOrigin] = useState('')
-
-  useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
+  const origin = useOrigin()
 
   const inviteUrl = state?.token ? `${origin}/invite/${state.token}` : null
 
