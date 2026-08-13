@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Image from 'next/image'
 import { uploadProductImage, deleteProductImage, addProductImageUrl } from '@/lib/actions/images'
-import { ImagePlus, Trash2, Loader2, Link2 } from 'lucide-react'
+import { ImagePlus, Trash2, Loader2, Link2, ImageOff } from 'lucide-react'
 
 interface ProductImage {
   id: string
@@ -25,6 +26,7 @@ export function ProductImages({ productId, images, canEdit }: ProductImagesProps
   const [error, setError] = useState<string | null>(null)
   const [showUrlInput, setShowUrlInput] = useState(false)
   const [urlValue, setUrlValue] = useState('')
+  const [failedIds, setFailedIds] = useState<Set<string>>(new Set())
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -72,14 +74,21 @@ export function ProductImages({ productId, images, canEdit }: ProductImagesProps
       <div className="flex flex-wrap gap-3">
         {images.map((img) => (
           <div key={img.id} className="group relative w-24 h-24 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
-            <img
-              src={img.display_url}
-              alt=""
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect fill="%23f1f5f9" width="96" height="96"/><text x="48" y="52" text-anchor="middle" fill="%2394a3b8" font-size="12">Ошибка</text></svg>'
-              }}
-            />
+            {failedIds.has(img.id) ? (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-slate-400">
+                <ImageOff size={16} />
+                <span className="text-[10px]">Ошибка</span>
+              </div>
+            ) : (
+              <Image
+                src={img.display_url}
+                alt=""
+                fill
+                sizes="96px"
+                className="object-cover"
+                onError={() => setFailedIds((prev) => new Set(prev).add(img.id))}
+              />
+            )}
             {img.url && (
               <div className="absolute top-1 left-1">
                 <Link2 size={10} className="text-white drop-shadow-md" />

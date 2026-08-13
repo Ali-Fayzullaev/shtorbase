@@ -20,6 +20,18 @@ export async function POST(request: NextRequest) {
   const token = process.env.TELEGRAM_BOT_TOKEN
   if (!token) return NextResponse.json({ ok: false }, { status: 500 })
 
+  // Если секрет настроен (см. .env.example), Telegram обязан прислать его в
+  // заголовке — так мы отличаем реальные апдейты от Telegram от произвольных
+  // POST-запросов на этот публичный URL, которые иначе заставили бы нашего
+  // бота слать сообщения в любой чужой chat_id от имени нашего бота.
+  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET
+  if (webhookSecret) {
+    const provided = request.headers.get('x-telegram-bot-api-secret-token')
+    if (provided !== webhookSecret) {
+      return NextResponse.json({ ok: false }, { status: 401 })
+    }
+  }
+
   let update: Record<string, unknown>
   try {
     update = await request.json()

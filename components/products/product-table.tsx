@@ -4,6 +4,7 @@ import { type Product } from '@/lib/types/database'
 import { formatPrice, formatStock, cn } from '@/lib/utils/format'
 import { AlertTriangle, ChevronRight, ImageIcon } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface ProductWithThumb extends Product {
   thumbnail?: string | null
@@ -56,9 +57,11 @@ export function ProductTable({ products }: ProductTableProps) {
                 <td className="px-4 py-3">
                   <div className="flex items-start gap-3">
                     {product.thumbnail ? (
-                      <img
+                      <Image
                         src={product.thumbnail}
                         alt={product.name}
+                        width={36}
+                        height={36}
                         className="mt-0.5 h-9 w-9 shrink-0 rounded-lg object-cover ring-1 ring-slate-200/60 dark:ring-zinc-700/60"
                       />
                     ) : (
