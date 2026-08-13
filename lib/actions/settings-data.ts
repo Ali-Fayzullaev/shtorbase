@@ -23,6 +23,22 @@ async function requireAdmin() {
   return user
 }
 
+/** Создавать категории/единицы может и менеджер — это нужно прямо в форме товара. Менять/удалять — только админ. */
+async function requireManagerOrAdmin() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Не авторизован')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'admin' && profile?.role !== 'manager') throw new Error('Недостаточно прав')
+  return user
+}
+
 // ============================================
 // Categories CRUD
 // ============================================
@@ -36,7 +52,7 @@ export async function getCategories() {
 }
 
 export async function createCategory(name: string) {
-  await requireAdmin()
+  await requireManagerOrAdmin()
   const admin = createAdminClient()
   const slug = name.toLowerCase().replace(/[^a-zа-яё0-9]+/gi, '-').replace(/^-|-$/g, '')
 
@@ -47,11 +63,15 @@ export async function createCategory(name: string) {
     .limit(1)
     .single()
 
-  const { error } = await admin.from('categories').insert({
-    name,
-    slug: slug || 'category',
-    sort_order: (maxOrder?.sort_order ?? 0) + 1,
-  })
+  const { data, error } = await admin
+    .from('categories')
+    .insert({
+      name,
+      slug: slug || 'category',
+      sort_order: (maxOrder?.sort_order ?? 0) + 1,
+    })
+    .select()
+    .single()
 
   if (error) {
     if (error.code === '23505') return { error: 'Категория уже существует' }
@@ -60,7 +80,7 @@ export async function createCategory(name: string) {
 
   updateTag('categories')
   revalidatePath('/settings')
-  return { success: true }
+  return { success: true, category: data as Category }
 }
 
 export async function updateCategory(id: string, name: string) {
@@ -119,7 +139,7 @@ export async function getUnits() {
 }
 
 export async function createUnit(name: string, shortName: string) {
-  await requireAdmin()
+  await requireManagerOrAdmin()
   const admin = createAdminClient()
 
   const { data: maxOrder } = await admin
@@ -129,11 +149,15 @@ export async function createUnit(name: string, shortName: string) {
     .limit(1)
     .single()
 
-  const { error } = await admin.from('units').insert({
-    name,
-    short_name: shortName,
-    sort_order: (maxOrder?.sort_order ?? 0) + 1,
-  })
+  const { data, error } = await admin
+    .from('units')
+    .insert({
+      name,
+      short_name: shortName,
+      sort_order: (maxOrder?.sort_order ?? 0) + 1,
+    })
+    .select()
+    .single()
 
   if (error) {
     if (error.code === '23505') return { error: 'Единица уже существует' }
@@ -141,7 +165,7 @@ export async function createUnit(name: string, shortName: string) {
   }
 
   revalidatePath('/settings')
-  return { success: true }
+  return { success: true, unit: data as Unit }
 }
 
 export async function updateUnit(id: string, name: string, shortName: string) {

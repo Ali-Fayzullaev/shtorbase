@@ -11,6 +11,7 @@ import {
   addCustomFieldOption,
   type ProductFormState,
 } from '@/lib/actions/product-mutations'
+import { createCategory, createUnit } from '@/lib/actions/settings-data'
 import { cn } from '@/lib/utils'
 import { toast } from '@/lib/utils/toast'
 import { ColorSwatch } from '@/components/ui/color-swatch'
@@ -111,6 +112,53 @@ export function ProductForm({ categories, units, customFields, product, initialC
       setCustomValues((prev) => ({ ...prev, [fieldId]: value }))
       setNewOptionValue('')
       setAddingOptionFor(null)
+    })
+  }
+
+  // Новые категории/единицы, добавленные прямо из формы (доступно менеджеру и админу) —
+  // сразу пишутся в БД и видны всем, а не только в этой сессии.
+  const [extraCategories, setExtraCategories] = useState<Category[]>([])
+  const [addingCategory, setAddingCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [addingCategoryPending, startAddingCategoryTransition] = useTransition()
+
+  function handleAddCategory() {
+    const value = newCategoryName.trim()
+    if (!value) return
+    startAddingCategoryTransition(async () => {
+      const result = await createCategory(value)
+      if (result.error || !result.category) {
+        toast.error(result.error ?? 'Не удалось создать категорию')
+        return
+      }
+      setExtraCategories((prev) => [...prev, result.category!])
+      setCategoryId(result.category.id)
+      setNewCategoryName('')
+      setAddingCategory(false)
+    })
+  }
+
+  const [extraUnits, setExtraUnits] = useState<Unit[]>([])
+  const [addingUnit, setAddingUnit] = useState(false)
+  const [newUnitName, setNewUnitName] = useState('')
+  const [newUnitShort, setNewUnitShort] = useState('')
+  const [addingUnitPending, startAddingUnitTransition] = useTransition()
+
+  function handleAddUnit() {
+    const name = newUnitName.trim()
+    const shortName = newUnitShort.trim()
+    if (!name || !shortName) return
+    startAddingUnitTransition(async () => {
+      const result = await createUnit(name, shortName)
+      if (result.error || !result.unit) {
+        toast.error(result.error ?? 'Не удалось создать единицу')
+        return
+      }
+      setExtraUnits((prev) => [...prev, result.unit!])
+      setUnit(result.unit.short_name)
+      setNewUnitName('')
+      setNewUnitShort('')
+      setAddingUnit(false)
     })
   }
 
@@ -390,31 +438,104 @@ export function ProductForm({ categories, units, customFields, product, initialC
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label htmlFor="category_id" className={labelCls}>Категория</label>
-            <select
-              id="category_id" value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className={cn(selectCls, state?.fieldErrors?.category_id && errCls)}
-            >
-              <option value="">Выберите категорию</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+            {addingCategory ? (
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  autoFocus
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Название категории"
+                  className={cn(inputCls, 'flex-1')}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCategory}
+                  disabled={addingCategoryPending}
+                  className={cn(btnOutlineCls, 'h-9 w-9 shrink-0 text-emerald-600')}
+                >
+                  {addingCategoryPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={14} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAddingCategory(false); setNewCategoryName('') }}
+                  disabled={addingCategoryPending}
+                  className={cn(btnOutlineCls, 'h-9 w-9 shrink-0 text-muted-foreground')}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <select
+                id="category_id" value={categoryId}
+                onChange={(e) => {
+                  if (e.target.value === '__add_new__') { setAddingCategory(true); setNewCategoryName(''); return }
+                  setCategoryId(e.target.value)
+                }}
+                className={cn(selectCls, state?.fieldErrors?.category_id && errCls)}
+              >
+                <option value="">Выберите категорию</option>
+                {[...categories, ...extraCategories].map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+                <option value="__add_new__">+ Добавить категорию…</option>
+              </select>
+            )}
             {state?.fieldErrors?.category_id && <p className="text-xs text-destructive">{state.fieldErrors.category_id}</p>}
           </div>
           <div className="space-y-2">
             <label htmlFor="unit" className={labelCls}>Единица измерения</label>
-            <select
-              id="unit" name="unit" value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              disabled={isEdit}
-              className={cn(selectCls, state?.fieldErrors?.unit && errCls, isEdit && 'opacity-50 cursor-not-allowed')}
-            >
-              <option value="">Выберите</option>
-              {units.map((u) => (
-                <option key={u.id} value={u.short_name}>{u.name} ({u.short_name})</option>
-              ))}
-            </select>
+            {addingUnit ? (
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  autoFocus
+                  value={newUnitName}
+                  onChange={(e) => setNewUnitName(e.target.value)}
+                  placeholder="Название: Рулон"
+                  className={cn(inputCls, 'flex-1')}
+                />
+                <input
+                  type="text"
+                  value={newUnitShort}
+                  onChange={(e) => setNewUnitShort(e.target.value)}
+                  placeholder="Кратко: рул"
+                  className={cn(inputCls, 'w-24')}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddUnit}
+                  disabled={addingUnitPending}
+                  className={cn(btnOutlineCls, 'h-9 w-9 shrink-0 text-emerald-600')}
+                >
+                  {addingUnitPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={14} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAddingUnit(false); setNewUnitName(''); setNewUnitShort('') }}
+                  disabled={addingUnitPending}
+                  className={cn(btnOutlineCls, 'h-9 w-9 shrink-0 text-muted-foreground')}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <select
+                id="unit" name="unit" value={unit}
+                onChange={(e) => {
+                  if (e.target.value === '__add_new__') { setAddingUnit(true); setNewUnitName(''); setNewUnitShort(''); return }
+                  setUnit(e.target.value)
+                }}
+                disabled={isEdit}
+                className={cn(selectCls, state?.fieldErrors?.unit && errCls, isEdit && 'opacity-50 cursor-not-allowed')}
+              >
+                <option value="">Выберите</option>
+                {[...units, ...extraUnits].map((u) => (
+                  <option key={u.id} value={u.short_name}>{u.name} ({u.short_name})</option>
+                ))}
+                {!isEdit && <option value="__add_new__">+ Добавить единицу…</option>}
+              </select>
+            )}
             {isEdit && <p className="text-xs text-muted-foreground">Нельзя изменить после создания</p>}
             {state?.fieldErrors?.unit && <p className="text-xs text-destructive">{state.fieldErrors.unit}</p>}
           </div>
