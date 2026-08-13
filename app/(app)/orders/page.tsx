@@ -175,6 +175,11 @@ async function OrdersContent({
         employees={employees}
         showEmployeeFilter={userRole !== 'employee'}
       />
+      {(params.status || params.q || params.assigned) && (
+        <p className="px-1 text-[12px] text-zinc-400 dark:text-zinc-500">
+          Найдено: {total}
+        </p>
+      )}
       <OrdersTable orders={orders} userRole={userRole} statuses={orderStatuses} />
       {totalPages > 1 && (
         <Pagination currentPage={page} totalPages={totalPages} />

@@ -1,1 +1,1 @@
-try{var t=localStorage.getItem('theme'),a=localStorage.getItem('accent');if(t==='dark')document.documentElement.classList.add('dark');if(a&&a!=='indigo')document.documentElement.setAttribute('data-accent',a)}catch(e){}
+try{var t=localStorage.getItem('theme'),a=localStorage.getItem('accent');if(t==='dark')document.documentElement.classList.add('dark');if(a&&a!=='indigo')document.documentElement.setAttribute('data-accent',a)}catch{}

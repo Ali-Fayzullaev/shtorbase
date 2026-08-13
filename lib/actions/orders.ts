@@ -165,7 +165,7 @@ export async function getOrders(params: OrdersParams = {}) {
   // Fetch profiles separately.
   const rows = data ?? []
   const userIds = [...new Set(rows.flatMap((r) => [r.assigned_to, r.created_by]).filter(Boolean))] as string[]
-  let profileMap: Record<string, { id: string; full_name: string; role: string; phone: string | null }> = {}
+  const profileMap: Record<string, { id: string; full_name: string; role: string; phone: string | null }> = {}
   if (userIds.length > 0) {
     const { data: profiles } = await admin
       .from('profiles')
@@ -202,7 +202,7 @@ export async function getOrder(id: string) {
 
   // Fetch profiles for assigned_to / created_by
   const userIds = [data.assigned_to, data.created_by].filter(Boolean) as string[]
-  let profileMap: Record<string, { id: string; full_name: string; role: string; phone: string | null }> = {}
+  const profileMap: Record<string, { id: string; full_name: string; role: string; phone: string | null }> = {}
   if (userIds.length > 0) {
     const { data: profiles } = await admin
       .from('profiles')

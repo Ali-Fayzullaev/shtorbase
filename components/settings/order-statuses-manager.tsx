@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils/format'
 import { toast } from '@/lib/utils/toast'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
-import { Plus, Pencil, Trash2, Loader2, X, Check, ArrowUp, ArrowDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Check, ArrowUp, ArrowDown } from 'lucide-react'
 
 const colorPresets = [
   { label: 'Синий', color: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' },

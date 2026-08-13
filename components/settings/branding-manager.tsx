@@ -41,7 +41,7 @@ export function BrandingManager({ initial }: Props) {
         toast.success('Логотип обновлён')
         setPreview(null)
         // Refresh URL with cache buster
-        setLogoUrl((_prev) => `${Date.now()}`)
+        setLogoUrl(() => `${Date.now()}`)
         setTimeout(() => window.location.reload(), 300)
       }
       e.target.value = ''

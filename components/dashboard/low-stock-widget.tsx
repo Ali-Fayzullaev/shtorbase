@@ -1,6 +1,6 @@
 import { type Product } from '@/lib/types/database'
 import { formatStock, cn } from '@/lib/utils/format'
-import { AlertTriangle, TrendingDown } from 'lucide-react'
+import { TrendingDown } from 'lucide-react'
 import Link from 'next/link'
 
 interface LowStockWidgetProps {

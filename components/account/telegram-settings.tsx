@@ -2,7 +2,7 @@
 
 import React, { useActionState, useEffect, useRef } from 'react'
 import { saveTelegramId } from '@/lib/actions/profile-mutations'
-import { Send, CheckCircle2, AlertCircle, ExternalLink, Copy } from 'lucide-react'
+import { Send, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react'
 
 interface TelegramSettingsProps {
   telegramChatId: string | null

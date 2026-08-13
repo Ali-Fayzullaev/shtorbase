@@ -47,7 +47,12 @@ export async function inviteUserAction(_prevState: InviteState, formData: FormDa
   const { data: existingProfile } = await supabase
     .from('profiles')
     .select('id')
-    .eq('id', (await supabase.from('profiles').select('id')).data?.find(() => false)?.id ?? '')
+    .eq('email', parsed.data.email)
+    .maybeSingle()
+
+  if (existingProfile) {
+    return { error: 'Пользователь с таким email уже зарегистрирован' }
+  }
 
   // Проверяем что нет активного инвайта на этот email
   const { data: existingInvite } = await supabase

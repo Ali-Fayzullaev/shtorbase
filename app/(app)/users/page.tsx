@@ -8,20 +8,7 @@ import { requireProfile } from '@/lib/actions/profile'
 import { redirect } from 'next/navigation'
 import { formatDate } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/format'
-import { type UserRole } from '@/lib/types/database'
-import { Users as UsersIcon, UserCheck, ShieldCheck, Briefcase, User as UserIcon, Lock, Eye, Settings2 } from 'lucide-react'
-
-const roleColors: Record<UserRole, string> = {
-  employee: 'bg-sky-50 text-sky-600 ring-1 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-900/60',
-  manager: 'bg-amber-50 text-amber-600 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60',
-  admin: 'bg-violet-50 text-violet-600 ring-1 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900/60',
-}
-
-const roleLabels: Record<UserRole, string> = {
-  employee: 'Сотрудник',
-  manager: 'Менеджер',
-  admin: 'Администратор',
-}
+import { Lock, Eye, Settings2 } from 'lucide-react'
 
 function getDisplayName(name: string) {
   if (name.includes('@')) return name.split('@')[0]
@@ -213,28 +200,5 @@ export default async function UsersPage() {
         </div>
       </div>
     </>
-  )
-}
-
-const toneStyles: Record<string, { bg: string; icon: string }> = {
-  indigo: { bg: 'from-indigo-500 to-violet-500', icon: 'text-indigo-100' },
-  emerald: { bg: 'from-emerald-500 to-teal-500', icon: 'text-emerald-100' },
-  violet: { bg: 'from-violet-500 to-fuchsia-500', icon: 'text-violet-100' },
-  amber: { bg: 'from-amber-500 to-orange-500', icon: 'text-amber-100' },
-  sky: { bg: 'from-sky-500 to-cyan-500', icon: 'text-sky-100' },
-}
-
-function StatCard({ icon: Icon, label, value, tone }: { icon: typeof UsersIcon; label: string; value: number; tone: string }) {
-  const s = toneStyles[tone] ?? toneStyles.indigo
-  return (
-    <div className="glass-card rounded-2xl p-4 flex items-center gap-3">
-      <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md', s.bg)}>
-        <Icon size={18} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-zinc-500">{label}</p>
-        <p className="text-xl font-bold text-slate-800 dark:text-zinc-100 tabular-nums leading-tight">{value}</p>
-      </div>
-    </div>
   )
 }

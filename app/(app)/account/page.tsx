@@ -1,7 +1,7 @@
 import { Header } from '@/components/layout/header'
 import { requireProfile } from '@/lib/actions/profile'
 import { TelegramSettings } from '@/components/account/telegram-settings'
-import { User, Bell } from 'lucide-react'
+import { Bell } from 'lucide-react'
 
 export default async function AccountPage() {
   const profile = await requireProfile()

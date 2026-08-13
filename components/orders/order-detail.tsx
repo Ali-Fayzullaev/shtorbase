@@ -94,8 +94,6 @@ export function OrderDetail({ order, employees, userRole, statuses, currentUserI
     return map
   }, [statuses])
 
-  const status = statusMap[order.status] ?? defaultBadge
-
   function handleStatusChange(newStatus: OrderStatus) {
     if (newStatus === order.status) return
     if (newStatus === 'delivered' && order.payment_status !== 'paid') {

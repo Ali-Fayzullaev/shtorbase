@@ -1,5 +1,5 @@
 import { type AuditLog } from '@/lib/types/database'
-import { formatDate, formatPrice, cn } from '@/lib/utils/format'
+import { formatDate, formatPrice } from '@/lib/utils/format'
 import { ArrowRight } from 'lucide-react'
 
 interface ProductAuditLogProps {

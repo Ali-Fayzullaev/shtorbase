@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { toast } from '@/lib/utils/toast'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
-import { Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, Loader2 } from 'lucide-react'
 
 const inputCls =
   'flex h-8 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30'
