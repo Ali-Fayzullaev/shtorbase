@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      # Полный `next build` здесь не запускаем — ему нужны реальные ключи
+      # Supabase/Cloudinary (repo secrets), а деплой-сборку и так на каждый
+      # push в main делает Netlify. Эта проверка — быстрый сигнал по
+      # типам/линту/тестам ещё до того, как Netlify начнёт собирать.

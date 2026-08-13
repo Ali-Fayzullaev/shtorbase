@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { passwordSchema } from '@/lib/schemas/auth'
+import { consume, getClientIp, formatRetry } from '@/lib/utils/rate-limit'
 
 const AcceptInviteSchema = z.object({
   token: z.string().min(1, 'Токен обязателен').max(200),
@@ -28,6 +29,14 @@ export async function acceptInviteAction(_prevState: AcceptInviteState, formData
   const parsed = AcceptInviteSchema.safeParse(raw)
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message }
+  }
+
+  // Rate limit по IP — не даёт скриптом перебирать токены приглашений
+  // или спамить попытками регистрации.
+  const ip = await getClientIp()
+  const byIp = consume(ip, { key: 'accept-invite:ip', limit: 8, windowMs: 10 * 60_000, blockMs: 15 * 60_000 })
+  if (!byIp.ok) {
+    return { error: `Слишком много попыток. Попробуйте через ${formatRetry(byIp.retryAfterMs)}.` }
   }
 
   const supabase = await createClient()
