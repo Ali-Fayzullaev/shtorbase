@@ -6,7 +6,7 @@ import { type OrderItem } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
 import { extractDimensions } from '@/lib/utils/dimensions'
 import { DimensionsDiagram } from './dimensions-diagram'
-import { CheckCircle2, Circle, Loader2, ClipboardCheck, X } from 'lucide-react'
+import { CheckCircle2, Circle, Loader2, ClipboardCheck, X, Package } from 'lucide-react'
 
 interface CompleteChecklistModalProps {
   orderNumber: number
@@ -87,6 +87,16 @@ export function CompleteChecklistModal({ orderNumber, items, pending, onConfirm,
                   ) : (
                     <Circle size={18} className="shrink-0 mt-0.5 text-zinc-300 dark:text-zinc-600" />
                   )}
+                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                    {item.product?.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.product.thumbnail} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-zinc-300 dark:text-zinc-600">
+                        <Package size={16} />
+                      </div>
+                    )}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-medium text-zinc-800 dark:text-zinc-200">
                       {item.product?.name ?? 'Товар'} · {item.quantity} {item.product?.unit === 'meter' ? 'м' : 'шт'}

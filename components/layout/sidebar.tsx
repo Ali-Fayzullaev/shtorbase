@@ -222,8 +222,8 @@ export function Sidebar({ role, userName, logoUrl, companyName }: SidebarProps) 
       {/* Divider */}
       <div className="h-px mx-3 bg-zinc-100 dark:bg-zinc-800/80" />
 
-      {/* Collapse toggle */}
-      <div className={cn('px-2 py-2', collapsed ? 'flex justify-center' : '')}>
+      {/* Collapse toggle — только для десктопного рельса; в мобильном выдвижном меню бессмысленна (там всегда полная ширина) */}
+      <div className={cn('hidden lg:block px-2 py-2', collapsed ? 'lg:flex lg:justify-center' : '')}>
         <button
           onClick={toggleCollapsed}
           title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}

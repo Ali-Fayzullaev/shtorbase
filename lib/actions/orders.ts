@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { after } from 'next/server'
 import { z } from 'zod'
 import { type Order, type OrderStatus } from '@/lib/types/database'
 import { createNotification } from './notifications'
@@ -192,80 +193,48 @@ export async function getOrders(params: OrdersParams = {}) {
 
 export async function getOrder(id: string) {
   const admin = createAdminClient()
-  const { data } = await admin
-    .from('orders')
-    .select('*, client:clients(*)')
-    .eq('id', id)
-    .single()
+
+  // Раунд 1: всё, что зависит только от id заказа — параллельно, а не по очереди
+  const [{ data }, { data: items }, { data: history }, { data: payments }] = await Promise.all([
+    admin.from('orders').select('*, client:clients(*)').eq('id', id).single(),
+    admin.from('order_items').select('*, product:products(id, sku, name, unit, price)').eq('order_id', id).order('created_at'),
+    admin.from('order_history').select('*').eq('order_id', id).order('created_at', { ascending: false }),
+    admin.from('payments').select('*').eq('order_id', id).order('created_at', { ascending: false }),
+  ])
 
   if (!data) return null
 
-  // Fetch profiles for assigned_to / created_by
-  const userIds = [data.assigned_to, data.created_by].filter(Boolean) as string[]
-  const profileMap: Record<string, { id: string; full_name: string; role: string; phone: string | null }> = {}
-  if (userIds.length > 0) {
-    const { data: profiles } = await admin
-      .from('profiles')
-      .select('id, full_name, role, phone')
-      .in('id', userIds)
-    for (const p of profiles ?? []) {
-      profileMap[p.id] = p
-    }
-  }
-
-  // Fetch items
-  const { data: items } = await admin
-    .from('order_items')
-    .select('*, product:products(id, sku, name, unit, price)')
-    .eq('order_id', id)
-    .order('created_at')
-
-  // Fetch history
-  const { data: history } = await admin
-    .from('order_history')
-    .select('*')
-    .eq('order_id', id)
-    .order('created_at', { ascending: false })
-
-  // Fetch payments (история оплат)
-  const { data: payments } = await admin
-    .from('payments')
-    .select('*')
-    .eq('order_id', id)
-    .order('created_at', { ascending: false })
-
-  // Add history/payments user profiles to profileMap
-  const otherUserIds = [
+  // Раунд 2: профили (нужны id из заказа/истории/платежей) и фото товаров
+  // (нужны product_id из позиций) — не зависят друг от друга, тоже параллельно
+  const userIds = [...new Set([
+    data.assigned_to,
+    data.created_by,
     ...(history ?? []).map(h => h.user_id),
     ...(payments ?? []).map(p => p.created_by),
-  ]
-  const missingIds = [...new Set(otherUserIds.filter(Boolean))].filter(id => !profileMap[id]) as string[]
-  if (missingIds.length > 0) {
-    const { data: extraProfiles } = await admin
-      .from('profiles')
-      .select('id, full_name, role, phone')
-      .in('id', missingIds)
-    for (const p of extraProfiles ?? []) {
-      profileMap[p.id] = p
-    }
+  ].filter(Boolean))] as string[]
+  const productIds = [...new Set((items ?? []).map((i) => i.product_id))]
+
+  const [{ data: profiles }, { data: images }] = await Promise.all([
+    userIds.length > 0
+      ? admin.from('profiles').select('id, full_name, role, phone').in('id', userIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string; role: string; phone: string | null }[] }),
+    productIds.length > 0
+      ? admin.from('product_images').select('product_id, storage_path, url').in('product_id', productIds).order('sort_order', { ascending: true })
+      : Promise.resolve({ data: [] as { product_id: string; storage_path: string | null; url: string | null }[] }),
+  ])
+
+  const profileMap: Record<string, { id: string; full_name: string; role: string; phone: string | null }> = {}
+  for (const p of profiles ?? []) {
+    profileMap[p.id] = p
   }
 
-  // Превью фото товара для каждой позиции — видно, что именно делать/отдать
-  const productIds = [...new Set((items ?? []).map((i) => i.product_id))]
   const thumbMap: Record<string, string> = {}
-  if (productIds.length > 0) {
-    const { data: images } = await admin
-      .from('product_images')
-      .select('product_id, storage_path, url')
-      .in('product_id', productIds)
-      .order('sort_order', { ascending: true })
-    for (const img of images ?? []) {
-      if (thumbMap[img.product_id]) continue
-      if (img.url) thumbMap[img.product_id] = img.url
-      else if (img.storage_path) {
-        const { data: urlData } = admin.storage.from('product-images').getPublicUrl(img.storage_path)
-        thumbMap[img.product_id] = urlData.publicUrl
-      }
+  for (const img of images ?? []) {
+    if (thumbMap[img.product_id]) continue
+    if (img.url) thumbMap[img.product_id] = img.url
+    else if (img.storage_path) {
+      const { data: urlData } = admin.storage.from('product-images').getPublicUrl(img.storage_path)
+      thumbMap[img.product_id] = urlData.publicUrl
     }
   }
 
@@ -382,16 +351,12 @@ export async function getOrderStats(userId?: string, userRole?: string) {
     return q
   }
 
-  const { count: total } = await baseQuery()
-
-  const { count: newCount } = await baseQuery()
-    .eq('status', 'new')
-
-  const { count: inProgress } = await baseQuery()
-    .eq('status', 'in_progress')
-
-  const { count: ready } = await baseQuery()
-    .eq('status', 'ready')
+  const [{ count: total }, { count: newCount }, { count: inProgress }, { count: ready }] = await Promise.all([
+    baseQuery(),
+    baseQuery().eq('status', 'new'),
+    baseQuery().eq('status', 'in_progress'),
+    baseQuery().eq('status', 'ready'),
+  ])
 
   return {
     total: total ?? 0,
@@ -565,34 +530,37 @@ export async function createOrderAction(
       await createNotification(finalAssignedTo, 'Новый заказ', `Вам назначен новый заказ #${order.id.slice(0, 8)}`, `/orders/${order.id}`)
     }
 
-    // Telegram notification
+    // Telegram-уведомление не нужно ждать — уходит в фон после ответа,
+    // чтобы медленный внешний запрос к Telegram не тормозил создание заказа
     const total = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
-    // Fetch profiles and client for notification — failures must not block order creation
-    const [creatorRes, assignedRes, clientRes] = await Promise.allSettled([
-      admin.from('profiles').select('*').eq('id', user.id).single(),
-      finalAssignedTo && finalAssignedTo !== user.id
-        ? admin.from('profiles').select('*').eq('id', finalAssignedTo).single()
-        : Promise.resolve({ data: null, error: null }),
-      clientId
-        ? admin.from('clients').select('name').eq('id', clientId).single()
-        : Promise.resolve({ data: null, error: null }),
-    ])
-    const creatorProfile = creatorRes.status === 'fulfilled' ? creatorRes.value.data : null
-    const assignedProfile = assignedRes.status === 'fulfilled' ? assignedRes.value.data : null
-    const clientRow = clientRes.status === 'fulfilled' ? clientRes.value.data : null
-    await broadcastTelegram(
-      tgNewOrder({
-        orderNumber: order.id.slice(0, 8).toUpperCase(),
-        clientName: (clientRow as { name?: string } | null)?.name ?? phone ?? 'Клиент',
-        createdBy: (creatorProfile as { full_name?: string } | null)?.full_name ?? 'Неизвестно',
-        itemCount: items.length,
-        total,
-      }),
-      [
-        (creatorProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id,
-        (assignedProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id,
-      ],
-    )
+    const orderId = order.id
+    after(async () => {
+      const [creatorRes, assignedRes, clientRes] = await Promise.allSettled([
+        admin.from('profiles').select('*').eq('id', user.id).single(),
+        finalAssignedTo && finalAssignedTo !== user.id
+          ? admin.from('profiles').select('*').eq('id', finalAssignedTo).single()
+          : Promise.resolve({ data: null, error: null }),
+        clientId
+          ? admin.from('clients').select('name').eq('id', clientId).single()
+          : Promise.resolve({ data: null, error: null }),
+      ])
+      const creatorProfile = creatorRes.status === 'fulfilled' ? creatorRes.value.data : null
+      const assignedProfile = assignedRes.status === 'fulfilled' ? assignedRes.value.data : null
+      const clientRow = clientRes.status === 'fulfilled' ? clientRes.value.data : null
+      await broadcastTelegram(
+        tgNewOrder({
+          orderNumber: orderId.slice(0, 8).toUpperCase(),
+          clientName: (clientRow as { name?: string } | null)?.name ?? phone ?? 'Клиент',
+          createdBy: (creatorProfile as { full_name?: string } | null)?.full_name ?? 'Неизвестно',
+          itemCount: items.length,
+          total,
+        }),
+        [
+          (creatorProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id,
+          (assignedProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id,
+        ],
+      )
+    })
 
     revalidatePath('/orders')
     revalidatePath('/catalog')
@@ -683,26 +651,29 @@ export async function createQuickOrder(
     // Log history
     await logOrderHistory(admin, order.id, user.id, 'created', null, 'new')
 
-    // Telegram notification (quick order)
+    // Telegram-уведомление — в фон, не блокирует оформление заказа
     const total = orderTotal
-    const [creatorRes, clientRes] = await Promise.allSettled([
-      admin.from('profiles').select('*').eq('id', user.id).single(),
-      clientId
-        ? admin.from('clients').select('name').eq('id', clientId).single()
-        : Promise.resolve({ data: null, error: null }),
-    ])
-    const creatorProfile = creatorRes.status === 'fulfilled' ? creatorRes.value.data : null
-    const clientRow = clientRes.status === 'fulfilled' ? clientRes.value.data : null
-    await broadcastTelegram(
-      tgNewOrder({
-        orderNumber: order.id.slice(0, 8).toUpperCase(),
-        clientName: (clientRow as { name?: string } | null)?.name ?? phone ?? 'Клиент',
-        createdBy: (creatorProfile as { full_name?: string } | null)?.full_name ?? 'Неизвестно',
-        itemCount: validated.length,
-        total,
-      }),
-      [(creatorProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id],
-    )
+    const orderId = order.id
+    after(async () => {
+      const [creatorRes, clientRes] = await Promise.allSettled([
+        admin.from('profiles').select('*').eq('id', user.id).single(),
+        clientId
+          ? admin.from('clients').select('name').eq('id', clientId).single()
+          : Promise.resolve({ data: null, error: null }),
+      ])
+      const creatorProfile = creatorRes.status === 'fulfilled' ? creatorRes.value.data : null
+      const clientRow = clientRes.status === 'fulfilled' ? clientRes.value.data : null
+      await broadcastTelegram(
+        tgNewOrder({
+          orderNumber: orderId.slice(0, 8).toUpperCase(),
+          clientName: (clientRow as { name?: string } | null)?.name ?? phone ?? 'Клиент',
+          createdBy: (creatorProfile as { full_name?: string } | null)?.full_name ?? 'Неизвестно',
+          itemCount: validated.length,
+          total,
+        }),
+        [(creatorProfile as { telegram_chat_id?: string | null } | null)?.telegram_chat_id],
+      )
+    })
 
     revalidatePath('/orders')
     revalidatePath('/catalog')
@@ -757,33 +728,35 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
   await logOrderHistory(admin, orderId, user.id, 'status_change', order.status, newStatus)
 
-  // Notify assigned employee about status change + Telegram
-  const [{ data: fullOrder }, { data: changerProfile }, statusLabels] = await Promise.all([
-    admin.from('orders').select('assigned_to, client:clients(name)').eq('id', orderId).single(),
-    admin.from('profiles').select('full_name').eq('id', user.id).single(),
-    getStatusLabels(admin),
-  ])
-  const newStatusLabel = statusLabels[newStatus] ?? newStatus
-  if (fullOrder?.assigned_to && fullOrder.assigned_to !== user.id) {
-    await createNotification(fullOrder.assigned_to, 'Статус заказа изменён', `Заказ #${orderId.slice(0, 8)} — ${newStatusLabel}`, `/orders/${orderId}`)
-  }
-  // Also notify the assigned employee personally (graceful — column may not exist yet)
-  let assignedTgId: string | null = null
-  if (fullOrder?.assigned_to) {
-    const res = await admin.from('profiles').select('*').eq('id', fullOrder.assigned_to).single()
-    assignedTgId = (res.data as { telegram_chat_id?: string | null } | null)?.telegram_chat_id ?? null
-  }
-  await broadcastTelegram(
-    tgStatusChanged({
-      orderNumber: orderId.slice(0, 8).toUpperCase(),
-      clientName: (fullOrder?.client as { name?: string } | null)?.name ?? 'Клиент',
-      oldStatus: statusLabels[order.status] ?? order.status,
-      newStatus: newStatusLabel,
-      newStatusSlug: newStatus,
-      changedBy: changerProfile?.full_name ?? 'Неизвестно',
-    }),
-    [assignedTgId],
-  )
+  // Уведомления (в т.ч. медленный внешний запрос к Telegram) — в фон, не блокируют смену статуса
+  const oldStatusSlug = order.status
+  after(async () => {
+    const [{ data: fullOrder }, { data: changerProfile }, statusLabels] = await Promise.all([
+      admin.from('orders').select('assigned_to, client:clients(name)').eq('id', orderId).single(),
+      admin.from('profiles').select('full_name').eq('id', user.id).single(),
+      getStatusLabels(admin),
+    ])
+    const newStatusLabel = statusLabels[newStatus] ?? newStatus
+    let assignedTgId: string | null = null
+    if (fullOrder?.assigned_to) {
+      if (fullOrder.assigned_to !== user.id) {
+        await createNotification(fullOrder.assigned_to, 'Статус заказа изменён', `Заказ #${orderId.slice(0, 8)} — ${newStatusLabel}`, `/orders/${orderId}`)
+      }
+      const res = await admin.from('profiles').select('*').eq('id', fullOrder.assigned_to).single()
+      assignedTgId = (res.data as { telegram_chat_id?: string | null } | null)?.telegram_chat_id ?? null
+    }
+    await broadcastTelegram(
+      tgStatusChanged({
+        orderNumber: orderId.slice(0, 8).toUpperCase(),
+        clientName: (fullOrder?.client as { name?: string } | null)?.name ?? 'Клиент',
+        oldStatus: statusLabels[oldStatusSlug] ?? oldStatusSlug,
+        newStatus: newStatusLabel,
+        newStatusSlug: newStatus,
+        changedBy: changerProfile?.full_name ?? 'Неизвестно',
+      }),
+      [assignedTgId],
+    )
+  })
 
   revalidatePath('/orders')
   revalidatePath(`/orders/${orderId}`)
@@ -852,12 +825,12 @@ export async function acceptOrder(orderId: string) {
   if (error) return { error: `Не удалось принять заказ: ${error.message}` }
 
   await logOrderHistory(admin, orderId, user.id, 'accepted', order.status, 'in_progress')
-  await notifyCreator(
+  after(() => notifyCreator(
     admin, orderId, order.created_by, user.id,
     'Заказ принят в работу',
     `Заказ #${orderId.slice(0, 8)} принят в работу`,
     'new', 'in_progress',
-  )
+  ))
 
   revalidatePath('/orders')
   revalidatePath(`/orders/${orderId}`)
@@ -891,12 +864,12 @@ export async function completeOrder(orderId: string) {
   if (error) return { error: `Не удалось завершить заказ: ${error.message}` }
 
   await logOrderHistory(admin, orderId, user.id, 'status_change', 'in_progress', 'ready')
-  await notifyCreator(
+  after(() => notifyCreator(
     admin, orderId, order.created_by, user.id,
     'Заказ готов',
     `Заказ #${orderId.slice(0, 8)} готов к выдаче`,
     'in_progress', 'ready',
-  )
+  ))
 
   revalidatePath('/orders')
   revalidatePath(`/orders/${orderId}`)
